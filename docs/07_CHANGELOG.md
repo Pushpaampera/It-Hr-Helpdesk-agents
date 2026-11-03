@@ -1,5 +1,21 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 7: Login page
+- Added: `frontend/src/pages/Login.tsx` (real form + demo-account quick-picker),
+  `AppPlaceholder.tsx` (temporary post-login landing, Phase 8 replaces it),
+  `frontend/src/components/RequireAuth.tsx` (route guard), `frontend/src/components/ui/
+  TextField.tsx`.
+- Changed: `frontend/src/routes.tsx` (`/login` → `Login`; `/app` wrapped in `RequireAuth` →
+  `AppPlaceholder`), `frontend/src/App.tsx` (calls `authStore.refreshMe()` on mount).
+- Deleted: `frontend/src/pages/LoginPlaceholder.tsx` (fully superseded by `Login.tsx`).
+- Verified: `npx tsc -b --noEmit`/`npm run build` succeed; a full live end-to-end test (real
+  backend + frontend dev server, Chrome + playwright-core) confirmed the route guard, manual
+  login, the demo quick-picker, the per-role "lands on" redirect text, sign-out, the wrong-
+  password error state, and correct rendering under Reduce-motion.
+- Why: this is the first page that actually exercises the Phase 4 JWT auth endpoints and the
+  Phase 5 `authStore` from a real UI, and it's the gate every Phase 8+ dashboard route sits
+  behind via `RequireAuth`.
+
 ### 2026-11-03 — Phase 6: Landing page
 - Added: `frontend/src/pages/Landing.tsx` (real cinematic landing page), `LoginPlaceholder.tsx`
   (temporary, Phase 7 replaces it), `frontend/src/components/Reveal.tsx` (scroll-reveal wrapper,

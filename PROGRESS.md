@@ -1,20 +1,23 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 6 — Landing page: DONE.** Next up: **Phase 7 — Login page** (not
-  started; awaiting operator go-ahead, since this session pauses between phases on request).
+- Current phase: **Phase 7 — Login page: DONE.** Next up: **Phase 8 — Dashboard shell and
+  Overview** (not started; awaiting operator go-ahead, since this session pauses between phases
+  on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 7 — the real login page (JWT form against `POST /api/auth/login`,
-  demo-account quick-picker, role-aware post-login redirect), replacing `LoginPlaceholder`.
+- Next step: start Phase 8 — the real per-role dashboard shell (nav, layout) and the Overview
+  page, replacing `AppPlaceholder`. `src/components/RequireAuth.tsx` is ready to wrap every new
+  dashboard route.
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Every
-  backend endpoint through Phase 4 is behind real JWT auth. Phase 5 built the zustand stores,
-  API client, and 3D building blocks; Phase 6 composed them into the real landing page and, this
-  time, had a browser tool (Chrome + playwright-core, installed ad hoc for verification only)
-  available to actually screenshot it — which caught and fixed a real bug where the hero content
-  went fully invisible under Reduce-motion (see `docs/06_DECISIONS.md`). `LLM_MOCK_MODE=true` is
-  set so everything built so far works without GROQ/GEMINI keys. Langfuse tracing
-  (`app/observability.py`) stays a no-op until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`
-  are set and `poetry add langfuse` has been run — neither is needed for the demo.
+  backend endpoint through Phase 4 is behind real JWT auth. Phase 7 built the real login page
+  (`src/pages/Login.tsx`) and exercised `authStore.login()` for the first time against a live
+  backend + frontend dev server pair, scripted end to end with a browser tool (Chrome +
+  playwright-core, the same ad hoc setup from Phase 6) — confirmed the route guard, manual
+  login, the demo quick-picker, the per-role "lands on" text, logout, the wrong-password error
+  state, and reduced-motion all work correctly. `LLM_MOCK_MODE=true` is set so everything built
+  so far works without GROQ/GEMINI keys. Langfuse tracing (`app/observability.py`) stays a no-op
+  until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set and `poetry add langfuse` has
+  been run — neither is needed for the demo.
 
 ## Phase checklist
 
@@ -26,7 +29,7 @@
 | 4 | Auth, API surface, bandit and analytics | done | 2026-11-03 | JWT login/me/logout for all 4 demo roles; chat/approvals/feedback retrofitted to use the authenticated identity; 10 new routers (conversations, tickets, kb, analytics, agents incl. live SSE, bandit, eval, admin, costs); real golden-set eval runner; live-bandit feedback simulator; `/metrics`; optional Langfuse hook. |
 | 5 | Frontend design system and 3D building blocks | done | 2026-11-03 | zustand stores (`uiStore`, `authStore`), API client, `Scene`/`AgentOrb`/`DataPulse`/`ParticleField` 3D primitives, hand-rolled `Button`/`Badge`/`Panel` UI atoms, `ReduceMotionToggle`; showcased in an extended `PlaceholderHome`. |
 | 6 | Landing page | done | 2026-11-03 | Cinematic hero (Scene+bloom, 7 AgentOrbs, DataPulse, ParticleField), "Meet the team"/"How it works" sections, Reveal scroll animations, LoginPlaceholder stub. Found and fixed a real Reduce-motion bug via screenshot verification. |
-| 7 | Login page | not started | | |
+| 7 | Login page | done | 2026-11-03 | Real email/password form + demo-account quick-picker calling `POST /api/auth/login`, RequireAuth route guard, role-aware "lands on" redirect, AppPlaceholder post-login stand-in. Verified end to end live against a running backend with a browser tool. |
 | 8 | Dashboard shell and Overview | not started | | |
 | 9 | AI Assistant page (centerpiece) | not started | | |
 | 10 | Remaining dashboard pages | not started | | |
@@ -131,3 +134,14 @@
 - Console check: zero app errors; the only logged message is the browser's default
   `/favicon.ico` 404 (pre-existing since Phase 1, no `<link rel="icon">` was ever added).
 - Full details in `docs/phases/PHASE_06.md`.
+
+### Phase 7 — DONE
+- `npx tsc -b --noEmit` and `npm run build`: both succeed.
+- Full end-to-end live test (real backend on port 8000 + `npm run dev` on 5173, driven by Chrome
+  + playwright-core, not just static screenshots): `/app` redirects to `/login` when logged out;
+  manual login as `emma.employee@acme.test` succeeds against the real API and redirects to
+  `/app` showing "AI Assistant" as its landing page; sign-out returns to `/`; the demo quick-
+  picker logs in as `alex.admin@acme.test` in one click and correctly shows "Control Room";
+  wrong password shows "Invalid email or password" inline; Reduce-motion toggled on the login
+  page keeps the form fully visible (no repeat of Phase 6's bug).
+- Full details in `docs/phases/PHASE_07.md`.

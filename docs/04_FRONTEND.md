@@ -1,12 +1,13 @@
 # 04 — Frontend
 
-Updated through Phase 6.
+Updated through Phase 7.
 
-## Routes (Phase 6 state)
+## Routes (Phase 7 state)
 | Path | Page | Notes |
 |------|------|-------|
 | `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
-| `/login` | `LoginPlaceholder` | Temporary stand-in until Phase 7 builds the real login page. |
+| `/login` | `Login` | Real email/password form + demo-account quick-picker. Redirects to `/app` (or wherever `RequireAuth` remembered) on success. |
+| `/app` (wrapped in `RequireAuth`) | `AppPlaceholder` | Temporary post-login landing; Phase 8 replaces it with the real per-role dashboard shell. |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -45,12 +46,18 @@ Updated through Phase 6.
   `reduceMotion` flag.
 - `src/components/ui/{Button,Badge,Panel}.tsx` (Phase 5) — hand-rolled UI atoms (no UI kit, no
   Tailwind), styled from the CSS variable tokens.
+- `src/components/ui/TextField.tsx` (Phase 7) — hand-rolled labeled input.
 - `src/components/Reveal.tsx` (Phase 6) — scroll-triggered fade-up wrapper (`whileInView`,
   once). Renders a plain `<div>` with no Framer Motion component at all under reduced motion —
   see the Phase 6 decision log entry on why this is the pattern to copy, not the conditional-
   prop approach that briefly shipped broken.
+- `src/components/RequireAuth.tsx` (Phase 7) — route guard; redirects to `/login` (remembering
+  the attempted destination in router state) when `authStore.isAuthenticated` is false. Every
+  real dashboard route Phase 8+ adds should wrap in this the same way `/app` does.
 - `src/pages/Landing.tsx` (Phase 6) — the real landing page.
-- `src/pages/LoginPlaceholder.tsx` (Phase 6) — temporary; Phase 7 replaces it.
+- `src/pages/Login.tsx` (Phase 7) — real login form + demo-account quick-picker, calls
+  `authStore.login()`, redirects on success/if-already-authenticated.
+- `src/pages/AppPlaceholder.tsx` (Phase 7) — temporary; Phase 8 replaces it.
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px

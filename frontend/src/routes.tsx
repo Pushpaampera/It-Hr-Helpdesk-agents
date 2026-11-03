@@ -1,18 +1,23 @@
 import { Route, Routes } from "react-router-dom";
 
+import RequireAuth from "./components/RequireAuth";
+import AppPlaceholder from "./pages/AppPlaceholder";
 import Landing from "./pages/Landing";
-import LoginPlaceholder from "./pages/LoginPlaceholder";
+import Login from "./pages/Login";
 
 /**
- * Phase 6: the real cinematic landing page replaces PlaceholderHome. `/login` is a temporary
- * stand-in until Phase 7 builds the real login page; Phase 8+ adds the `/app/*` dashboard
- * routes described in docs/04_FRONTEND.md.
+ * Phase 7: the real login page replaces LoginPlaceholder. `/app` is a temporary, auth-gated
+ * stand-in for the role-specific dashboard shell Phase 8+ builds (Overview, AI Assistant, HR
+ * Insights, Control Room, etc. — see docs/04_FRONTEND.md).
  */
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<LoginPlaceholder />} />
+      <Route path="/login" element={<Login />} />
+      <Route element={<RequireAuth />}>
+        <Route path="/app" element={<AppPlaceholder />} />
+      </Route>
     </Routes>
   );
 }
