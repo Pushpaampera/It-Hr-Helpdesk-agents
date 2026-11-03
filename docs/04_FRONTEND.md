@@ -1,8 +1,8 @@
 # 04 — Frontend
 
-Updated through Phase 10.
+Updated through Phase 11.
 
-## Routes (Phase 10 state)
+## Routes (Phase 11 state — every nav item is now implemented)
 | Path | Page | Notes |
 |------|------|-------|
 | `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
@@ -15,6 +15,11 @@ Updated through Phase 10.
 | `/app/team` | `Team` | Manager only; a manager's direct reports + real signal (`GET /api/team`, new this phase). |
 | `/app/hr-insights` | `HrInsights` | HR only; company-wide headcount/leave posture + pending leave decisions (`GET /api/hr/overview`, `GET`/`PATCH /api/hr/leave-requests`, new this phase). |
 | `/app/kb` | `KnowledgeBase` | HR/admin; search/compare/read the real RAG knowledge base (`GET /api/kb/{search,compare,articles/{id}}`). |
+| `/app/control-room` | `ControlRoom` | Admin; per-agent health, an always-on live feed of every user's agent activity (`GET /api/agents/live`, SSE), recent runs + Replay (`GET /api/agents/runs` new this phase, `GET /api/runs/{id}/events`). |
+| `/app/reinforcement-lab` | `ReinforcementLab` | Admin (nav-gated; backend allows manager/hr too); the LinUCB bandit's real state (`GET /api/bandit/stats`). |
+| `/app/evaluation` | `Evaluation` | Admin; trigger + inspect golden-set runs (`POST /api/eval/run`, `GET /api/eval/runs`, `GET /api/eval/runs/{id}` new this phase). |
+| `/app/costs` | `Costs` | Admin (nav-gated; backend allows manager/hr too); token/$ spend (`GET /api/costs`). |
+| `/app/audit-log` | `AuditLog` | Admin; the real `audit_log` table (`GET /api/admin/audit-log` + `.../actions`, new this phase). |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -71,9 +76,11 @@ Updated through Phase 10.
   first `.module.css` file (CLAUDE.md sanctions "CSS variables + CSS modules"; every other page
   still uses inline styles).
 - `src/layouts/navItems.ts` (Phase 8) — the role-aware nav table from
-  `docs/00_PROJECT_OVERVIEW.md`'s role list. Each entry has an `implemented` flag; only
-  `Overview` is true so far, everything else renders as a role-filtered, disabled "Soon" row
-  until its own phase builds it.
+  `docs/00_PROJECT_OVERVIEW.md`'s role list. Every entry's `implemented` flag is `true` as of
+  Phase 11 — there is no longer a disabled "Soon" row anywhere in the nav.
+- `src/api/sse.ts`'s `streamGetSSE` (Phase 11) — a GET sibling of the Phase 9 `streamSSE`
+  (POST-only), for `GET /api/agents/live`'s always-on feed; native `EventSource` still can't
+  carry the bearer header even on a GET.
 - `src/pages/Landing.tsx` (Phase 6) — the real landing page.
 - `src/pages/Login.tsx` (Phase 7) — real login form + demo-account quick-picker, calls
   `authStore.login()`, redirects on success/if-already-authenticated.
@@ -97,6 +104,20 @@ Updated through Phase 10.
 - `src/pages/dashboard/KnowledgeBase.tsx` (Phase 10) — search/compare-strategies/article-reader
   over the real RAG knowledge base; the "Compare strategies" view is the same lexical/semantic/
   hybrid comparison the bandit picks between.
+- `src/pages/dashboard/ControlRoom.tsx` (Phase 11) — per-agent 24h health cards, an always-on
+  live feed over `GET /api/agents/live` (via `streamGetSSE`), and a recent-runs table with a
+  Replay panel (`GET /api/runs/{id}/events`).
+- `src/pages/dashboard/ReinforcementLab.tsx` (Phase 11) — the LinUCB bandit's real state: per-
+  arm pulls/reward, cumulative regret, a reward-over-time `recharts` line chart, context win
+  rates.
+- `src/pages/dashboard/Evaluation.tsx` (Phase 11) — triggers a real synchronous 70-question
+  golden-set run and drills into any past run's full per-question breakdown.
+- `src/pages/dashboard/Costs.tsx` (Phase 11) — token/$ spend totals, a daily chart, by-route/
+  by-model breakdowns. Its "by route" list keys rows by array index, not the backend's `route`
+  value — two distinct backend groups (`NULL` and literal `'OTHER'`) both display as `"OTHER"`,
+  a real duplicate-key bug caught via live browser testing (`docs/phases/PHASE_11.md`).
+- `src/pages/dashboard/AuditLog.tsx` (Phase 11) — the real `audit_log` table, filterable by
+  action.
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px

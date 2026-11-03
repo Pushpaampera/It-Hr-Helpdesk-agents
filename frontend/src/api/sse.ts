@@ -61,3 +61,46 @@ export async function streamSSE<T extends { type: string }>(
     }
   }
 }
+
+/** Same manual parsing as `streamSSE`, for GET /api/agents/live (Control Room's always-on feed).
+ * Native `EventSource` can't attach the bearer header, so this is a GET sibling of `streamSSE`
+ * rather than a method option on it — that stream's payloads have no `type` field of their own
+ * (the event name lives in the `event:` line, which this endpoint doesn't need since it only
+ * ever sends one event type), so the generic shape differs enough to keep this separate. */
+export async function streamGetSSE<T>(path: string, onEvent: (event: T) => void, signal: AbortSignal): Promise<void> {
+  const token = useAuthStore.getState().token;
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(`/api${path}`, { method: "GET", headers, signal });
+  if (!res.ok || !res.body) throw new Error(res.statusText);
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+
+    let sepIndex: number;
+    while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+      const rawEvent = buffer.slice(0, sepIndex);
+      buffer = buffer.slice(sepIndex + 2);
+
+      const dataLine = rawEvent
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .join("");
+
+      if (!dataLine) continue;
+      try {
+        onEvent(JSON.parse(dataLine) as T);
+      } catch {
+        // skip malformed chunk
+      }
+    }
+  }
+}

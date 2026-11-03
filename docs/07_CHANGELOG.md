@@ -1,5 +1,35 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 11: Evaluation and polish
+- Added: `frontend/src/pages/dashboard/{ControlRoom,ReinforcementLab,Evaluation,Costs,
+  AuditLog}.tsx` — the last five admin-only nav items, completing every item in
+  `navItems.ts`. `GET /api/agents/runs` (`backend/app/routers/agents.py`), recent runs across
+  every user, backing Control Room. `GET /api/eval/runs/{id}` (`backend/app/routers/eval.py`),
+  one eval run's full per-question breakdown. `GET /api/admin/audit-log` +
+  `.../audit-log/actions` (`backend/app/routers/admin.py`), the first read-back of the
+  `audit_log` table populated since Phase 1. `frontend/src/api/sse.ts` grew `streamGetSSE`, a
+  GET sibling of the existing POST-only `streamSSE`, for `GET /api/agents/live`'s always-on feed.
+- Changed: `frontend/src/api/types.ts` (`AgentStatus`, `RunSummary`, `RunEventsResponse`,
+  `LiveAgentEvent`, `BanditArm`/`BanditStats`, `EvalSummary`/`EvalRun`/`EvalResult`/
+  `EvalRunDetail`, `CostsResponse`, `AuditLogEntry`), `frontend/src/routes.tsx` (5 new routes),
+  `frontend/src/layouts/navItems.ts` (all 5 flipped to `implemented: true` — every nav item is
+  now implemented).
+- Fixed: a real bug found via live browser testing — `Costs.tsx`'s "By route" breakdown keyed
+  rows by `r.route`, but the backend groups by the raw column (`NULL` vs. the literal string
+  `'OTHER'`), so two distinct rows can both display as `"OTHER"` and collide on a value-based
+  React key. Fixed with an index key, the same fix class as Phase 9's resumed-run duplicate-key
+  bug. See `docs/phases/PHASE_11.md`.
+- Verified: `npx tsc -b --noEmit`/`npm run build` succeed; `poetry run pytest -q` 24/24 (the
+  pre-existing intermittent flake noted in Phase 10 did not trigger this run); full live,
+  functional end-to-end tests as admin covering every new page's core flow, including Control
+  Room's live feed genuinely streaming a second, concurrently-logged-in employee session's real
+  chat turn in real time, a real synchronous 70-question evaluation run with full per-question
+  drill-down, and confirming server-side role enforcement on every admin-only endpoint.
+- Why: this was the last feature phase on the original checklist (Phase 10B was explicitly
+  skipped by the operator) — these five pages give an admin real operational visibility into
+  the live multi-agent system, the bandit's learning, eval quality, spend, and the audit trail,
+  closing out the dashboard's full intended nav structure from `docs/00_PROJECT_OVERVIEW.md`.
+
 ### 2026-11-03 — Phase 10: Remaining dashboard pages
 - Added: `backend/app/routers/{team,hr_insights}.py` (`GET /api/team`; `GET /api/hr/overview`,
   `GET`/`PATCH /api/hr/leave-requests`) — no endpoint for "my direct reports" or "company-wide

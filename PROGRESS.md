@@ -1,26 +1,32 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 10 — Remaining dashboard pages: DONE.** **Phase 10B (Demo experience
-  layer / HR showcase) has been skipped by explicit operator instruction (2026-11-03)** — not
-  needed for this project. Next up: **Phase 11 — Evaluation and polish**, awaiting operator
-  go-ahead (this session pauses between phases on request).
+- Current phase: **Phase 11 — Evaluation and polish: DONE.** Phase 10B (Demo experience layer /
+  HR showcase) was skipped by explicit operator instruction (2026-11-03) — not needed for this
+  project. **Every planned phase in the checklist below is now complete.** Next up: Phase 12
+  (Documentation and final verification), awaiting operator go-ahead (this session pauses
+  between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 11 once the operator gives the go-ahead. No detailed scope has been
-  written down yet — ask what it should cover, or check for a master build prompt if the
-  operator provides one.
+- Next step: start Phase 12 once the operator gives the go-ahead — largely a documentation/
+  final-verification pass over the whole app rather than new features, per the original phase
+  checklist.
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
-  10 built the five remaining `/app/*` dashboard pages (Tickets, Approvals, Team, HR Insights,
-  Policy Knowledge Base), adding two new backend routers (`GET /api/team`,
-  `GET /api/hr/overview` + `GET`/`PATCH /api/hr/leave-requests`) since no "my direct reports" or
-  "company leave posture" endpoint existed before. Found and fixed a real bug via live
-  verification (Approvals' decide button called PATCH when the Phase 4 endpoint is POST — see
-  `docs/phases/PHASE_10.md`). `LLM_MOCK_MODE=true` is set so everything built so far works
-  without GROQ/GEMINI keys. Langfuse tracing (`app/observability.py`) stays a no-op until both
-  keys are set and `poetry add langfuse` has been run — neither is needed for the demo.
-- Known pre-existing (not Phase 10) issue: `test_agents_graph.py::test_e_unanswerable_question_
-  creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree too (not
-  caused by this phase's changes), not yet root-caused. See `docs/phases/PHASE_10.md`.
+  11 built the last five `/app/*` pages — Control Room, Reinforcement Lab, Evaluation, Costs,
+  Audit Log (all admin-only) — completing every nav item in `src/layouts/navItems.ts`. Added
+  three new backend endpoints (`GET /api/agents/runs`, `GET /api/eval/runs/{id}`,
+  `GET /api/admin/audit-log` + `.../actions`) since no "recent runs across everyone," "one eval
+  run's full question breakdown," or "read the audit_log table back" endpoint existed before.
+  Found and fixed a real bug via live verification (Costs' "By route" list keyed rows by a
+  backend value that isn't actually unique — two distinct DB groups, NULL route and literal
+  'OTHER' route, both display as "OTHER" — causing a React duplicate-key warning; fixed the same
+  way Phase 9's resumed-run bug was, with an index key). `LLM_MOCK_MODE=true` is set so
+  everything built so far works without GROQ/GEMINI keys. Langfuse tracing
+  (`app/observability.py`) stays a no-op until both keys are set and `poetry add langfuse` has
+  been run — neither is needed for the demo.
+- Known pre-existing (not Phase 10 or 11) issue: `test_agents_graph.py::test_e_unanswerable_
+  question_creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree
+  too, not yet root-caused. Did not trigger during Phase 11's final full-suite run. See
+  `docs/phases/PHASE_10.md`.
 
 ## Phase checklist
 
@@ -37,7 +43,7 @@
 | 9 | AI Assistant page (centerpiece) | done | 2026-11-03 | Real chat UI against POST /api/chat/stream (manual SSE client), 3D AgentOrb/DataPulse wired to live events, live caption log, feedback widget, full request_access pause/resume working end to end through the UI. Found/fixed 3 real bugs via live browser verification. |
 | 10 | Remaining dashboard pages | done | 2026-11-03 | Tickets, Approvals, Team, HR Insights, Policy Knowledge Base pages, all wired to real data; two new backend routers (`team`, `hr_insights`) since no endpoint for direct-reports/company-leave-posture existed before. Found/fixed 1 real bug via live verification (Approvals decide used wrong HTTP method). |
 | 10B | Demo experience layer (HR showcase) | skipped | 2026-11-03 | Skipped by explicit operator instruction — not needed for this project. |
-| 11 | Evaluation and polish | not started | | |
+| 11 | Evaluation and polish | done | 2026-11-03 | Control Room, Reinforcement Lab, Evaluation, Costs, Audit Log — the last 5 admin nav items. 3 new backend endpoints (recent runs, eval run detail, audit log read-back). Found/fixed 1 real bug via live verification (Costs' route-breakdown duplicate React key). |
 | 12 | Documentation and final verification | not started | | |
 
 ## Verification output log
@@ -198,3 +204,27 @@
   and confirmed an employee hitting `/app/team` directly gets the backend's real `403`, not a
   silently-broken page — role enforcement is genuinely server-side.
 - Full details in `docs/phases/PHASE_10.md`.
+
+### Phase 11 — DONE
+- `poetry run pytest -q`: 24/24 pass this run (the pre-existing intermittent flake noted in
+  Phase 10's log did not trigger).
+- `npx tsc -b --noEmit` and `npm run build`: both succeed.
+- New `GET /api/agents/runs`, `GET /api/eval/runs/{id}`, `GET /api/admin/audit-log` (+
+  `.../actions`) smoke-tested directly against the live seeded DB before any frontend existed:
+  correct real recent-runs/eval-breakdown/audit-log data, correct `403` for a manager token on
+  all three.
+- Full live, functional end-to-end tests as `alex.admin@acme.test` (Chrome + playwright-core):
+  Control Room's live feed genuinely streamed a second, concurrently-logged-in employee
+  session's real chat turn in real time with correct attribution (verified across two browser
+  tabs); Reinforcement Lab's real bandit stats and reward-over-time chart (confirmed via raw SVG
+  path data when a full-page screenshot's downscaling initially made the chart lines hard to
+  see — not a bug); Evaluation triggered a real synchronous 70-question run through the live
+  agent graph and showed its full per-question breakdown; Costs showed real 30-day totals and
+  breakdowns — this is where a real duplicate-React-key bug was caught and fixed (two distinct
+  backend route groups both display as "OTHER"); Audit Log showed real entries with working
+  action filtering. Confirmed a manager hitting `/app/control-room`, `/app/evaluation`, or
+  `/app/audit-log` directly gets the backend's real `403` (genuinely server-side enforcement),
+  while `/app/reinforcement-lab`/`/app/costs` correctly show real data for a manager — those two
+  backend endpoints have been manager/hr/admin-scoped since Phase 4, nav-hiding them from
+  managers is IA, not security.
+- Full details in `docs/phases/PHASE_11.md`.

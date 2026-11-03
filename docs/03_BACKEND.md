@@ -1,7 +1,7 @@
 # 03 — Backend
 
-Updated through Phase 10 (endpoint table only — module list below is Phase 1-4, plus the Phase
-10 routers noted inline).
+Updated through Phase 11 (endpoint table only — module list below is Phase 1-4, plus the Phase
+10/11 routers noted inline).
 
 ## Modules (Phase 1 state)
 - `app/config.py` — `Settings` (pydantic-settings), loads `.env` from the repo root. Every
@@ -79,6 +79,13 @@ Updated through Phase 10 (endpoint table only — module list below is Phase 1-4
 - `app/routers/hr_insights.py` (Phase 10) — `GET /api/hr/overview`,
   `GET`/`PATCH /api/hr/leave-requests` — company-wide headcount/leave posture and the real
   pending leave requests HR has to act on. HR/admin only.
+- `app/routers/agents.py` grew `GET /api/agents/runs` (Phase 11) — recent runs across every
+  user, backing Control Room's recent-activity table and Replay control. Admin only.
+- `app/routers/eval.py` grew `GET /api/eval/runs/{id}` (Phase 11) — one eval run's full
+  per-question breakdown. Admin only.
+- `app/routers/admin.py` grew `GET /api/admin/audit-log` + `.../audit-log/actions` (Phase 11) —
+  the first read-back of the `audit_log` table, populated since Phase 1 by every
+  `mock_apis/__init__.py::log_action` call. Admin only.
 
 ## API endpoints (through Phase 4)
 Every endpoint below (except `/api/health` and `/metrics`) requires a bearer JWT
@@ -115,17 +122,22 @@ enforced via `app/deps.py::ensure_self_or_roles`.
 | GET | `/api/bandit/stats` | manager/hr/admin | — | arm pulls, avg reward, regret, context win rates |
 | POST | `/api/eval/run` | admin | — | `{eval_run_id, summary}` |
 | GET | `/api/eval/runs` | admin | — | list of past `eval_runs` |
+| GET | `/api/eval/runs/{id}` | admin | — | one eval run's summary + full per-question `eval_results` breakdown |
 | POST | `/api/admin/reset-demo` | admin | — | `{success, message}` (wipes + reseeds all data) |
 | GET | `/api/costs` | manager/hr/admin | `?days=` | token/$ breakdown by day/route/model |
 | GET | `/api/team` | manager; admin (self or `?manager_id=`) | `?manager_id=` (admin only) | list of direct reports + ticket/leave/activity signal |
 | GET | `/api/hr/overview` | hr/admin | — | headcount by dept, leave-request counts, leave-balance utilization, upcoming approved leave |
 | GET | `/api/hr/leave-requests` | hr/admin | `?status=` | list of leave requests |
 | PATCH | `/api/hr/leave-requests/{id}/decide` | hr/admin | `{decision}` | `{id, status}` — approving increments the matching `leave_balances.used_days` |
+| GET | `/api/agents/runs` | admin | `?limit=` | recent `agent_runs` across every user, with requester name |
+| GET | `/api/admin/audit-log` | admin | `?action=&actor_id=&limit=` | real `audit_log` rows, most recent first |
+| GET | `/api/admin/audit-log/actions` | admin | — | distinct `action` values seen so far |
 
 Phase 10 added `team`/`hr_insights` (above). Note `POST /api/approvals/{id}/decide` is a POST,
 not PATCH, despite every Phase 10 decide/update action otherwise being a PATCH — a real bug
 found during Phase 10 live verification came from assuming otherwise (see
-`docs/phases/PHASE_10.md`).
+`docs/phases/PHASE_10.md`). Phase 11 added `GET /api/agents/runs`, `GET /api/eval/runs/{id}`,
+and the two `/api/admin/audit-log*` endpoints — see `docs/phases/PHASE_11.md`.
 
 Phase 3 shipped `chat`/`approvals`/`feedback` without auth — `user_id`/`approver_id` were passed
 directly in the request body. Phase 4 retrofitted all three onto the real JWT dependency

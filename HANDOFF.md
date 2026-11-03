@@ -1,16 +1,17 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_10.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_11.md`, in that order, before touching code.
 
 ## Current state (2026-11-03)
-**Phases 1-10 are all DONE and verified end to end**, including live browser-driven checks for
-Phases 6-10 — each tested as real functional flows (real clicks/form submissions/decisions, not
-just static screenshots). Phase 10B (Demo experience layer / HR showcase) has been **skipped by
-explicit operator instruction (2026-11-03)** — not needed for this project; next up is Phase 11
-(Evaluation and polish). This
-session pauses and asks the operator before starting each new phase (explicit operator
-instruction — see `docs/06_DECISIONS.md`).
+**Phases 1-11 are all DONE and verified end to end**, including live browser-driven checks for
+Phases 6-11 — each tested as real functional flows (real clicks/form submissions/decisions, not
+just static screenshots). Phase 10B (Demo experience layer / HR showcase) was **skipped by
+explicit operator instruction (2026-11-03)** — not needed for this project. **Every nav item in
+`src/layouts/navItems.ts` is now `implemented: true`** — Phase 12 (Documentation and final
+verification) is the only phase left on the original checklist, and is largely a docs/final-pass
+phase rather than new features. This session pauses and asks the operator before starting each
+new phase (explicit operator instruction — see `docs/06_DECISIONS.md`).
 
 What exists and is verified working:
 - **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated, Vite+React+TS
@@ -34,20 +35,37 @@ What exists and is verified working:
   3D building blocks now wired to real events for the first time: handoff beams, active-agent
   pulsing, a live caption narrator log).
 - **Remaining dashboard pages** (Phase 10): `src/pages/dashboard/{Tickets,Approvals,Team,
-  HrInsights,KnowledgeBase}.tsx` — all five `/app/*` nav items that were "Soon" placeholders
-  through Phase 9 are now real, live pages. Two new backend routers,
+  HrInsights,KnowledgeBase}.tsx`. Two new backend routers,
   `backend/app/routers/{team,hr_insights}.py` (`GET /api/team`; `GET /api/hr/overview`,
   `GET`/`PATCH /api/hr/leave-requests`), since no endpoint for "my direct reports" or
-  "company-wide leave posture" existed before. Every nav item is now `implemented: true` except
-  Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log, which are Phase 11 scope (Phase 10B
-  was skipped — see above).
+  "company-wide leave posture" existed before.
+- **Evaluation and polish** (Phase 11): `src/pages/dashboard/{ControlRoom,ReinforcementLab,
+  Evaluation,Costs,AuditLog}.tsx` — the last five admin-only nav items. Three new backend
+  endpoints: `GET /api/agents/runs` (recent runs across everyone, backs Control Room),
+  `GET /api/eval/runs/{id}` (one eval run's full per-question breakdown),
+  `GET /api/admin/audit-log` + `.../actions` (the `audit_log` table, populated since Phase 1,
+  read back for the first time). `src/api/sse.ts` grew `streamGetSSE`, a GET sibling of the
+  existing POST-only `streamSSE`, for `GET /api/agents/live`'s always-on feed. **Every nav item
+  is now `implemented: true`.**
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
-  `poetry run pytest -q` → **24/25 passed** (one pre-existing, unrelated intermittent failure —
-  see "Known issues" below).
+  `poetry run pytest -q` → **24/24 passed** on Phase 11's final run (the one pre-existing,
+  unrelated intermittent failure — see "Known issues" below — did not trigger this run, but is
+  still unfixed).
 - `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty.
-- Git repo on branch `main`; Phases 1-9 committed, Phase 10 pending this handoff's commit.
+- Git repo on branch `main`; Phases 1-10 committed, Phase 11 pending this handoff's commit.
 - **Environment quirk**: port 8000 has been occupied by unrelated system services in earlier
-  sessions in this sandbox but was free during Phases 5-10's verification — check before binding.
+  sessions in this sandbox but was free during Phases 5-11's verification — check before binding.
+
+## Important lesson from Phase 11 (read before keying a React list by a backend-echoed field)
+Don't assume a value the backend returns is actually unique — check what it's grouped by.
+`Costs.tsx`'s "By route" list keyed each row by `r.route`, but `GET /api/costs`'s `by_route`
+query groups by the raw `agent_runs.route` column (which can be `NULL`) and only applies
+`coalesce(route, 'OTHER')` in the `SELECT` — so a `NULL`-route group and a literal-`'OTHER'`-
+route group are two distinct rows that both display as `"OTHER"`, colliding on a value-based
+key. Caught by a live browser's console warning, not `tsc`/build. Fixed with an array-index key
+— the same fix class as Phase 9's resumed-run duplicate-key bug. General rule: a backend value is
+only a safe React key if the backend's own grouping/uniqueness guarantees it, not just because it
+looks like a label.
 
 ## Important lesson from Phase 10 (read before wiring a frontend action to a new/pre-existing
 endpoint)
@@ -90,35 +108,40 @@ Branch the render tree: `reduceMotion ? <div>...</div> : <motion.div variants={.
 </motion.div>`, or reuse `src/components/Reveal.tsx`. See `docs/06_DECISIONS.md` for the Phase
 6 bug this prevents.
 
-## Exact next step: start Phase 11 — Evaluation and polish
-Phase 10B (Demo experience layer / HR showcase) was explicitly skipped by the operator — don't
-build it unless asked again later. No detailed scope has been written down anywhere yet for
-Phase 11 (checked — no master build prompt file exists in this repo). Before starting:
-1. Ask the operator what "Evaluation and polish" concretely means here, or check for a master
-   build prompt / design doc they may provide this session.
-2. Per `src/layouts/navItems.ts`, the still-unbuilt nav items are Control Room, Reinforcement
-   Lab, Evaluation, Costs, Audit Log (all admin-only) — these are the most likely candidates for
-   this phase's scope, but confirm rather than assume.
-3. Whatever it turns out to be, keep following the reduced-motion rule and the live-verification
-   bar below, and grep the actual backend router for its HTTP verb before wiring any frontend
-   call to it (see the Phase 10 lesson above — don't infer it from another page's pattern).
-4. Run the documentation gate: a new `docs/phases/PHASE_11.md`, `PROGRESS.md`, this file,
-   `docs/07_CHANGELOG.md`, `docs/04_FRONTEND.md`, commit, **then stop and ask the operator
-   before starting the phase after that**.
+## Exact next step: Phase 12 — Documentation and final verification
+Every feature phase (1-11) is now done; Phase 10B was explicitly skipped. Phase 12 is the last
+phase on the original checklist, and `docs/09_DEMO_SCRIPT.md`'s own placeholder text says what
+it is: a full documentation audit for accuracy against the real code, final golden-set results
+logged in `docs/08_TESTING_AND_EVAL.md`, and a demo script. Since Phase 10B's showcase scenarios
+don't exist, base the demo script on the real dashboard pages (Phases 8-11) and the golden-set
+scenarios (Phase 3's 7 verification scenarios), not on anything Phase-10B-specific. Operator
+instruction for this session (2026-11-04): complete Phase 12 and don't pause for confirmation
+afterward — this was the last planned phase, so there is nothing further to ask about unless a
+problem comes up.
+
+## Project status: every planned phase is complete after Phase 12
+Once Phase 12 lands, there is no more standing "next step" to write here — update this section
+to say so plainly rather than inventing further work.
 
 ## Known issues
-None blocking. Eight things worth knowing about, not fixing:
+None blocking. Ten things worth knowing about, not fixing:
 - `MemorySaver`'s in-memory checkpointer means a backend restart loses any run that's
   mid-approval.
 - `app/eval/run_eval.py` doesn't resume paused (`request_access`) golden questions end to end.
 - `GET /api/agents/live` polls `agent_events` every second (no real pub/sub) — fine locally.
-- `src/three/AgentOrb.tsx`'s `AGENT_COLORS`, `Overview.tsx`'s chart colors, and
-  `AgentActivityPanel.tsx`'s `AGENT_ORDER`/`FRIENDLY_NAMES` all duplicate backend/token values
-  by hand (SVG/WebGL need concrete values; frontend has no import path to Python constants).
-- The production JS bundle is past Vite's 500kB chunk-size warning (~1.6MB raw / ~450kB
-  gzipped after Phase 10). Still not worth code-splitting yet.
+- `src/three/AgentOrb.tsx`'s `AGENT_COLORS`, `Overview.tsx`'s chart colors,
+  `AgentActivityPanel.tsx`'s `AGENT_ORDER`/`FRIENDLY_NAMES`, and `ReinforcementLab.tsx`'s
+  `ARM_COLORS` all duplicate backend/token values by hand (SVG/WebGL need concrete values;
+  frontend has no import path to Python constants).
+- The production JS bundle is past Vite's 500kB chunk-size warning (~1.7MB raw / ~460kB
+  gzipped after Phase 11). Still not worth code-splitting yet.
 - The Assistant page starts a fresh conversation every page visit — no history loading yet; the
-  new Tickets page is the closest thing to a "my past activity" view so far.
+  Tickets page is the closest thing to a "my past activity" view so far.
+- A manager can reach `/app/reinforcement-lab`/`/app/costs` directly even though their nav links
+  are admin-only — correct per those endpoints' real Phase-4-era backend scope
+  (manager/hr/admin), not a bug. See `docs/phases/PHASE_11.md`.
+- `POST /api/admin/reset-demo` has no frontend button anywhere (its UI was Phase 10B scope,
+  which was skipped) — still reachable via `poetry run seed` or curl.
 - `test_agents_graph.py::test_e_unanswerable_question_creates_ticket` fails intermittently —
   confirmed present on the clean Phase 9 tree (not caused by Phase 10), not yet root-caused. See
   `docs/phases/PHASE_10.md`.

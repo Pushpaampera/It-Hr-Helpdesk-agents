@@ -11,12 +11,36 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.agents.events import AGENT_JOBS, FRIENDLY_NAMES
 from app.db import get_db, get_engine
-from app.deps import get_current_user
+from app.deps import get_current_user, require_roles
 from app.models.user import User
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 
 POLL_INTERVAL_SECONDS = 1.0
+
+
+@router.get("/runs", dependencies=[Depends(require_roles("admin"))])
+def recent_runs(limit: int = 50, db: Session = Depends(get_db)):
+    """Recent agent_runs across every user, for the Control Room's recent-activity table and
+    its "Replay" control (which opens GET /api/runs/{id}/events for the selected row)."""
+    rows = db.execute(
+        text(
+            """SELECT r.id, r.user_id, u.name AS user_name, r.query, r.route, r.status,
+                   r.total_latency_ms, r.cost_usd, r.created_at
+               FROM agent_runs r JOIN users u ON u.id = r.user_id
+               ORDER BY r.created_at DESC LIMIT :limit"""
+        ),
+        {"limit": limit},
+    ).mappings().all()
+    return [
+        {
+            "id": str(r["id"]), "user_id": str(r["user_id"]), "user_name": r["user_name"],
+            "query": r["query"], "route": r["route"], "status": r["status"],
+            "total_latency_ms": r["total_latency_ms"], "cost_usd": r["cost_usd"],
+            "created_at": r["created_at"].isoformat(),
+        }
+        for r in rows
+    ]
 
 
 @router.get("/status")

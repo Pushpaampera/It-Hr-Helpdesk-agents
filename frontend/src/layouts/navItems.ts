@@ -1,7 +1,6 @@
-/** Role-aware sidebar navigation, per docs/00_PROJECT_OVERVIEW.md's role list. Overview, AI
- * Assistant (Phase 9), and Tickets/Approvals/Team/HR Insights/Policy KB (Phase 10) are
- * `implemented`; Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log stay disabled
- * "Soon" entries until Phase 10B/11 builds them. */
+/** Role-aware sidebar navigation, per docs/00_PROJECT_OVERVIEW.md's role list. Every nav item
+ * is now `implemented: true` as of Phase 11 (Control Room/Reinforcement Lab/Evaluation/Costs/
+ * Audit Log, all admin-only). */
 import {
   BookOpen, Brain, CheckSquare, ClipboardCheck, DollarSign, HeartHandshake,
   LayoutDashboard, MessageCircle, Radar, ScrollText, Ticket, Users,
@@ -28,9 +27,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Team", path: "/app/team", icon: Users, roles: ["manager"], implemented: true },
   { label: "HR Insights", path: "/app/hr-insights", icon: HeartHandshake, roles: ["hr"], implemented: true },
   { label: "Policy Knowledge Base", path: "/app/kb", icon: BookOpen, roles: ["hr", "admin"], implemented: true },
-  { label: "Control Room", path: "/app/control-room", icon: Radar, roles: ["admin"], implemented: false },
-  { label: "Reinforcement Lab", path: "/app/reinforcement-lab", icon: Brain, roles: ["admin"], implemented: false },
-  { label: "Evaluation", path: "/app/evaluation", icon: ClipboardCheck, roles: ["admin"], implemented: false },
-  { label: "Costs", path: "/app/costs", icon: DollarSign, roles: ["admin"], implemented: false },
-  { label: "Audit Log", path: "/app/audit-log", icon: ScrollText, roles: ["admin"], implemented: false },
+  { label: "Control Room", path: "/app/control-room", icon: Radar, roles: ["admin"], implemented: true },
+  { label: "Reinforcement Lab", path: "/app/reinforcement-lab", icon: Brain, roles: ["admin"], implemented: true },
+  { label: "Evaluation", path: "/app/evaluation", icon: ClipboardCheck, roles: ["admin"], implemented: true },
+  { label: "Costs", path: "/app/costs", icon: DollarSign, roles: ["admin"], implemented: true },
+  { label: "Audit Log", path: "/app/audit-log", icon: ScrollText, roles: ["admin"], implemented: true },
 ];

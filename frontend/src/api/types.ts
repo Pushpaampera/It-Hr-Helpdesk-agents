@@ -237,3 +237,93 @@ export type KbArticle = {
   created_at: string;
 };
 export type KbArticleDetail = { article: KbArticle; chunks: KbChunk[] };
+
+// GET /api/agents/status
+export type AgentStatus = { agent: string; name: string; job: string; events_24h: number; avg_latency_ms: number; errors_24h: number };
+
+// GET /api/agents/runs (admin)
+export type RunSummary = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  query: string;
+  route: string | null;
+  status: string;
+  total_latency_ms: number | null;
+  cost_usd: number;
+  created_at: string;
+};
+
+// GET /api/runs/{id}/events (replay)
+export type RunEventsResponse = { run_id: string; status: string; events: AgentEventPayload[] };
+
+// GET /api/agents/live (SSE payload shape; user_id/user_name only present for admin viewers)
+export type LiveAgentEvent = {
+  run_id: string;
+  seq: number;
+  agent: string;
+  status: string;
+  action: string | null;
+  caption: string;
+  detail: Record<string, unknown>;
+  model: string | null;
+  latency_ms: number | null;
+  ts: string;
+  user_id?: string;
+  user_name?: string;
+};
+
+// GET /api/bandit/stats (manager/hr/admin)
+export type BanditArm = { arm_id: string; name: string; config: Record<string, unknown>; pulls: number; avg_reward: number | null };
+export type BanditStats = {
+  arms: BanditArm[];
+  total_pulls: number;
+  best_arm: string | null;
+  cumulative_regret: number | null;
+  reward_over_time: { day: string; arm: string; avg_reward: number; pulls: number }[];
+  context_win_rates: { dept: string | null; has_error_code: boolean; arm: string; n: number }[];
+};
+
+// GET /api/eval/runs, GET /api/eval/runs/{id}, POST /api/eval/run (admin)
+export type EvalSummary = {
+  total: number;
+  passed: number;
+  pass_rate: number;
+  avg_correctness: number;
+  by_route: Record<string, { total: number; passed: number }>;
+};
+export type EvalRun = { id: string; summary: EvalSummary; created_at: string };
+export type EvalResult = {
+  id: string;
+  question_id: string;
+  question: string;
+  expected_route: string;
+  actual_route: string | null;
+  correctness: number;
+  passed: boolean;
+  details: Record<string, unknown>;
+};
+export type EvalRunDetail = EvalRun & { results: EvalResult[] };
+
+// GET /api/costs (manager/hr/admin)
+export type CostsResponse = {
+  total_cost_usd: number;
+  total_tokens_in: number;
+  total_tokens_out: number;
+  total_runs: number;
+  by_day: { day: string; cost_usd: number; tokens_in: number; tokens_out: number }[];
+  by_route: { route: string; cost_usd: number; tokens_in: number; tokens_out: number; runs: number }[];
+  by_model: { model: string; tokens: number; calls: number }[];
+};
+
+// GET /api/admin/audit-log, /api/admin/audit-log/actions (admin)
+export type AuditLogEntry = {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  detail: Record<string, unknown>;
+  ts: string;
+};
