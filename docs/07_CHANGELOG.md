@@ -1,5 +1,22 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 5: Frontend design system and 3D building blocks
+- Added: `frontend/src/store/uiStore.ts` (reduce-motion + tab-visibility), `authStore.ts`
+  (JWT + user, persisted).
+- Added: `frontend/src/api/client.ts`, `types.ts`.
+- Added: `frontend/src/three/Scene.tsx`, `AgentOrb.tsx`, `DataPulse.tsx`, `ParticleField.tsx`.
+- Added: `frontend/src/components/ReduceMotionToggle.tsx`,
+  `frontend/src/components/ui/{Button,Badge,Panel}.tsx`.
+- Changed: `frontend/src/pages/PlaceholderHome.tsx` — now showcases every new building block
+  alongside the existing health check.
+- Verified: `npx tsc -b --noEmit` and `npm run build` both succeed; `npm run dev` boots cleanly;
+  a live full-stack check confirmed `/api/health` resolves through the Vite proxy. Visual/FPS
+  confirmation in an actual browser was **not** possible this session (no browser tool
+  available) — flagged for the operator in `docs/phases/PHASE_05.md` and `HANDOFF.md`.
+- Why: Phase 1 already shipped the design tokens themselves; Phase 5 is what turns those tokens
+  into the reusable pieces (3D primitives, UI atoms, state stores, API client) that Phase 6's
+  landing page and every page after it will assemble, rather than each page reinventing them.
+
 ### 2026-11-03 — Phase 4: Auth, API surface, bandit and analytics
 - Added: `backend/app/routers/auth.py` (`POST /api/auth/login`/`logout`, `GET /api/auth/me`).
 - Added: `backend/app/deps.py::ensure_self_or_roles` — shared "own it, or have an elevated role"

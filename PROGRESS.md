@@ -1,22 +1,24 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 4 — Auth, API surface, bandit and analytics: DONE.** Next up:
-  **Phase 5 — Frontend design system and 3D building blocks** (not started; awaiting operator
-  go-ahead, since this session pauses between phases on request).
+- Current phase: **Phase 5 — Frontend design system and 3D building blocks: DONE.** Next up:
+  **Phase 6 — Landing page** (not started; awaiting operator go-ahead, since this session
+  pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 5 — the frontend design system (CSS variable tokens, shared Framer
-  Motion variants) and the first React Three Fiber building blocks (AgentOrb, etc.) that later
-  phases compose into the landing/login/dashboard pages.
+- Next step: start Phase 6 — the real cinematic landing page, composed from Phase 5's `Scene`/
+  `AgentOrb`/`DataPulse`/`ParticleField` + design tokens + Framer Motion variants, replacing
+  `PlaceholderHome` entirely.
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Every
-  backend endpoint through Phase 4 is now behind real JWT auth with server-side role
-  enforcement — logged in as all 4 demo accounts (password `Demo@1234`) and exercised the full
-  chat + approval-pause/resume flow, plus every new router, against a live HTTP server (see
-  `docs/phases/PHASE_04.md`). `LLM_MOCK_MODE=true` is set so everything built so far works
-  without GROQ/GEMINI keys; the operator can add real keys later for live-provider testing (the
-  provider wrapper in `app/agents/llm.py` already supports both paths). Langfuse tracing
-  (`app/observability.py`) stays a no-op until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`
-  are set and `poetry add langfuse` has been run — neither is needed for the demo.
+  backend endpoint through Phase 4 is behind real JWT auth with server-side role enforcement.
+  Phase 5 added the zustand stores (`uiStore`, `authStore`), API client, and 3D building blocks
+  the frontend needs going forward (see `docs/phases/PHASE_05.md`) — verified via `tsc`/
+  `npm run build`/a live dev-server + backend full-stack check, but **not** visually in a real
+  browser (no browser/screenshot tool is available in this session — the operator should open
+  `http://localhost:5173/` once to confirm the 3D scene and the Reduce-motion toggle actually
+  look right before Phase 6 builds on top of them). `LLM_MOCK_MODE=true` is set so everything
+  built so far works without GROQ/GEMINI keys. Langfuse tracing (`app/observability.py`) stays a
+  no-op until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set and `poetry add langfuse`
+  has been run — neither is needed for the demo.
 
 ## Phase checklist
 
@@ -26,7 +28,7 @@
 | 2 | Seed data and RAG | done | 2026-11-03 | 48 users, 100 KB articles (130 chunks), 200 tickets, 80 approvals, 150 leave requests, 300 historical runs, 70 golden questions. Hybrid retrieval verified: exact error codes rank #1, semantic search sensible, dept filter correct. |
 | 3 | Agents, graph, mock APIs and events | done | 2026-11-03 | 7 agents + LangGraph flow with real NodeInterrupt pause/resume for manager approval. All 7 master-prompt verification scenarios (a)-(g) pass. SSE streaming confirmed end to end over real HTTP. |
 | 4 | Auth, API surface, bandit and analytics | done | 2026-11-03 | JWT login/me/logout for all 4 demo roles; chat/approvals/feedback retrofitted to use the authenticated identity; 10 new routers (conversations, tickets, kb, analytics, agents incl. live SSE, bandit, eval, admin, costs); real golden-set eval runner; live-bandit feedback simulator; `/metrics`; optional Langfuse hook. |
-| 5 | Frontend design system and 3D building blocks | not started | | |
+| 5 | Frontend design system and 3D building blocks | done | 2026-11-03 | zustand stores (`uiStore`, `authStore`), API client, `Scene`/`AgentOrb`/`DataPulse`/`ParticleField` 3D primitives, hand-rolled `Button`/`Badge`/`Panel` UI atoms, `ReduceMotionToggle`; showcased in an extended `PlaceholderHome`. |
 | 6 | Landing page | not started | | |
 | 7 | Login page | not started | | |
 | 8 | Dashboard shell and Overview | not started | | |
@@ -108,3 +110,15 @@
   approval flow (employee's chat pauses, the real manager sees it pending, a non-approver gets
   `403` trying to decide it, the real approver's `200` resumes the run to `resolved`).
 - Full details in `docs/phases/PHASE_04.md`.
+
+### Phase 5 — DONE
+- `npx tsc -b --noEmit`: no type errors.
+- `npm run build`: succeeds (only the expected "three.js is a large chunk" bundler note).
+- `npm run dev`: boots cleanly on port 5173; Vite's dependency optimizer picked up the new
+  `@react-three/fiber`/`three`/`zustand`/`zustand/middleware` usage with no transform errors.
+- Live full-stack check: backend on port 8000 + `npm run dev` on 5173 simultaneously; `GET
+  http://localhost:5173/api/health` through the Vite proxy returned the real healthy payload.
+- Not verified: actual visual rendering / frame rate / the Reduce-motion toggle's visible effect
+  in a real browser — no browser/screenshot tool is available in this session. Flagged in
+  `docs/phases/PHASE_05.md` for the operator to confirm directly.
+- Full details in `docs/phases/PHASE_05.md`.
