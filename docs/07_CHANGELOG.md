@@ -1,5 +1,24 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 2: Seed data and RAG
+- Added: `backend/app/rag/` — `chunker.py`, `embedder.py` (local all-MiniLM-L6-v2),
+  `reranker.py` (cross-encoder/ms-marco-MiniLM-L-6-v2), `strategies.py` (3 bandit arms),
+  `retriever.py` (hybrid lexical+vector retrieval, RRF, exact-match boost).
+- Added: `backend/app/bandit/features.py`, `backend/app/bandit/linucb.py` — pulled forward from
+  Phase 4 (see `docs/06_DECISIONS.md`) so historical seed data has real bandit decisions/rewards.
+- Added: `backend/app/seed/generators/knowledge.py` (100 articles), `users.py` (48 users),
+  `ops.py` (leave/payslips/tickets/approvals/leave_requests/300 historical runs), `golden.py`
+  (70-question golden set).
+- Added: `backend/app/seed/seed.py` — idempotent orchestrator wired to `poetry run seed`.
+- Added: `backend/tests/test_retrieval.py` — 4 regression tests for the retrieval acceptance
+  criteria (exact error code rank-1 under lexical_heavy/hybrid_rerank, sensible semantic_heavy
+  results for a vague query, dept filter correctness).
+- Verified: `poetry run seed` populates all tables with exactly the spec's row counts; re-run is
+  idempotent; `poetry run search` confirms the required ranking behavior; `poetry run pytest -q`
+  → 5 passed. Full detail in `docs/phases/PHASE_02.md`.
+- Why: establishes real, searchable knowledge content and a working hybrid RAG pipeline that
+  Phase 3's agents will call directly.
+
 ### 2026-11-03 — Phase 1: Foundation
 - Added: full repo layout (`backend/`, `frontend/`, `docs/`, `scripts/`) per
   `docs/01_ARCHITECTURE.md`.

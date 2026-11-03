@@ -1,89 +1,94 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_01.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_02.md`, in that order, before touching code.
 
 ## Current state (2026-11-03)
-**Phase 1 (Foundation) is DONE and verified end to end.** Phase 2 (Seed data and RAG) has not
-started. This session pauses and asks the operator before starting each new phase (an explicit
-operator instruction that overrides the master prompt's "don't stop between phases" default —
-see `docs/06_DECISIONS.md`).
+**Phase 1 (Foundation) and Phase 2 (Seed data and RAG) are both DONE and verified end to end.**
+Phase 3 (Agents, graph, mock APIs and events) has not started. This session pauses and asks the
+operator before starting each new phase (explicit operator instruction overriding the master
+prompt's default — see `docs/06_DECISIONS.md`).
 
 What exists and is verified working:
-- `backend/`: Poetry project installed (`poetry install` succeeded — note first install pulls
-  torch/sentence-transformers and takes ~15 minutes, this is normal). `app/config.py`,
-  `app/db.py`, `app/security.py`, `app/deps.py`, `app/main.py` (`/api/health`), `app/cli.py`
-  (script entry points: `migrate`, `seed`, `simulate-feedback`, `search`, `eval`, `dev`),
-  `app/models/user.py` (first ORM model; more are added as later phases need them — the SQL
-  migration is the schema source of truth, not the ORM).
-- `backend/migrations/0001_init.sql`: all 22 logical tables, **applied successfully** against
-  the operator's real Postgres 17 (port 5433). `idx_kb_chunks_embedding` uses a real `hnsw`
-  index (this server's pgvector supports it; `app/cli.py::migrate` has an automatic ivfflat
-  fallback for servers that don't, untested here since it wasn't needed).
-- `backend/tests/test_health.py` passes (`poetry run pytest -q` → `1 passed`).
-- `frontend/`: Vite + React 18 + TS scaffold, verified to boot (`npm run dev`, port 5173) and
-  proxy `/api/*` to the backend correctly. Design tokens (`src/design/tokens.css`) already
-  contain the final Phase 5 agent color palette and dark "AI ops room" background — don't
-  redefine these in Phase 5, just build on them.
-- `.env` is filled in by the operator and confirmed working: DB connects, pgvector enabled,
-  `LLM_MOCK_MODE=true`. GROQ/GEMINI keys are not yet set (fine — mock mode covers Phase 3+
-  agent work until the operator adds real keys).
-- Git repo initialized on branch `main`, not yet committed (commit happens as part of this
-  phase's documentation gate, right after this handoff is written).
+- **Backend foundation** (Phase 1): Poetry project, `app/config.py`/`db.py`/`security.py`/
+  `deps.py`/`main.py` (`/api/health`), `app/cli.py` script entry points, `app/models/user.py`.
+  `backend/migrations/0001_init.sql` applied against the operator's real Postgres 17 (port
+  5433), all 22 logical tables present, HNSW index working.
+- **RAG pipeline** (Phase 2): `app/rag/chunker.py`, `embedder.py` (local all-MiniLM-L6-v2),
+  `reranker.py` (cross-encoder/ms-marco-MiniLM-L-6-v2), `strategies.py` (3 arms), `retriever.py`
+  (hybrid lexical+vector+RRF, exact-match boost). `poetry run search "<query>" --strategy
+  <name> [--dept IT|HR]` works and is verified to rank correctly (see `docs/phases/PHASE_02.md`).
+- **Bandit foundations** (pulled forward from Phase 4): `app/bandit/features.py` (12-dim
+  context vector), `app/bandit/linucb.py` (`LinUCBArm`, `select_arm`, `compute_reward`).
+- **Seed data** (Phase 2): `poetry run seed` is idempotent and populates: 48 users (demo
+  accounts emma.employee/mark.manager/hannah.hr/alex.admin, password `Demo@1234` for all), 100
+  knowledge articles (60 IT, 40 HR) chunked into 130 embedded `kb_chunks`, leave balances +
+  3 months of payslips for everyone, 200 historical tickets, 80 approvals/access requests, 150
+  leave requests, 300 historical agent runs with 1206 events + 300 feedback rows + 249 bandit
+  decisions/rewards (bandit_state already "warmed up"), and a 70-question golden set (incl. 8
+  privacy traps).
+- `.env` is filled in and confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys
+  are still empty (fine until Phase 3 needs live-provider testing — mock mode covers it).
+- Git repo on branch `main`; Phase 1 and (pending this handoff) Phase 2 are committed.
 
-## Exact next step: start Phase 2 — Seed data and RAG
+## Exact next step: start Phase 3 — Agents, graph, mock APIs and events
 Per the master build prompt:
-1. Build `backend/app/seed/` generators + `backend/app/seed/data/*.json`: 48 users (1 admin, 3
-   HR, 6 managers, rest employees across Engineering/Sales/Finance/Support/Operations, managers
-   linked via `manager_id`), 60 IT runbook articles (VPN errors 619/691/800, laptop, Wi-Fi,
-   email/Outlook, MFA, printer, software install, password policy, SSO, remote desktop, backup,
-   phishing), 40 HR articles (leave types, payroll cycle, tax, benefits, travel, WFH,
-   onboarding, performance review), leave balances for everyone, 3 months of payslips, 200
-   historical tickets over 60 days, 300 historical runs with events+feedback, 80 historical
-   approvals/access requests, and a 70-question `golden_set.json` (8 payroll-access traps).
-   `poetry run seed` must be idempotent (safe to re-run).
-2. Build `backend/app/rag/`: `chunker.py` (300–500 token chunks, overlap, split on headings
-   first, store dept/title/category/section metadata), `embedder.py` (local
-   `all-MiniLM-L6-v2`, 384 dims, computed during seed), `retriever.py` (hybrid: Postgres
-   `tsvector`/`ts_rank_cd` lexical search + pgvector cosine search merged with Reciprocal Rank
-   Fusion k=60, optional cross-encoder rerank of top 20 → top 5, exact-match boost for error
-   codes via regex and policy names), `strategies.py` (three bandit arms: `lexical_heavy`
-   BM25-weight 0.7, `semantic_heavy` vector-weight 0.7, `hybrid_rerank` RRF+cross-encoder —
-   stored in `bandit_arms.config`), `reranker.py` (cross-encoder
-   `cross-encoder/ms-marco-MiniLM-L-6-v2`).
-3. Wire the `poetry run search "VPN error 619" --strategy hybrid_rerank` CLI (already stubbed
-   in `app/cli.py::search`, calling `app.rag.retriever.retrieve` — that function doesn't exist
-   yet, build it).
-4. **Verify**: after seeding, exact error-code queries return the right runbook at rank 1 under
-   `lexical_heavy` and `hybrid_rerank`; vague queries ("my laptop is super slow") return sensible
-   results under `semantic_heavy`. Paste example CLI output into `PROGRESS.md` and
-   `docs/phases/PHASE_02.md`.
-5. Run the documentation gate (see `CLAUDE.md`'s resume protocol / the master prompt's
-   "DOCUMENTATION GATE" section): update `docs/phases/PHASE_02.md`, `PROGRESS.md`, this file,
-   `docs/07_CHANGELOG.md`, `docs/06_DECISIONS.md` (any choices made), `docs/02_DATABASE.md` if
-   seed counts/schema details change, `docs/05_RUNBOOK.md` (add `poetry run seed` and
-   `poetry run search` to the quickstart), run `scripts/backup.sh`, commit, then **stop and ask
-   the operator before starting Phase 3** (per their standing instruction).
+1. `backend/app/agents/llm.py` — single provider wrapper: Groq + Gemini SDKs, `tenacity`
+   retries/backoff, automatic fallback (Gemini fails → try Groq and vice versa), per-provider
+   rate limiting, token/latency accounting, and full `LLM_MOCK_MODE` support (deterministic
+   canned responses per agent, still emitting the full event schema).
+2. `backend/app/agents/events.py` — the SSE event emitter/schema helper (see
+   `docs/01_ARCHITECTURE.md`'s event envelope), including the plain-English `caption` templates
+   per agent/status (reuse the caption style already used in `app/seed/generators/ops.py`'s
+   historical event generation — e.g. "Sage is reading your message...", "Iris is checking the
+   IT runbooks...", "Gus stopped this request...").
+3. The 7 agents in `backend/app/agents/`: `guard.py` (no LLM — rules + prompt-injection
+   detection, blocks cross-user payroll/personal data access, logs to `audit_log`),
+   `supervisor.py` (Sage — Groq `llama-3.1-8b-instant`, strict JSON `{route, confidence,
+   needs_action, intent}`, routes to OTHER below 0.55 confidence), `it_support.py` (Iris —
+   Gemini Flash-Lite, calls `app.rag.retriever.retrieve` with `dept="IT"` and the bandit-chosen
+   strategy via `app.bandit.linucb.select_arm`), `hr_policy.py` (Hana — same pattern,
+   `dept="HR"`, also reads the requester's own `leave_balances`), `action.py` (Atlas — Groq
+   `openai/gpt-oss-20b` tool calling: `reset_password`, `request_access` [pauses the graph via a
+   LangGraph interrupt pending manager approval], `apply_leave`, `get_leave_balance`,
+   `unlock_account`), `ticketing.py` (Tess — Groq `openai/gpt-oss-20b`, creates/updates a
+   ticket with a context summary), `feedback.py` (Finn — no LLM, computes
+   `app.bandit.linucb.compute_reward` and calls `LinUCBArm.update`).
+4. `backend/app/agents/graph.py` — LangGraph wiring: `guard -> supervisor -> (it_support |
+   hr_policy | other_reply) -> action (if needs_action) -> ticketing (if unresolved/escalated)
+   -> feedback`, conditional edges, shared typed state, every step persisted to `agent_events`.
+5. `backend/app/mock_apis/`: `directory.py`, `hr_system.py` (leave balances/requests,
+   payslips), `it_system.py` (password reset, unlock, access grant) — write to the real tables,
+   log every action to `audit_log`.
+6. SSE endpoint (`POST /api/chat/stream`) with the full event schema from
+   `docs/01_ARCHITECTURE.md`, plus `GET /api/runs/{id}/events` for replay.
+7. **Verify** (CLI or pytest, per the master prompt): (a) "VPN error 619" → IT route + cited
+   answer; (b) "how many sick days do I have" → HR route + own balance; (c) "reset my password"
+   → action runs; (d) "I need access to the finance system" → pauses for manager approval,
+   resumes after; (e) unanswerable question → ticket with summary; (f) "show me Priya's
+   payslip" → blocked by Guard, logged to `audit_log`; (g) every step appears in `agent_events`
+   with sequence numbers.
+8. Run the documentation gate: `docs/phases/PHASE_03.md`, `PROGRESS.md`, this file,
+   `docs/07_CHANGELOG.md`, `docs/06_DECISIONS.md`, `docs/01_ARCHITECTURE.md`/`03_BACKEND.md` (add
+   the real prompts used by each agent), `scripts/backup.sh`, commit, **then stop and ask the
+   operator before starting Phase 4**.
 
 ## Known issues
-None blocking. Watch for: GROQ/GEMINI API keys are still empty in `.env` — fine for Phase 2
-(no LLM calls needed for seeding/retrieval), but Phase 3's agents will need either real keys or
-`LLM_MOCK_MODE=true` (currently true).
+None blocking. GROQ_API_KEY/GEMINI_API_KEY are still empty in `.env` — Phase 3's agents must
+work correctly under `LLM_MOCK_MODE=true` regardless; live-provider testing can happen whenever
+the operator adds real keys (not required to finish Phase 3).
 
 ## Commands reference
 ```bash
 cd backend
 poetry install
 poetry run migrate
+poetry run seed
 poetry run pytest -q
-poetry run dev              # backend on :8000
+poetry run dev                                              # backend on :8000
+poetry run search "VPN error 619" --strategy hybrid_rerank    # retrieval sanity check
 
 cd frontend
 npm install
-npm run dev                  # frontend on :5173, proxies /api to :8000
-
-# Phase 2 (once built):
-cd backend
-poetry run seed
-poetry run search "VPN error 619" --strategy hybrid_rerank
+npm run dev                                                   # frontend on :5173
 ```

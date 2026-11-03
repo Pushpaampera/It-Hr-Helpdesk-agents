@@ -19,6 +19,27 @@ Updated as of Phase 1. Module-by-module description grows through Phase 3/4.
   file, with an automatic HNSW→ivfflat fallback if the server's pgvector lacks HNSW support.
 - `app/models/` — SQLAlchemy ORM models. Source of truth for the schema is the SQL migration;
   ORM models are added incrementally as routers/agents need them (only `User` exists so far).
+- `app/rag/chunker.py` — splits an article body into ~300-500 token chunks (overlap 40 words),
+  splitting on `## Heading` markdown first.
+- `app/rag/embedder.py` — local `all-MiniLM-L6-v2` (384-dim) via `sentence-transformers`,
+  `embed_texts()` / `embed_query()`.
+- `app/rag/reranker.py` — cross-encoder `cross-encoder/ms-marco-MiniLM-L-6-v2`, `rerank(query,
+  candidates, top_k)`.
+- `app/rag/strategies.py` — the three retrieval strategies' configs (`lexical_heavy`,
+  `semantic_heavy`, `hybrid_rerank`), stored in `bandit_arms.config` at seed time.
+- `app/rag/retriever.py` — `retrieve(query, strategy, dept, top_k)`: hybrid lexical (Postgres
+  `tsvector`) + vector (pgvector cosine) search, merged by weighted fusion or RRF+rerank
+  depending on strategy, with an exact-match boost for error codes/titles.
+- `app/bandit/features.py` — 12-dim context feature vector for the LinUCB bandit (pulled
+  forward from Phase 4 — see `docs/06_DECISIONS.md`).
+- `app/bandit/linucb.py` — `LinUCBArm`, `select_arm()`, `compute_reward()` (disjoint LinUCB;
+  `reward = 0.6*(rating-1)/4 + 0.4*resolved`).
+- `app/seed/generators/knowledge.py` — 60 IT + 40 HR knowledge article content.
+- `app/seed/generators/users.py` — 48 seed users (roles, departments, manager links).
+- `app/seed/generators/ops.py` — leave balances, payslips, tickets, approvals/access requests,
+  leave requests, and 300 historical agent runs/events/feedback/bandit decisions.
+- `app/seed/generators/golden.py` — the 70-question golden set (incl. 8 privacy traps).
+- `app/seed/seed.py` — orchestrates all of the above inside one transaction; idempotent.
 
 ## API endpoints (Phase 1)
 | Method | Path | Roles | Request | Response |

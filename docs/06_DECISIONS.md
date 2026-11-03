@@ -1,5 +1,40 @@
 # 06 — Decision Log
 
+### 2026-11-03 — Pulled `app/bandit/features.py` and `app/bandit/linucb.py` forward into Phase 2
+**Decision**: built the 12-dim context feature vector and a small, self-contained disjoint
+LinUCB implementation (`LinUCBArm.score`/`update`, `select_arm`, `compute_reward`) during Phase
+2 instead of waiting for Phase 4 ("Implement LinUCB, the feedback endpoint, and the simulator").
+**Reason**: the master prompt's section 11 seed-data spec wants "300 historical runs with
+events and feedback so every chart looks alive from the first launch" — including implicitly,
+the Reinforcement Lab (Phase 10). Seeding plausible `bandit_decisions`/`bandit_rewards` for
+those 300 runs needs *some* arm-selection logic, and writing the real LinUCB math once (reused
+later by Phase 4's live agents) is simpler and more honest than inventing throwaway random arm
+picks in the seed script that Phase 4 would then have to replace anyway.
+**Alternatives rejected**: random arm assignment in `seed.py` with no real selection logic —
+would have to be thrown away in Phase 4, and wouldn't demonstrate the "lexical wins for
+error-code queries, semantic wins for vague ones" pattern the master prompt explicitly wants
+visible in the simulator/dashboard.
+
+### 2026-11-03 — Added `leave_requests` seed data (150 rows) beyond the master prompt's spec
+**Decision**: seeded 150 historical `leave_requests` even though master prompt section 11 only
+explicitly calls for "leave balances for everyone" with no `leave_requests` count specified.
+**Reason**: the `leave_requests` table exists in the Phase 1 schema and the Phase 10 "My
+Requests" page needs populated history to avoid an empty-looking screen — consistent with the
+"no empty screens (everything pre-seeded)" rule in master prompt section 0.7.
+**Alternatives rejected**: leaving `leave_requests` empty until a later phase populates it —
+would contradict "no empty screens" once that page is built.
+
+### 2026-11-03 — Chunker prefixes each chunk with its article title (and section heading)
+**Decision**: `app/rag/chunker.py` prepends `"{title} — {heading}"` to every chunk's stored
+text, not just the raw body text.
+**Reason**: chunks are retrieved and shown standalone (as citation sources in the UI, and as
+cross-encoder rerank input) — a chunk that just says "Disconnect and reconnect the VPN client…"
+with no title context is much weaker signal for both lexical/semantic retrieval and for a human
+reading a cited source than one that says "VPN Error 619: causes and fix — Quick fixes…".
+**Alternatives rejected**: storing raw body text only and relying on a UI-side join back to the
+parent article's title — works for display, but weakens the chunk's own retrieval signal, which
+matters more since ranking operates on `kb_chunks.text`/`tsv`/`embedding` directly.
+
 ### 2026-11-03 — Plain SQL migration files instead of Alembic
 **Decision**: schema changes live in `backend/migrations/*.sql`, applied in order by a small
 Python runner (`app/cli.py::migrate`) that tracks applied versions in a `schema_migrations`

@@ -12,6 +12,8 @@ poetry install
 # locally on port 5433 (not the default 5432) — confirm with `pg_lsclusters`.
 
 poetry run migrate     # creates the pgvector extension + all 22 tables
+poetry run seed          # generates + embeds all seed data (idempotent, ~10-15s after models
+                          # are already downloaded once)
 poetry run dev          # backend on http://localhost:8000
 
 # Frontend (separate terminal)
@@ -20,10 +22,16 @@ npm install
 npm run dev              # frontend on http://localhost:5173, proxies /api to :8000
 ```
 
+Retrieval sanity check (Phase 2):
+```bash
+poetry run search "VPN error 619" --strategy hybrid_rerank
+poetry run search "VPN error 619" --strategy lexical_heavy
+poetry run search "my laptop is super slow" --strategy semantic_heavy
+poetry run search "parental leave policy" --strategy hybrid_rerank --dept HR
+```
+
 Later phases add:
 ```bash
-poetry run seed                          # Phase 2: generates and embeds all seed data
-poetry run search "VPN error 619" --strategy hybrid_rerank   # Phase 2: CLI retrieval check
 poetry run simulate-feedback --n 500      # Phase 4+: synthetic bandit feedback
 poetry run eval                           # Phase 11: run the golden-set evaluation
 ```
@@ -41,6 +49,13 @@ poetry run eval                           # Phase 11: run the golden-set evaluat
   app deliberately stops instead of silently using a different database.
 - **Port 5173/8000 already in use**: a previous `npm run dev`/`poetry run dev` is still running;
   `pkill -f vite` / `pkill -f uvicorn` or let Vite auto-pick the next free port (5174, ...).
+- **`poetry run seed` is slow or needs internet the first time**: `sentence-transformers`
+  (`all-MiniLM-L6-v2`) and the cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) download
+  their weights from Hugging Face on first use and cache them locally afterward (under
+  `~/.cache/huggingface`) — this needs internet once, not on every run.
+- **`poetry run seed` says "users table is not empty — seed already applied, skipping"**: this
+  is expected, intentional idempotency, not an error — the seed only runs once per empty
+  database.
 - **HNSW index creation fails**: the installed pgvector extension predates HNSW support (added
   in pgvector 0.5.0). `poetry run migrate` detects this and automatically creates an `ivfflat`
   index instead — no action needed.
