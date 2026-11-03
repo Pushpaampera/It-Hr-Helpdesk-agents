@@ -108,7 +108,7 @@ created_at. Seed count: **3** (`lexical_heavy`, `semantic_heavy`, `hybrid_rerank
 arm_id (pk, fk bandit_arms, cascade) · a_matrix (jsonb) · b_vector (jsonb) · pulls (int) ·
 updated_at. (LinUCB's `A` and `b` per arm, 12×12 / 12, per `app/bandit/features.py`'s `DIM`.)
 Seed count: **3**, pre-warmed from the 300 historical runs (see `app/bandit/linucb.py` and
-`docs/06_DECISIONS.md`) so Reinforcement Lab charts (Phase 10) won't start from a flat line.
+`docs/06_DECISIONS.md`) so Reinforcement Lab charts (Phase 11) won't start from a flat line.
 
 ### `bandit_decisions`
 id · run_id (fk agent_runs, cascade) · context (jsonb) · arm_id (fk bandit_arms) · ucb_scores

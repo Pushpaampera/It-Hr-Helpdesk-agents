@@ -33,8 +33,40 @@ poetry run search "parental leave policy" --strategy hybrid_rerank --dept HR
 Later phases add:
 ```bash
 poetry run simulate-feedback --n 500      # Phase 4+: synthetic bandit feedback
-poetry run eval                           # Phase 11: run the golden-set evaluation
+poetry run eval                           # run the golden-set evaluation (also triggerable live
+                                           # from the Evaluation page as admin, or
+                                           # POST /api/eval/run)
 ```
+
+## Verifying everything is working
+```bash
+cd backend && poetry run pytest -q        # 24/24 passing as of Phase 12
+cd frontend && npx tsc -b --noEmit && npm run build
+```
+Then log in at `http://localhost:5173` as each of the four demo accounts below and confirm each
+role's nav items load. `docs/08_TESTING_AND_EVAL.md` has the current golden-set pass rate and
+known failing cases; `docs/09_DEMO_SCRIPT.md` has the full live walkthrough.
+
+## Demo accounts (all password `Demo@1234`)
+| Role | Email | Lands on |
+|------|-------|----------|
+| employee | `emma.employee@acme.test` | AI Assistant |
+| manager | `mark.manager@acme.test` | Overview |
+| hr | `hannah.hr@acme.test` | Overview |
+| admin | `alex.admin@acme.test` | Overview |
+
+## Resetting demo data
+`POST /api/admin/reset-demo` (admin JWT required) truncates and re-seeds every table to the
+pristine state `poetry run seed` produces — useful before a fresh demo run after live clicking
+has changed ticket/approval/leave state. No frontend button exists for this (its UI was Phase
+10B scope, which was explicitly skipped); call it directly:
+```bash
+TOKEN=$(curl -s -X POST localhost:8000/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"alex.admin@acme.test","password":"Demo@1234"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+curl -s -X POST localhost:8000/api/admin/reset-demo -H "Authorization: Bearer $TOKEN"
+```
+This is a genuine, irreversible wipe of every seeded table — only run it against a local/demo
+database, never anything containing real data.
 
 ## `.env` variables (names only — see `.env.example`; never put real values in this file)
 `GROQ_API_KEY`, `GEMINI_API_KEY`, `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRE_MINUTES`,

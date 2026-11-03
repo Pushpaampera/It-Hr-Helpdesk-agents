@@ -4,13 +4,22 @@ An enterprise IT/HR helpdesk run by a team of cooperating AI agents — FastAPI 
 pgvector on the backend, a cinematic React + Three.js frontend driven entirely by live backend
 events on the front.
 
-This is a **work in progress**, built phase by phase. Start here:
+Every planned phase (1-11, 12) is complete — Phase 10B was explicitly skipped as unneeded. Start
+here:
 - [`CLAUDE.md`](CLAUDE.md) — standing instructions and hard constraints for any session working
   on this repo.
-- [`PROGRESS.md`](PROGRESS.md) — current phase, what's done, verification output.
-- [`HANDOFF.md`](HANDOFF.md) — exact next step to resume work.
-- [`docs/`](docs/) — architecture, database, backend, frontend, runbook, decisions, changelog,
-  testing, demo script, and one file per build phase.
+- [`PROGRESS.md`](PROGRESS.md) — phase-by-phase status and verification output.
+- [`HANDOFF.md`](HANDOFF.md) — current state and resume notes for a new session.
+- [`docs/05_RUNBOOK.md`](docs/05_RUNBOOK.md) — the full setup/run guide (no sudo required).
+- [`docs/09_DEMO_SCRIPT.md`](docs/09_DEMO_SCRIPT.md) — the live demo script.
+- [`docs/`](docs/) — architecture, database, backend, frontend, decisions, changelog, testing,
+  and one file per build phase.
 
-A full setup/run guide and demo script will be written in Phase 12; see
-[`docs/05_RUNBOOK.md`](docs/05_RUNBOOK.md) for the current (Phase 1) quickstart.
+## Quickstart
+```bash
+cd backend && poetry install && poetry run migrate && poetry run seed && poetry run dev
+cd frontend && npm install && npm run dev   # separate terminal
+```
+Open `http://localhost:5173`. Demo accounts (password `Demo@1234` for all): `emma.employee@
+acme.test`, `mark.manager@acme.test`, `hannah.hr@acme.test`, `alex.admin@acme.test`. Full detail
+in `docs/05_RUNBOOK.md`.

@@ -1,31 +1,27 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 11 — Evaluation and polish: DONE.** Phase 10B (Demo experience layer /
-  HR showcase) was skipped by explicit operator instruction (2026-11-03) — not needed for this
-  project. **Every planned phase in the checklist below is now complete.** Next up: Phase 12
-  (Documentation and final verification), awaiting operator go-ahead (this session pauses
-  between phases on request).
-- Last updated: 2026-11-03
-- Next step: start Phase 12 once the operator gives the go-ahead — largely a documentation/
-  final-verification pass over the whole app rather than new features, per the original phase
-  checklist.
-- Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
-  11 built the last five `/app/*` pages — Control Room, Reinforcement Lab, Evaluation, Costs,
-  Audit Log (all admin-only) — completing every nav item in `src/layouts/navItems.ts`. Added
-  three new backend endpoints (`GET /api/agents/runs`, `GET /api/eval/runs/{id}`,
-  `GET /api/admin/audit-log` + `.../actions`) since no "recent runs across everyone," "one eval
-  run's full question breakdown," or "read the audit_log table back" endpoint existed before.
-  Found and fixed a real bug via live verification (Costs' "By route" list keyed rows by a
-  backend value that isn't actually unique — two distinct DB groups, NULL route and literal
-  'OTHER' route, both display as "OTHER" — causing a React duplicate-key warning; fixed the same
-  way Phase 9's resumed-run bug was, with an index key). `LLM_MOCK_MODE=true` is set so
-  everything built so far works without GROQ/GEMINI keys. Langfuse tracing
-  (`app/observability.py`) stays a no-op until both keys are set and `poetry add langfuse` has
-  been run — neither is needed for the demo.
-- Known pre-existing (not Phase 10 or 11) issue: `test_agents_graph.py::test_e_unanswerable_
-  question_creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree
-  too, not yet root-caused. Did not trigger during Phase 11's final full-suite run. See
+- **Current phase: Phase 12 — Documentation and final verification: DONE.** Phase 10B (Demo
+  experience layer / HR showcase) was skipped by explicit operator instruction (2026-11-03) —
+  not needed for this project. **Every phase on the original checklist is now complete.** There
+  is no next feature phase — a future session should treat this as a finished project and take
+  direction from whatever the operator asks for next, not from an assumed phase number.
+- Last updated: 2026-11-04
+- Next step: none standing. If resuming, verify current state first (`poetry run pytest -q`,
+  `npx tsc -b --noEmit`, a quick live login as each demo role) before assuming anything in this
+  file is still accurate, per `CLAUDE.md`'s resume protocol — then ask the operator what they
+  want built or changed next.
+- Blocker/dependency: none. `.env` is filled in and verified working end to end.
+  `LLM_MOCK_MODE=true` so everything works without GROQ/GEMINI keys. Phase 12 did a full
+  documentation accuracy pass (fixed stale Phase 10B/10-vs-11 forward references in
+  `docs/01_ARCHITECTURE.md` and `docs/02_DATABASE.md`, rewrote the Phase-1-stub
+  `docs/08_TESTING_AND_EVAL.md` with real current results, wrote `docs/09_DEMO_SCRIPT.md`, and
+  extended `docs/05_RUNBOOK.md`) plus a final full live verification sweep across all 4 demo
+  roles and every implemented nav item — zero console errors except the pre-existing favicon 404.
+  No application code changed this phase.
+- Known pre-existing issue (unfixed, not blocking): `test_agents_graph.py::test_e_unanswerable_
+  question_creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree,
+  not yet root-caused; did not trigger during Phase 12's final full-suite run. See
   `docs/phases/PHASE_10.md`.
 
 ## Phase checklist
@@ -44,7 +40,7 @@
 | 10 | Remaining dashboard pages | done | 2026-11-03 | Tickets, Approvals, Team, HR Insights, Policy Knowledge Base pages, all wired to real data; two new backend routers (`team`, `hr_insights`) since no endpoint for direct-reports/company-leave-posture existed before. Found/fixed 1 real bug via live verification (Approvals decide used wrong HTTP method). |
 | 10B | Demo experience layer (HR showcase) | skipped | 2026-11-03 | Skipped by explicit operator instruction — not needed for this project. |
 | 11 | Evaluation and polish | done | 2026-11-03 | Control Room, Reinforcement Lab, Evaluation, Costs, Audit Log — the last 5 admin nav items. 3 new backend endpoints (recent runs, eval run detail, audit log read-back). Found/fixed 1 real bug via live verification (Costs' route-breakdown duplicate React key). |
-| 12 | Documentation and final verification | not started | | |
+| 12 | Documentation and final verification | done | 2026-11-04 | Fixed stale doc forward-references (Phase 10B, Phase 10-vs-11 mix-ups), rewrote the Phase-1-stub testing doc with real results, wrote the demo script, extended the runbook. Final full live sweep across all 4 roles: zero errors. No app code changed. |
 
 ## Verification output log
 (Appended to at the end of each phase.)
@@ -228,3 +224,29 @@
   backend endpoints have been manager/hr/admin-scoped since Phase 4, nav-hiding them from
   managers is IA, not security.
 - Full details in `docs/phases/PHASE_11.md`.
+
+### Phase 12 — DONE
+- `poetry run pytest -q`: **24/24 passed** (final run).
+- `poetry run eval`: **57/70 passed (81.43%, avg correctness 0.8381)** — IT 26/30, HR 31/40,
+  matching every prior run in this project's history; all 13 failures individually diagnosed and
+  logged in `docs/08_TESTING_AND_EVAL.md` (route-classification misses under mock mode, 1
+  retrieval near-miss, 1 pure eval-harness limitation).
+- `npx tsc -b --noEmit` and `npm run build`: both succeed.
+- Full live sweep across all 4 demo roles (Chrome + playwright-core): every nav item each role
+  can see loads without a role-denied message or fetch error (3 pages for employee, 5 for
+  manager, 5 for hr, 9 for admin); sign-out correctly returns to the landing page for every role;
+  zero console errors except the pre-existing favicon 404.
+- Verified the demo script's numeric claims directly: a live `POST /api/eval/run` timed at
+  49.8s ("under a minute" — true).
+- Documentation audit: fixed stale forward-references in `docs/01_ARCHITECTURE.md` (a dead link
+  to the never-built `PHASE_10B.md`, a Phase-10-vs-11 mix-up on `GET /api/agents/live`, an
+  overstated event-mapping summary) and `docs/02_DATABASE.md` (Reinforcement Lab phase number);
+  rewrote `docs/08_TESTING_AND_EVAL.md` from its untouched-since-Phase-1 stub; wrote
+  `docs/09_DEMO_SCRIPT.md`; extended `docs/05_RUNBOOK.md`; added a decision-log entry recording
+  the Phase 10B skip; rewrote `README.md`'s stale "Phase 1 quickstart" pointer.
+- `POST /api/admin/reset-demo` was not re-run live this phase — correctly blocked by the
+  sandbox's irreversible-local-destruction safeguard; relied on its unchanged code and Phase 4's
+  original verification instead.
+- Full details in `docs/phases/PHASE_12.md`.
+
+**Every phase on the original checklist is now complete.**

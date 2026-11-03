@@ -1,5 +1,20 @@
 # 06 — Decision Log
 
+### 2026-11-03 — Phase 10B (Demo experience layer / HR showcase) skipped entirely
+**Decision**: Phase 10B — a guided, bespoke on-screen showcase layer (confirmation modals,
+progress animations, a hard-coded script around the 7 scenarios referenced in
+`docs/phases/PHASE_03.md`) — was not built. `docs/09_DEMO_SCRIPT.md` (Phase 12) was written
+entirely around the real, already-shipped dashboard pages (Phases 8-11) and the same 7
+scenarios run live through the actual AI Assistant/Approvals/Tickets/Audit Log pages, instead of
+any bespoke showcase-only UI.
+**Reason**: explicit operator instruction ("no need any demo cover") — not needed for this
+project. `POST /api/admin/reset-demo`'s backend (Phase 4) remains unused by any frontend button
+as a direct consequence; it's still fully functional via direct API call (`docs/05_RUNBOOK.md`).
+**Alternatives rejected**: building a trimmed-down version of Phase 10B anyway "just in case" —
+rejected as scope the operator explicitly said wasn't wanted; the real dashboard pages already
+demonstrate every scenario Phase 10B would have scripted, just without a guided wrapper around
+them.
+
 ### 2026-11-03 — Manual SSE parsing must normalize `\r\n`, never assume `\n\n`
 **Decision**: `frontend/src/api/sse.ts` decodes each chunk and replaces `\r\n` with `\n` before
 splitting on the blank-line frame separator, rather than splitting on `\n\n` (or `\r\n\r\n`)

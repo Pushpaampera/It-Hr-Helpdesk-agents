@@ -1,17 +1,17 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_11.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_12.md`, in that order, before touching code.
 
-## Current state (2026-11-03)
-**Phases 1-11 are all DONE and verified end to end**, including live browser-driven checks for
-Phases 6-11 — each tested as real functional flows (real clicks/form submissions/decisions, not
-just static screenshots). Phase 10B (Demo experience layer / HR showcase) was **skipped by
-explicit operator instruction (2026-11-03)** — not needed for this project. **Every nav item in
-`src/layouts/navItems.ts` is now `implemented: true`** — Phase 12 (Documentation and final
-verification) is the only phase left on the original checklist, and is largely a docs/final-pass
-phase rather than new features. This session pauses and asks the operator before starting each
-new phase (explicit operator instruction — see `docs/06_DECISIONS.md`).
+## Current state (2026-11-04) — the project is feature-complete
+**Every phase on the original checklist (1-12) is DONE and verified end to end**, including live
+browser-driven checks for every frontend phase (6-12) — each tested as real functional flows
+(real clicks/form submissions/decisions, not just static screenshots). Phase 10B (Demo
+experience layer / HR showcase) was **skipped by explicit operator instruction (2026-11-03)** —
+not needed for this project. **Every nav item in `src/layouts/navItems.ts` is `implemented:
+true`.** There is no standing next phase — a new session should verify current state (see
+"Resuming this project" below) and then take direction from whatever the operator asks for next,
+not assume there's a queued feature to build.
 
 What exists and is verified working:
 - **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated, Vite+React+TS
@@ -47,14 +47,31 @@ What exists and is verified working:
   read back for the first time). `src/api/sse.ts` grew `streamGetSSE`, a GET sibling of the
   existing POST-only `streamSSE`, for `GET /api/agents/live`'s always-on feed. **Every nav item
   is now `implemented: true`.**
+- **Documentation and final verification** (Phase 12): no application code — a full accuracy
+  pass over every `docs/*.md` file (fixed stale Phase-10B/Phase-10-vs-11 forward references),
+  `docs/08_TESTING_AND_EVAL.md` rewritten with real current results (fresh `poetry run eval`:
+  57/70, all 13 failures individually diagnosed), `docs/09_DEMO_SCRIPT.md` written (a full live
+  walkthrough built around the real shipped pages, since Phase 10B doesn't exist), and a final
+  live sweep across all 4 roles and every nav item.
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
-  `poetry run pytest -q` → **24/24 passed** on Phase 11's final run (the one pre-existing,
+  `poetry run pytest -q` → **24/24 passed** on Phase 12's final run (the one pre-existing,
   unrelated intermittent failure — see "Known issues" below — did not trigger this run, but is
   still unfixed).
 - `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty.
-- Git repo on branch `main`; Phases 1-10 committed, Phase 11 pending this handoff's commit.
+- Git repo on branch `main`; Phases 1-11 committed, Phase 12 pending this handoff's commit.
 - **Environment quirk**: port 8000 has been occupied by unrelated system services in earlier
-  sessions in this sandbox but was free during Phases 5-11's verification — check before binding.
+  sessions in this sandbox but was free during Phases 5-12's verification — check before binding.
+
+## Resuming this project
+There is no queued feature work. Before doing anything else in a new session:
+1. Run `cd backend && poetry run pytest -q` and `cd frontend && npx tsc -b --noEmit && npm run
+   build` — confirm they still pass before trusting anything else in this file.
+2. Log in as each of the four demo accounts (below) and spot-check a page or two per role still
+   loads — code can drift from docs between sessions even when docs say otherwise.
+3. Only then take direction from the operator's actual request. If they want something new
+   built, treat it as its own scoped piece of work (write a `docs/phases/PHASE_13.md`-style doc
+   if it's substantial, following the same pattern every prior phase used) rather than assuming
+   it fits some predetermined plan.
 
 ## Important lesson from Phase 11 (read before keying a React list by a backend-echoed field)
 Don't assume a value the backend returns is actually unique — check what it's grouped by.
@@ -108,20 +125,16 @@ Branch the render tree: `reduceMotion ? <div>...</div> : <motion.div variants={.
 </motion.div>`, or reuse `src/components/Reveal.tsx`. See `docs/06_DECISIONS.md` for the Phase
 6 bug this prevents.
 
-## Exact next step: Phase 12 — Documentation and final verification
-Every feature phase (1-11) is now done; Phase 10B was explicitly skipped. Phase 12 is the last
-phase on the original checklist, and `docs/09_DEMO_SCRIPT.md`'s own placeholder text says what
-it is: a full documentation audit for accuracy against the real code, final golden-set results
-logged in `docs/08_TESTING_AND_EVAL.md`, and a demo script. Since Phase 10B's showcase scenarios
-don't exist, base the demo script on the real dashboard pages (Phases 8-11) and the golden-set
-scenarios (Phase 3's 7 verification scenarios), not on anything Phase-10B-specific. Operator
-instruction for this session (2026-11-04): complete Phase 12 and don't pause for confirmation
-afterward — this was the last planned phase, so there is nothing further to ask about unless a
-problem comes up.
-
-## Project status: every planned phase is complete after Phase 12
-Once Phase 12 lands, there is no more standing "next step" to write here — update this section
-to say so plainly rather than inventing further work.
+## Important lesson from Phase 12 (read before trusting a doc's forward-looking claims)
+Documentation written early (Phase 1-4) made forward references to phases that hadn't happened
+yet — "Phase 10 Agent Control Room," "Phase 10B," "the master prompt" — and nothing ever swept
+back through to fix them once those phases actually landed (or, for 10B, got skipped). Found and
+fixed three stale ones in `docs/01_ARCHITECTURE.md` alone (a dead link to a file that was never
+built, a phase-number mix-up on which phase actually consumed `GET /api/agents/live`, and an
+event-mapping summary that overstated what's live vs. deferred relative to `04_FRONTEND.md`'s
+own correct list). General rule for any future phase: when a doc says "Phase N will build X,"
+check whether phase N actually happened and whether it actually built X exactly as described —
+don't assume an old forward-reference stayed accurate just because nobody flagged it.
 
 ## Known issues
 None blocking. Ten things worth knowing about, not fixing:
@@ -170,3 +183,9 @@ npx tsc -b --noEmit
 - `mark.manager@acme.test` — manager
 - `hannah.hr@acme.test` — hr
 - `alex.admin@acme.test` — admin
+
+## Further reading
+- `docs/09_DEMO_SCRIPT.md` — the full live demo walkthrough (10 steps, anticipated HR questions,
+  recovery plan).
+- `docs/08_TESTING_AND_EVAL.md` — current test/golden-set results and every known failing case.
+- `docs/05_RUNBOOK.md` — full setup, verification commands, and `reset-demo` usage.
