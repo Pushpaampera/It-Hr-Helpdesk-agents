@@ -269,3 +269,28 @@ def run_seed() -> None:
 
     elapsed = time.time() - t0
     print(f"[seed] done in {elapsed:.1f}s")
+
+
+# All seeded tables except schema_migrations, in an order TRUNCATE ... CASCADE can safely clear
+# in one statement regardless of FK direction.
+_SEED_TABLES = [
+    "eval_results", "eval_runs", "golden_questions", "bandit_rewards", "bandit_decisions",
+    "bandit_state", "bandit_arms", "feedback", "agent_events", "agent_runs", "messages",
+    "conversations", "leave_requests", "access_requests", "approvals", "ticket_events",
+    "tickets", "payslips", "leave_balances", "kb_chunks", "knowledge_articles", "audit_log",
+    "users",
+]
+
+
+def reset_and_reseed() -> None:
+    """Wipes every demo data table and reseeds from scratch. Used by the admin 'reset demo'
+    button (Phase 10B) so a presenter can return the showcase to its pristine state between
+    runs. Never touches schema_migrations — the schema itself is untouched."""
+    print("[seed] resetting demo data ...")
+    with psycopg.connect(_dsn(), autocommit=False) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"TRUNCATE TABLE {', '.join(_SEED_TABLES)} CASCADE")
+            cur.execute("ALTER SEQUENCE ticket_number_seq RESTART WITH 1000")
+        conn.commit()
+    print("[seed] demo data wiped, reseeding ...")
+    run_seed()

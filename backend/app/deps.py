@@ -35,3 +35,14 @@ def require_roles(*roles: str):
         return user
 
     return _check
+
+
+def ensure_self_or_roles(user: User, resource_user_id: str, *roles: str) -> None:
+    """Allows access when `user` owns the resource (resource_user_id matches) or has one of
+    the given elevated roles. Raises 403 otherwise. Used inline by routers that return a mix
+    of "my own data" and "elevated staff can see everyone's data"."""
+    if str(user.id) == str(resource_user_id):
+        return
+    if user.role in roles:
+        return
+    raise HTTPException(status.HTTP_403_FORBIDDEN, "You don't have access to this resource")

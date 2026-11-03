@@ -1,35 +1,36 @@
 """POST /api/chat/stream (SSE) and GET /api/runs/{id}/events (replay).
 
-Phase 3 scope: no JWT auth wiring yet (that's Phase 4) — the caller identifies the user by
-user_id in the request body. Phase 4 wraps this with the real auth dependency.
+Phase 4: wrapped with the real JWT auth dependency — the caller's identity comes from the
+bearer token, not a user_id body field (Phase 3's interim approach).
 """
 import asyncio
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.events import load_events_for_run, new_run_id
 from app.agents.graph import start_chat
 from app.agents.runs_store import get_run, save_message
-from app.mock_apis.directory import get_user
+from app.deps import ensure_self_or_roles, get_current_user
+from app.models.user import User
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
 
 class ChatRequest(BaseModel):
-    user_id: str
     message: str
     conversation_id: str | None = None
 
 
 @router.post("/chat/stream")
-async def chat_stream(req: ChatRequest):
-    user = get_user(req.user_id)
-    if not user:
-        raise HTTPException(404, "User not found")
-    user = {k: str(v) if v is not None else v for k, v in user.items()}
+async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current_user)):
+    user = {
+        "id": str(current_user.id), "name": current_user.name, "email": current_user.email,
+        "role": current_user.role, "department": current_user.department,
+        "manager_id": str(current_user.manager_id) if current_user.manager_id else None,
+    }
 
     run_id = new_run_id()
     queue: asyncio.Queue = asyncio.Queue()
@@ -54,8 +55,9 @@ async def chat_stream(req: ChatRequest):
 
 
 @router.get("/runs/{run_id}/events")
-def get_run_events(run_id: str):
+def get_run_events(run_id: str, current_user: User = Depends(get_current_user)):
     run = get_run(run_id)
     if not run:
         raise HTTPException(404, "Run not found")
+    ensure_self_or_roles(current_user, run["user_id"], "manager", "hr", "admin")
     return {"run_id": run_id, "status": run["status"], "events": load_events_for_run(run_id)}

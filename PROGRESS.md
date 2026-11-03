@@ -1,21 +1,22 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 3 — Agents, graph, mock APIs and events: DONE.** Next up: **Phase 4 —
-  Auth, API surface, bandit and analytics** (not started; awaiting operator go-ahead, since this
-  session pauses between phases on request).
+- Current phase: **Phase 4 — Auth, API surface, bandit and analytics: DONE.** Next up:
+  **Phase 5 — Frontend design system and 3D building blocks** (not started; awaiting operator
+  go-ahead, since this session pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 4 — implement JWT login + role dependencies wired onto the Phase 3
-  routers (chat/approvals/feedback currently take `user_id`/`approver_id` directly in the body;
-  these need to switch to the authenticated identity), plus the remaining routers
-  (conversations, tickets, kb, analytics, agents, bandit, eval, costs), the live LinUCB stats
-  endpoint, and `poetry run simulate-feedback --n 500`.
-- Blocker/dependency: none currently. `.env` is filled in and verified working end to end
-  (DB connects, pgvector enabled, seeded, and the full 7-agent LangGraph flow — including a real
-  manager-approval pause/resume — verified against a live HTTP server). `LLM_MOCK_MODE=true` is
-  set so everything built so far works without GROQ/GEMINI keys; the operator can add real keys
-  later for live-provider testing (the provider wrapper in `app/agents/llm.py` already supports
-  both paths).
+- Next step: start Phase 5 — the frontend design system (CSS variable tokens, shared Framer
+  Motion variants) and the first React Three Fiber building blocks (AgentOrb, etc.) that later
+  phases compose into the landing/login/dashboard pages.
+- Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Every
+  backend endpoint through Phase 4 is now behind real JWT auth with server-side role
+  enforcement — logged in as all 4 demo accounts (password `Demo@1234`) and exercised the full
+  chat + approval-pause/resume flow, plus every new router, against a live HTTP server (see
+  `docs/phases/PHASE_04.md`). `LLM_MOCK_MODE=true` is set so everything built so far works
+  without GROQ/GEMINI keys; the operator can add real keys later for live-provider testing (the
+  provider wrapper in `app/agents/llm.py` already supports both paths). Langfuse tracing
+  (`app/observability.py`) stays a no-op until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`
+  are set and `poetry add langfuse` has been run — neither is needed for the demo.
 
 ## Phase checklist
 
@@ -24,7 +25,7 @@
 | 1 | Foundation | done | 2026-11-03 | Repo layout, Poetry project, 22-table SQL migration (24 tables incl. bookkeeping), `/api/health` verified against a real DB with pgvector/HNSW enabled, Vite+React+TS scaffold verified serving and proxying to the backend. |
 | 2 | Seed data and RAG | done | 2026-11-03 | 48 users, 100 KB articles (130 chunks), 200 tickets, 80 approvals, 150 leave requests, 300 historical runs, 70 golden questions. Hybrid retrieval verified: exact error codes rank #1, semantic search sensible, dept filter correct. |
 | 3 | Agents, graph, mock APIs and events | done | 2026-11-03 | 7 agents + LangGraph flow with real NodeInterrupt pause/resume for manager approval. All 7 master-prompt verification scenarios (a)-(g) pass. SSE streaming confirmed end to end over real HTTP. |
-| 4 | Auth, API surface, bandit and analytics | not started | | |
+| 4 | Auth, API surface, bandit and analytics | done | 2026-11-03 | JWT login/me/logout for all 4 demo roles; chat/approvals/feedback retrofitted to use the authenticated identity; 10 new routers (conversations, tickets, kb, analytics, agents incl. live SSE, bandit, eval, admin, costs); real golden-set eval runner; live-bandit feedback simulator; `/metrics`; optional Langfuse hook. |
 | 5 | Frontend design system and 3D building blocks | not started | | |
 | 6 | Landing page | not started | | |
 | 7 | Login page | not started | | |
@@ -88,3 +89,22 @@
   ticket-number sequence that wasn't advanced past the hand-seeded ticket numbers (both in
   `docs/phases/PHASE_03.md` and `docs/06_DECISIONS.md`).
 - Full details, exact commands and problems-fixed in `docs/phases/PHASE_03.md`.
+
+### Phase 4 — DONE
+- `poetry run pytest -q`: **24 passed** (12 from Phases 1-3 + 12 new in `tests/test_auth_api.py`):
+  login works for all 4 demo roles; wrong password and missing token are both rejected;
+  `employee` gets `403` on `/api/analytics/kpis` and `POST /api/eval/run`; `hr` gets `200` on
+  analytics; `employee` gets `403` reading another user's run events; `POST /api/feedback`
+  visibly increments `bandit_state.pulls`; `run_simulation(60)` produces a defined learning
+  curve.
+- `poetry run simulate-feedback --n 40` against the live seeded DB: all three bandit arms'
+  pulls and average reward moved (e.g. `hybrid_rerank: pulls 137 -> 151, avg_reward 0.786 ->
+  0.802`).
+- `poetry run eval` against the live seeded DB, through the real agent graph: `57/70 passed
+  (pass_rate=0.8143, avg_correctness=0.8476)`.
+- Live HTTP smoke test on port 8077: all 4 demo logins; conversation create; KB search (VPN 619
+  still ranks #1); employee's own-tickets list; `/api/agents/status`; analytics 403 for employee
+  / 200 for hr; a full authenticated chat SSE turn end to end; the full `request_access`
+  approval flow (employee's chat pauses, the real manager sees it pending, a non-approver gets
+  `403` trying to decide it, the real approver's `200` resumes the run to `resolved`).
+- Full details in `docs/phases/PHASE_04.md`.

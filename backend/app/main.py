@@ -1,9 +1,27 @@
-from fastapi import FastAPI
+import time
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from starlette.responses import Response
 
 from app.config import get_settings
 from app.db import check_db_connection
-from app.routers import approvals, chat, feedback
+from app.routers import (
+    admin,
+    agents,
+    analytics,
+    approvals,
+    auth,
+    bandit,
+    chat,
+    conversations,
+    costs,
+    eval as eval_router,
+    feedback,
+    kb,
+    tickets,
+)
 
 settings = get_settings()
 
@@ -17,9 +35,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+REQUEST_COUNT = Counter(
+    "helpdesk_http_requests_total", "HTTP requests", ["method", "path", "status_code"]
+)
+REQUEST_LATENCY = Histogram(
+    "helpdesk_http_request_latency_seconds", "HTTP request latency", ["method", "path"]
+)
+
+
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    path = request.scope.get("route").path if request.scope.get("route") else request.url.path
+    REQUEST_COUNT.labels(request.method, path, response.status_code).inc()
+    REQUEST_LATENCY.labels(request.method, path).observe(time.perf_counter() - start)
+    return response
+
+
+app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(approvals.router)
 app.include_router(feedback.router)
+app.include_router(conversations.router)
+app.include_router(tickets.router)
+app.include_router(kb.router)
+app.include_router(analytics.router)
+app.include_router(agents.router)
+app.include_router(bandit.router)
+app.include_router(eval_router.router)
+app.include_router(admin.router)
+app.include_router(costs.router)
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/health")

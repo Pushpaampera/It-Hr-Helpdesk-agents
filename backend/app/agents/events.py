@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from app import observability
 from app.db import get_engine
 
 FRIENDLY_NAMES = {
@@ -165,6 +166,7 @@ class EventSink:
             "tokens_in": tokens_in, "tokens_out": tokens_out, "ts": self._ts(),
         }
         self._persist(agent, status, action, caption, detail, model, latency_ms, tokens_in, tokens_out)
+        observability.trace_event(self.run_id, agent, status, detail, latency_ms, model)
         await self._publish(event)
         return event
 

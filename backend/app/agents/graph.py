@@ -22,6 +22,7 @@ from app.agents import ticketing as ticketing_agent
 from app.agents.events import EventSink, drop_queue, get_queue
 from app.agents.runs_store import create_run, get_run, last_event_seq, update_run
 from app.mock_apis import approvals as approvals_api
+from app import observability
 
 _CHECKPOINTER = MemorySaver()
 
@@ -181,6 +182,7 @@ def build_graph(ctx: RunContext):
             route=state.get("route"), status="escalated" if state.get("ticket_number") else "resolved",
             outcome=outcome,
         )
+        observability.trace_run_end(ctx.run_id, outcome, state.get("answer", ""))
         return {"ended": True}
 
     graph = StateGraph(AgentState)
@@ -220,6 +222,7 @@ async def start_chat(user: dict, query: str, conversation_id: str | None, run_id
     `queue` as they happen. Returns once the graph finishes OR pauses for manager approval."""
     sink = EventSink(run_id, queue)
     create_run(run_id, user["id"], conversation_id, query)
+    observability.trace_run_start(run_id, user["id"], query)
     ctx = RunContext(run_id, user, sink)
     graph = build_graph(ctx)
     config = {"configurable": {"thread_id": run_id}}

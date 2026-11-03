@@ -1,5 +1,34 @@
 # 06 — Decision Log
 
+### 2026-11-03 — `POST /api/conversations` added beyond Phase 4's literal "list/get" spec
+**Decision**: added a `POST /api/conversations` endpoint (and that's it — no update/delete)
+alongside the `list`/`get` the master prompt's Phase 4 plan named.
+**Reason**: `app/agents/runs_store.py::save_message` (Phase 3) inserts into `messages` with a
+`NOT NULL` FK to `conversations.id`. There was no endpoint anywhere that could create that row —
+`chat.py` only ever received a `conversation_id` it assumed already existed. Without a create
+endpoint, the frontend has no way to start a persisted conversation thread, which breaks the
+"list/get" endpoints too (there'd be nothing to list). This is the same kind of forward-pull as
+Phase 2's bandit code: building the one piece an already-committed later piece depends on.
+**Alternatives rejected**: having `chat.py` silently auto-create a conversation row when
+`conversation_id` is omitted — rejected because it hides a meaningful user action (starting a
+new thread) inside a side effect of an unrelated endpoint, and still wouldn't have let the
+frontend show a conversation list before the first message.
+
+### 2026-11-03 — `reset_and_reseed()` truncates every seeded table, not just a subset
+**Decision**: the admin "reset demo" backend (`app/seed/seed.py::reset_and_reseed`) issues one
+`TRUNCATE ... CASCADE` across every table `poetry run seed` populates (including `users`), then
+re-runs the normal seed script.
+**Reason**: a presenter resetting between demo runs wants the exact pristine state Phase 2's
+seed script produces — partial resets (e.g. only `agent_runs`/`feedback`) would leave behind
+whatever the previous run's live chat created (new tickets, approvals, access requests, leave
+requests) while silently keeping stale bandit learning from the decayed state, which would make
+the Reinforcement Lab dashboard tell an inconsistent story. `CASCADE` handles the FK ordering
+correctly in one statement; `schema_migrations` is deliberately excluded since the schema itself
+never changes on a reset.
+**Alternatives rejected**: `DELETE FROM` row-by-row in dependency order — functionally
+equivalent but slower and more failure-prone to get the ordering right by hand; `TRUNCATE
+CASCADE` is the standard Postgres idiom for "wipe this data graph."
+
 ### 2026-11-03 — `NodeInterrupt` + a module-level `MemorySaver` for the approval pause/resume
 **Decision**: `request_access` pauses the LangGraph flow by raising
 `langgraph.errors.NodeInterrupt`, with a single process-wide `MemorySaver()` checkpointer

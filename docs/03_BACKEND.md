@@ -1,6 +1,6 @@
 # 03 — Backend
 
-Updated as of Phase 1. Module-by-module description grows through Phase 3/4.
+Updated through Phase 4.
 
 ## Modules (Phase 1 state)
 - `app/config.py` — `Settings` (pydantic-settings), loads `.env` from the repo root. Every
@@ -56,20 +56,66 @@ Updated as of Phase 1. Module-by-module description grows through Phase 3/4.
   writes to the real tables and logs to `audit_log` via `mock_apis/__init__.py::log_action`.
 - `app/bandit/store.py` — loads/saves `LinUCBArm` state from `bandit_arms`/`bandit_state`,
   records `bandit_decisions`/`bandit_rewards`.
+- `app/bandit/simulator.py` (Phase 4) — `run_simulation(n)`: generates synthetic feedback
+  against the *live* bandit state (reloads arms from the DB each iteration), weighted so
+  `lexical_heavy`/`hybrid_rerank` win error-code queries and `semantic_heavy`/`hybrid_rerank`
+  win vague ones. Wired to `poetry run simulate-feedback --n <n>`.
+- `app/eval/run_eval.py` (Phase 4) — `run_eval()` / `run_eval_async()`: runs every
+  `golden_questions` row through the real agent graph (`app.agents.graph.start_chat`) as a fixed
+  demo employee, scores route accuracy / source-citation accuracy / escalation-match, persists
+  to `eval_runs`/`eval_results`. Wired to `poetry run eval` and `POST /api/eval/run`.
+- `app/observability.py` (Phase 4) — optional Langfuse hook. A true no-op unless both
+  `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set in `.env` and the `langfuse` package is
+  installed (`poetry add langfuse` — not a default dependency). Every call is wrapped so a
+  Langfuse failure can never affect a live request. Called from `app/agents/events.py`'s
+  `EventSink.emit` (per agent event) and `app/agents/graph.py`'s `start_chat`/`node_feedback`
+  (run start/end).
+- `app/routers/auth.py` (Phase 4) — `POST /api/auth/login`/`logout`, `GET /api/auth/me`.
+- `app/routers/{conversations,tickets,kb,analytics,agents,bandit,eval,admin,costs}.py`
+  (Phase 4) — see the endpoint table below.
 
-## API endpoints (Phase 1)
-| Method | Path | Roles | Request | Response |
-|--------|------|-------|---------|----------|
-| GET | `/api/health` | public | — | `{status, service, mock_mode, database: {connected, detail}, pgvector: {enabled, detail}}` |
-| POST | `/api/chat/stream` | **none yet (Phase 4 adds JWT)** | `{user_id, message, conversation_id?}` | SSE stream of the event schema in `docs/01_ARCHITECTURE.md` |
-| GET | `/api/runs/{run_id}/events` | none yet | — | `{run_id, status, events: [...]}` (replay) |
-| POST | `/api/approvals/{id}/decide` | none yet (Phase 4 adds: must be the approver) | `{decision: "approved"\|"rejected", comment?, approver_id}` | `{approval_id, status}` |
-| POST | `/api/feedback` | none yet | `{run_id, rating (1-5), resolved, comment?}` | `{reward, updated_bandit}` |
+## API endpoints (through Phase 4)
+Every endpoint below (except `/api/health` and `/metrics`) requires a bearer JWT
+(`Authorization: Bearer <token>` from `POST /api/auth/login`). "Roles" lists who may call it
+beyond the default (any authenticated user); "Ownership" notes self-vs-staff access rules
+enforced via `app/deps.py::ensure_self_or_roles`.
 
-Phase 3 deliberately ships these without auth/role enforcement — `user_id`/`approver_id` are
-passed directly in the request body. Phase 4 wraps each with the real JWT dependency
-(`app/deps.py::get_current_user`/`require_roles`) and removes the body fields in favor of the
-authenticated identity.
+| Method | Path | Roles / ownership | Request | Response |
+|--------|------|--------------------|---------|----------|
+| GET | `/api/health` | public | — | `{status, service, mock_mode, database, pgvector}` |
+| GET | `/metrics` | public (Prometheus) | — | text exposition format |
+| POST | `/api/auth/login` | public | `{email, password}` | `{access_token, token_type, user}` |
+| POST | `/api/auth/logout` | any | — | `{success}` |
+| GET | `/api/auth/me` | any | — | `{id, name, email, role, department, title, manager_id}` |
+| POST | `/api/chat/stream` | any | `{message, conversation_id?}` | SSE event stream (`docs/01_ARCHITECTURE.md`) |
+| GET | `/api/runs/{id}/events` | own run, or manager/hr/admin | — | `{run_id, status, events}` |
+| GET | `/api/approvals` | own (as approver), admin sees all | `?status=` | list of approvals |
+| POST | `/api/approvals/{id}/decide` | must be the approval's `approver_id`, or admin | `{decision, comment?}` | `{approval_id, status}` |
+| POST | `/api/feedback` | own run, or admin | `{run_id, rating, resolved, comment?}` | `{reward, updated_bandit}` |
+| POST | `/api/conversations` | any | `{title?}` | created conversation row |
+| GET | `/api/conversations` | own | — | list of own conversations |
+| GET | `/api/conversations/{id}` | own, or manager/hr/admin | — | `{conversation, messages}` |
+| GET | `/api/tickets` | own; manager/hr/admin see all | `?status=&category=` | list of tickets |
+| GET | `/api/tickets/{id}` | own, or manager/hr/admin | — | `{ticket, events}` |
+| PATCH | `/api/tickets/{id}` | manager/hr/admin | `{status?, priority?, assignee_id?, note?}` | updated `{ticket, events}` |
+| GET | `/api/kb/search` | any | `?q=&dept=&strategy=&top_k=` | `{query, strategy, results}` |
+| GET | `/api/kb/compare` | any | `?q=&dept=` | `{query, strategies: {name: results}}` |
+| GET | `/api/kb/articles/{id}` | any | — | `{article, chunks}` |
+| GET | `/api/analytics/kpis` | manager/hr/admin | — | run/feedback/ticket/approval KPIs |
+| GET | `/api/analytics/timeseries` | manager/hr/admin | `?days=` | daily run/rating series |
+| GET | `/api/analytics/departments` | manager/hr/admin | — | per-route (IT/HR) breakdown |
+| GET | `/api/agents/status` | any | — | per-agent 24h event/latency/error counts |
+| GET | `/api/agents/live` | any (anonymised unless admin) | — | always-on aggregated SSE of all `agent_events` |
+| GET | `/api/bandit/stats` | manager/hr/admin | — | arm pulls, avg reward, regret, context win rates |
+| POST | `/api/eval/run` | admin | — | `{eval_run_id, summary}` |
+| GET | `/api/eval/runs` | admin | — | list of past `eval_runs` |
+| POST | `/api/admin/reset-demo` | admin | — | `{success, message}` (wipes + reseeds all data) |
+| GET | `/api/costs` | manager/hr/admin | `?days=` | token/$ breakdown by day/route/model |
+
+Phase 3 shipped `chat`/`approvals`/`feedback` without auth — `user_id`/`approver_id` were passed
+directly in the request body. Phase 4 retrofitted all three onto the real JWT dependency
+(`app/deps.py::get_current_user`/`require_roles`/`ensure_self_or_roles`) and removed those body
+fields in favor of the authenticated identity.
 
 ## Agent prompts (verbatim system prompts, Phase 3)
 - **Sage** (`app/agents/supervisor.py::SYSTEM_PROMPT`): routing classifier instructions, strict

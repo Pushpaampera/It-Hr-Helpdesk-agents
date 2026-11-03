@@ -1,5 +1,33 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 4: Auth, API surface, bandit and analytics
+- Added: `backend/app/routers/auth.py` (`POST /api/auth/login`/`logout`, `GET /api/auth/me`).
+- Added: `backend/app/deps.py::ensure_self_or_roles` — shared "own it, or have an elevated role"
+  check.
+- Added: `backend/app/routers/{conversations,tickets,kb,analytics,agents,bandit,eval,admin,
+  costs}.py`, `backend/app/eval/run_eval.py` (real golden-set runner through the live agent
+  graph), `backend/app/bandit/simulator.py` (`poetry run simulate-feedback`, drives the live
+  bandit), `backend/app/observability.py` (optional Langfuse hook, no-op by default).
+- Added: `backend/tests/test_auth_api.py` — 12 new tests (login for all 4 roles, 403 role/
+  ownership enforcement, bandit update via feedback, simulator learning curve).
+- Changed: `backend/app/routers/{chat,approvals,feedback}.py` — removed `user_id`/`approver_id`
+  body fields in favor of the JWT-authenticated identity; added 403s for cross-user/cross-role
+  access.
+- Changed: `backend/app/main.py` — wired all 10 new routers, added a Prometheus middleware +
+  `GET /metrics`.
+- Changed: `backend/app/seed/seed.py` — added `reset_and_reseed()` (admin "reset demo" backend).
+- Changed: `backend/app/agents/events.py`, `app/agents/graph.py` — added the optional Langfuse
+  trace hook (`trace_event`/`trace_run_start`/`trace_run_end`), inert unless both Langfuse keys
+  are set.
+- Verified: `poetry run pytest -q` → 24 passed; `poetry run simulate-feedback --n 40` and
+  `poetry run eval` both run successfully against the live seeded DB; live HTTP smoke test
+  covering login for all 4 roles, the full chat SSE flow, and the full `request_access`
+  approval flow with real approver-identity enforcement. Full detail in
+  `docs/phases/PHASE_04.md`.
+- Why: this is the phase that makes the backend's role boundaries real — every endpoint built in
+  Phases 1-3 was intentionally open; Phase 4 closes that gap before any frontend ships against
+  it, and adds the analytics/bandit/cost surfaces the Phase 8+ dashboard pages will read from.
+
 ### 2026-11-03 — Phase 3: Agents, graph, mock APIs and events
 - Added: `backend/app/agents/llm.py` (provider wrapper, retries, fallback, mock mode),
   `events.py` (SSE event builder + live-queue registry), `guard.py`, `supervisor.py`,
