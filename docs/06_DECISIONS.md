@@ -1,5 +1,26 @@
 # 06 — Decision Log
 
+### 2026-11-03 — Manual SSE parsing must normalize `\r\n`, never assume `\n\n`
+**Decision**: `frontend/src/api/sse.ts` decodes each chunk and replaces `\r\n` with `\n` before
+splitting on the blank-line frame separator, rather than splitting on `\n\n` (or `\r\n\r\n`)
+directly.
+**Reason**: found live, by instrumenting chunk-by-chunk logging in Phase 9's first AI Assistant
+implementation. sse-starlette (the backend's SSE library) terminates every line with `\r\n` —
+the SSE spec's canonical line ending — not the bare `\n` the first version of this parser
+assumed. The practical effect was total silent failure: `fetch`'s `ReadableStream` delivered
+every byte correctly and the stream closed cleanly (confirmed via `reader.read()` logging
+showing all chunks and a final `done: true`), but `buffer.indexOf("\n\n")` never matched a
+single frame in the entire stream, so `onEvent` was never called once — no captions, no
+streamed text, no final answer, no error, just silent nothing. Chrome's network panel reporting
+`net::ERR_ABORTED` on the connection's eventual close was a complete red herring that cost real
+debugging time before the actual cause (frame-separator mismatch) was found by bisecting from
+"the fetch resolves and the bytes are all there" down to "the parser's own split logic never
+fires." Any future hand-written text-protocol parser in this codebase should assume `\r\n` by
+default and verify against raw bytes before assuming `\n`.
+**Alternatives rejected**: splitting on `\r\n\r\n` instead of normalizing first — works for this
+specific backend but is more fragile if a proxy or future backend change ever emits mixed line
+endings within one stream; normalizing once up front is strictly safer for the same cost.
+
 ### 2026-11-03 — Reduced motion must branch the render tree, not neuter motion props in place
 **Decision**: when a component needs to skip animation under `uiStore.reduceMotion`, it must
 render a genuinely different tree — a plain `<div>` instead of `motion.div`, or reuse

@@ -1,23 +1,23 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 8 — Dashboard shell and Overview: DONE.** Next up: **Phase 9 — AI
-  Assistant page (centerpiece)** (not started; awaiting operator go-ahead, since this session
+- Current phase: **Phase 9 — AI Assistant page (centerpiece): DONE.** Next up: **Phase 10 —
+  Remaining dashboard pages** (not started; awaiting operator go-ahead, since this session
   pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 9 — the AI Assistant page, the project's centerpiece: the real chat UI
-  against `POST /api/chat/stream`, wired to the Phase 5 3D building blocks
-  (`AgentOrb`/`DataPulse`/etc.) per the event→animation mapping documented in
-  `docs/04_FRONTEND.md`. Replaces the "AI Assistant" nav item's `implemented: false` in
-  `src/layouts/navItems.ts`.
+- Next step: start Phase 10 — the remaining `/app/*` pages currently marked "Soon" in
+  `src/layouts/navItems.ts`: Tickets, Approvals (the in-app decide UI — Phase 9's approval test
+  used direct API calls since no page existed yet), Team, HR Insights, Policy Knowledge Base.
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
-  8 built the real dashboard shell (`DashboardLayout` + role-aware `navItems`) and the first
-  real dashboard page (`Overview`, with staff/employee variants and the project's first
-  `recharts` chart), verified end to end live (real backend + frontend, Chrome +
-  playwright-core) across admin/manager/hr/employee roles, mobile viewport, and reduced motion.
-  `LLM_MOCK_MODE=true` is set so everything built so far works without GROQ/GEMINI keys.
-  Langfuse tracing (`app/observability.py`) stays a no-op until both keys are set and
-  `poetry add langfuse` has been run — neither is needed for the demo.
+  9 built the real AI Assistant chat page against the live agent graph, with the Phase 5 3D
+  building blocks wired to real SSE events for the first time (handoff beams, active-agent
+  pulsing, a live caption log) and the full `request_access` approval pause/resume working
+  end to end through the actual UI. Found and fixed 3 real bugs via live verification (CRLF SSE
+  parsing, clipped 3D orbs, a duplicate-React-key edge case on resume) — see
+  `docs/06_DECISIONS.md` and `docs/phases/PHASE_09.md`. `LLM_MOCK_MODE=true` is set so
+  everything built so far works without GROQ/GEMINI keys. Langfuse tracing
+  (`app/observability.py`) stays a no-op until both keys are set and `poetry add langfuse` has
+  been run — neither is needed for the demo.
 
 ## Phase checklist
 
@@ -31,7 +31,7 @@
 | 6 | Landing page | done | 2026-11-03 | Cinematic hero (Scene+bloom, 7 AgentOrbs, DataPulse, ParticleField), "Meet the team"/"How it works" sections, Reveal scroll animations, LoginPlaceholder stub. Found and fixed a real Reduce-motion bug via screenshot verification. |
 | 7 | Login page | done | 2026-11-03 | Real email/password form + demo-account quick-picker calling `POST /api/auth/login`, RequireAuth route guard, role-aware "lands on" redirect, AppPlaceholder post-login stand-in. Verified end to end live against a running backend with a browser tool. |
 | 8 | Dashboard shell and Overview | done | 2026-11-03 | DashboardLayout (responsive sidebar+topbar shell, first CSS module), role-aware navItems with "Soon" placeholders for future phases, Overview page (staff KPIs+chart via recharts; employee own-tickets view). Verified live across all 4 roles, mobile, reduced motion. |
-| 9 | AI Assistant page (centerpiece) | not started | | |
+| 9 | AI Assistant page (centerpiece) | done | 2026-11-03 | Real chat UI against POST /api/chat/stream (manual SSE client), 3D AgentOrb/DataPulse wired to live events, live caption log, feedback widget, full request_access pause/resume working end to end through the UI. Found/fixed 3 real bugs via live browser verification. |
 | 10 | Remaining dashboard pages | not started | | |
 | 10B | Demo experience layer (HR showcase) | not started | | |
 | 11 | Evaluation and polish | not started | | |
@@ -158,3 +158,18 @@
   (420px) sidebar correctly collapses to a hamburger-triggered drawer; HR dashboard renders
   correctly under Reduce-motion.
 - Full details in `docs/phases/PHASE_08.md`.
+
+### Phase 9 — DONE
+- `npx tsc -b --noEmit` and `npm run build`: both succeed.
+- Live end-to-end tests against a real backend + frontend dev server (Chrome + playwright-core):
+  a grounded VPN-619 IT answer with cited sources, full caption sequence, live handoff beam, and
+  a submitted 5-star rating; the complete `request_access` approval pause/resume across two
+  separate logged-in sessions (employee's chat pauses with a visible banner, a real manager
+  decides it via the real API, the employee's still-open connection resolves automatically); an
+  HR leave-balance question under Reduce-motion.
+- Found and fixed 3 real bugs this way: SSE parsing silently never fired a single event because
+  of a `\r\n` vs `\n` mismatch (see `docs/06_DECISIONS.md`); two of seven 3D orbs were clipped
+  outside the activity panel's narrow camera frustum; a duplicate-React-key warning on resumed
+  runs (backend behavior was correct — Atlas genuinely re-emits on resume — frontend key choice
+  was the bug).
+- Full details in `docs/phases/PHASE_09.md`.

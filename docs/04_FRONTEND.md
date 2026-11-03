@@ -1,14 +1,15 @@
 # 04 — Frontend
 
-Updated through Phase 8.
+Updated through Phase 9.
 
-## Routes (Phase 8 state)
+## Routes (Phase 9 state)
 | Path | Page | Notes |
 |------|------|-------|
 | `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
 | `/login` | `Login` | Real email/password form + demo-account quick-picker. Redirects to `/app` (or wherever `RequireAuth` remembered) on success. |
 | `/app` (wrapped in `RequireAuth`) | `DashboardLayout` | Sidebar + top bar shell. `index` redirects to `overview`. |
 | `/app/overview` | `Overview` | Staff (manager/hr/admin): KPI cards + 30-day runs chart from `/api/analytics/*`. Employee: own open tickets + conversation count. |
+| `/app/assistant` | `Assistant` | The real chat UI against the live agent graph (`POST /api/chat/stream`, SSE) — the project's centerpiece. |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -31,7 +32,11 @@ Updated through Phase 8.
   `login`/`logout`/`refreshMe` call the Phase 4 `/api/auth/*` endpoints via `api/client.ts`.
 - `src/api/client.ts` / `src/api/types.ts` (Phase 5) — `apiFetch`/`apiGet`/`apiPost`/`apiPatch`
   (attaches the bearer token, normalizes FastAPI error responses, logs out on `401`) and the
-  typed response shapes every later page will reuse.
+  typed response shapes every later page will reuse. `types.ts` grew the full `ChatEvent`
+  discriminated union in Phase 9.
+- `src/api/sse.ts` (Phase 9) — manual SSE client for `POST /api/chat/stream` (native
+  `EventSource` can't do POST + auth headers). Normalizes `\r\n` → `\n` before splitting frames
+  — sse-starlette's actual line ending, found the hard way (see `docs/phases/PHASE_09.md`).
 - `src/three/Scene.tsx` (Phase 5; `bloom` option added Phase 6) — shared `<Canvas>` wrapper:
   `dpr={[1, 2]}`, `frameloop` switches to `"demand"` when the tab is hidden, base lighting, and
   an opt-in `bloom` prop (`@react-three/postprocessing`'s `EffectComposer`/`Bloom`) for scenes
@@ -69,19 +74,30 @@ Updated through Phase 8.
   `authStore.login()`, redirects on success/if-already-authenticated.
 - `src/pages/dashboard/Overview.tsx` (Phase 8) — the first real dashboard page and the first use
   of `recharts` (a day-one dependency, unused until now).
+- `src/pages/dashboard/Assistant.tsx` (Phase 9) — the real chat UI; see the event mapping below.
+- `src/components/chat/AgentActivityPanel.tsx` (Phase 9) — live 3D visualization: all 7
+  `AgentOrb`s in a row (tight `1.05` spacing — a wider spacing clipped the two outermost orbs
+  outside this panel's narrow frustum, caught via a live screenshot), the in-flight agent's orb
+  `active`, a `DataPulse` on each `handoff`, and a scrolling plain-English caption log.
+- `src/components/chat/FeedbackWidget.tsx` (Phase 9) — star rating, posts to `POST
+  /api/feedback`.
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px
 subtle border + panel shadow), agent colors as above.
 
-## Frontend ↔ event mapping (building blocks exist as of Phase 5; wiring to live SSE events is
-Phase 9's job — see `docs/01_ARCHITECTURE.md`)
-- `handoff` events → `DataPulse` beams between the two agents' `AgentOrb`s (increment that
-  beam's `trigger` prop on each event).
-- `agent_event` with `status: "retrieving"` → highlight the relevant `KnowledgeCore` chunk
-  (component not yet built — Phase 9).
-- `agent_event` with `status: "tool_call"` → the Action Agent's tool card (not yet built).
-- `approval_required` → the approval banner/card (not yet built).
-- `final` + a 1-5 star rating → a feedback burst (not yet built).
-- Every `AgentOrb` toggles its `active` prop (and therefore its pulse) while that agent has an
-  in-flight `agent_event` for the current run.
+## Frontend ↔ event mapping (live as of Phase 9 — see docs/01_ARCHITECTURE.md and
+docs/phases/PHASE_09.md)
+- `handoff` events → `DataPulse` beams between the two agents' `AgentOrb`s (`AgentActivityPanel`
+  increments that beam's `trigger` prop on each event). **Live.**
+- Every `AgentOrb` toggles `active` (and its pulse) while that agent has an in-flight
+  `agent_event` (`started`/`working`/`retrieving`/`tool_call`) for the current run. **Live.**
+- `token` events stream into the assistant message bubble live; the `final` event replaces it
+  with the canonical answer + sources + ticket number. **Live.**
+- `approval_required` → a visible "waiting on a human" banner; the still-open SSE connection
+  delivers `final` automatically once a manager decides elsewhere. **Live** (no in-app approve
+  UI yet — that's Phase 10's "Approvals" page).
+- `final` + a 1-5 star rating → `FeedbackWidget`, posts to `POST /api/feedback`. **Live.**
+- `agent_event` with `status: "retrieving"` highlighting a specific KB chunk (a dedicated
+  `KnowledgeCore` visual, not just the caption log) is **not** built — deferred, not required for
+  the current demo script.

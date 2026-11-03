@@ -75,3 +75,80 @@ export type ConversationSummary = {
   last_message: string | null;
   message_count: number;
 };
+
+// POST /api/conversations
+export type Conversation = {
+  id: string;
+  user_id: string;
+  title: string;
+  status: string;
+  created_at: string;
+};
+
+// POST /api/chat/stream — SSE event schema, see docs/01_ARCHITECTURE.md.
+export type ChatSource = { chunk_id: string; article_id: string; title: string; score: number };
+
+export type AgentEventPayload = {
+  type: "agent_event";
+  run_id: string;
+  seq: number;
+  agent: string;
+  status: "started" | "working" | "tool_call" | "retrieving" | "completed" | "handoff" | "error";
+  action: string | null;
+  caption: string;
+  detail: Record<string, unknown>;
+  model: string | null;
+  latency_ms: number | null;
+  tokens_in: number;
+  tokens_out: number;
+  ts: string;
+};
+
+export type HandoffEventPayload = {
+  type: "handoff";
+  run_id: string;
+  seq: number;
+  from: string;
+  to: string;
+  reason: string;
+  caption: string;
+  ts: string;
+};
+
+export type TokenEventPayload = { type: "token"; run_id: string; seq: number; text: string; ts: string };
+
+export type ApprovalRequiredEventPayload = {
+  type: "approval_required";
+  run_id: string;
+  seq: number;
+  approval_id: string;
+  approver_name: string;
+  system: string;
+  caption: string;
+  ts: string;
+};
+
+export type FinalEventPayload = {
+  type: "final";
+  run_id: string;
+  seq: number;
+  answer: string;
+  sources: ChatSource[];
+  route: string | null;
+  resolved: boolean;
+  ticket_number: string | null;
+  ts: string;
+};
+
+export type ErrorEventPayload = { type: "error"; run_id: string; seq: number; message: string; ts: string };
+
+export type ChatEvent =
+  | AgentEventPayload
+  | HandoffEventPayload
+  | TokenEventPayload
+  | ApprovalRequiredEventPayload
+  | FinalEventPayload
+  | ErrorEventPayload;
+
+// POST /api/feedback
+export type FeedbackResponse = { reward: number; updated_bandit: boolean };

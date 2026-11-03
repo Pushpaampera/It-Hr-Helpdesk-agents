@@ -1,8 +1,8 @@
-/** Role-aware sidebar navigation, per docs/00_PROJECT_OVERVIEW.md's role list. Only `Overview`
- * is `implemented` this phase (Phase 8) — the rest render as disabled "Soon" entries so the
- * shell shows the full intended structure without inventing page content ahead of its own
- * phase (AI Assistant is Phase 9; Tickets/Approvals/Team/HR Insights/Policy KB are Phase 10;
- * Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log are Phase 10/11). */
+/** Role-aware sidebar navigation, per docs/00_PROJECT_OVERVIEW.md's role list. `Overview`
+ * (Phase 8) and `AI Assistant` (Phase 9) are `implemented`; the rest render as disabled "Soon"
+ * entries so the shell shows the full intended structure without inventing page content ahead
+ * of its own phase (Tickets/Approvals/Team/HR Insights/Policy KB are Phase 10; Control Room/
+ * Reinforcement Lab/Evaluation/Costs/Audit Log are Phase 10/11). */
 import {
   BookOpen, Brain, CheckSquare, ClipboardCheck, DollarSign, HeartHandshake,
   LayoutDashboard, MessageCircle, Radar, ScrollText, Ticket, Users,
@@ -23,7 +23,7 @@ const ALL_ROLES: Role[] = ["employee", "manager", "hr", "admin"];
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", path: "/app/overview", icon: LayoutDashboard, roles: ALL_ROLES, implemented: true },
-  { label: "AI Assistant", path: "/app/assistant", icon: MessageCircle, roles: ALL_ROLES, implemented: false },
+  { label: "AI Assistant", path: "/app/assistant", icon: MessageCircle, roles: ALL_ROLES, implemented: true },
   { label: "Tickets", path: "/app/tickets", icon: Ticket, roles: ALL_ROLES, implemented: false },
   { label: "Approvals", path: "/app/approvals", icon: CheckSquare, roles: ["manager", "admin"], implemented: false },
   { label: "Team", path: "/app/team", icon: Users, roles: ["manager"], implemented: false },

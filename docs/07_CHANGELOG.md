@@ -1,5 +1,28 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 9: AI Assistant page (centerpiece)
+- Added: `frontend/src/api/sse.ts` (manual SSE client for `POST /api/chat/stream`),
+  `frontend/src/pages/dashboard/Assistant.tsx` (the real chat UI), `frontend/src/components/
+  chat/{AgentActivityPanel,FeedbackWidget}.tsx` (Phase 5's 3D primitives wired to live SSE
+  events for the first time).
+- Changed: `frontend/src/api/types.ts` (full `ChatEvent` discriminated union, `Conversation`,
+  `FeedbackResponse`), `frontend/src/routes.tsx` (`/app/assistant`), `frontend/src/layouts/
+  navItems.ts` (AI Assistant flipped to implemented).
+- Fixed: 3 real bugs found via live end-to-end browser testing, not static screenshots — a `\r\n`
+  vs `\n` SSE frame-parsing mismatch that silently dropped every single event (see
+  `docs/06_DECISIONS.md`); two of seven 3D agent orbs clipped outside the activity panel's
+  camera frustum; a duplicate-React-key warning on resumed `request_access` runs (correct
+  backend re-emission, wrong frontend key choice).
+- Verified: `npx tsc -b --noEmit`/`npm run build` succeed; live, functional end-to-end tests
+  covering a grounded IT answer with real citations and feedback submission, the complete
+  `request_access` pause → real cross-session manager approval → automatic resume flow over the
+  same open SSE connection, and an HR question under Reduce-motion.
+- Why: this is the product's actual demo centerpiece — the page a non-technical audience
+  watches to see the multi-agent system work. Getting the real-time visualization genuinely
+  wired to genuine backend events (not a canned animation) is the whole point of the project's
+  "cinematic frontend driven only by real backend SSE events" framing in
+  `docs/00_PROJECT_OVERVIEW.md`.
+
 ### 2026-11-03 — Phase 8: Dashboard shell and Overview
 - Added: `frontend/src/layouts/DashboardLayout.tsx` + `.module.css` (responsive sidebar+topbar
   shell, the project's first CSS module/real `@media` breakpoint), `navItems.ts` (role-aware nav
