@@ -19,7 +19,9 @@ from app.routers import (
     costs,
     eval as eval_router,
     feedback,
+    hr_insights,
     kb,
+    team,
     tickets,
 )
 
@@ -66,6 +68,8 @@ app.include_router(bandit.router)
 app.include_router(eval_router.router)
 app.include_router(admin.router)
 app.include_router(costs.router)
+app.include_router(team.router)
+app.include_router(hr_insights.router)
 
 
 @app.get("/metrics")

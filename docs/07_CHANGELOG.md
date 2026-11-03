@@ -1,5 +1,30 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 10: Remaining dashboard pages
+- Added: `backend/app/routers/{team,hr_insights}.py` (`GET /api/team`; `GET /api/hr/overview`,
+  `GET`/`PATCH /api/hr/leave-requests`) — no endpoint for "my direct reports" or "company-wide
+  leave posture" existed before this phase. `frontend/src/pages/dashboard/
+  {Tickets,Approvals,Team,HrInsights,KnowledgeBase}.tsx` — the five remaining `/app/*` nav items
+  that were "Soon" placeholders through Phase 9.
+- Changed: `backend/app/main.py` (registered the two new routers), `frontend/src/api/types.ts`
+  (`TicketDetail`/`TicketEvent`, `Approval`, `TeamMember`, `HrOverview`, `LeaveRequest`,
+  `KbResult`/`KbArticle`/`KbArticleDetail`/`KbChunk`), `frontend/src/routes.tsx` (5 new routes),
+  `frontend/src/layouts/navItems.ts` (all 5 flipped to `implemented: true`).
+- Fixed: a real bug found via live end-to-end browser testing — Approvals' decide button called
+  `PATCH /api/approvals/{id}/decide` by analogy with every other new page's decide/update action,
+  but that Phase-4-era endpoint is a `POST`. `tsc`/`npm run build` and a static screenshot both
+  looked correct; only clicking "Approve" live surfaced the real `405`. Fixed by switching to
+  `apiPost`. See `docs/phases/PHASE_10.md`.
+- Verified: `npx tsc -b --noEmit`/`npm run build` succeed; `poetry run pytest -q` 24/25 (one
+  pre-existing, unrelated intermittent failure, confirmed present on the clean Phase 9 tree via
+  `git stash`); full live, functional end-to-end tests across all 4 demo roles (Chrome +
+  playwright-core driving real clicks) covering every new page's core flow, including a live
+  ticket status change, a live approval decide, a live leave-request decide, and confirming an
+  employee hitting `/app/team` directly gets the backend's real `403`.
+- Why: these were the last "Soon" dashboard placeholders a staff user would actually click
+  during a demo. Team and HR Insights needed real backend endpoints built from scratch rather
+  than placeholder UI, in keeping with `CLAUDE.md`'s "no placeholders" rule.
+
 ### 2026-11-03 — Phase 9: AI Assistant page (centerpiece)
 - Added: `frontend/src/api/sse.ts` (manual SSE client for `POST /api/chat/stream`),
   `frontend/src/pages/dashboard/Assistant.tsx` (the real chat UI), `frontend/src/components/

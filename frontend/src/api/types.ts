@@ -152,3 +152,88 @@ export type ChatEvent =
 
 // POST /api/feedback
 export type FeedbackResponse = { reward: number; updated_bandit: boolean };
+
+// GET /api/tickets/{id}
+export type TicketEvent = { id: string; actor: string; type: string; note: string | null; created_at: string };
+export type TicketDetail = { ticket: TicketSummary; events: TicketEvent[] };
+
+// GET /api/approvals
+export type Approval = {
+  id: string;
+  run_id: string | null;
+  requester_id: string;
+  requester_name: string;
+  approver_id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  comment: string | null;
+  decided_at: string | null;
+  created_at: string;
+};
+
+// GET /api/team (manager/admin)
+export type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  title: string;
+  department: string;
+  open_tickets: number;
+  total_tickets: number;
+  pending_leave_requests: number;
+  last_activity_at: string | null;
+};
+
+// GET /api/hr/overview (hr/admin)
+export type HrOverview = {
+  headcount_by_department: { department: string; count: number }[];
+  leave_requests_by_status: { pending: number; approved: number; rejected: number };
+  leave_balances_by_type: { leave_type: string; total_days: number; used_days: number; utilization: number }[];
+  upcoming_approved_leave: {
+    id: string; user_id: string; user_name: string; leave_type: string;
+    start_date: string; end_date: string; days: number;
+  }[];
+};
+
+// GET /api/hr/leave-requests
+export type LeaveRequest = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  department: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  reason: string | null;
+  status: string;
+  created_at: string;
+};
+
+// GET /api/kb/search, /api/kb/compare
+export type KbResult = {
+  chunk_id: string;
+  article_id: string;
+  title: string;
+  dept: string;
+  category: string;
+  text: string;
+  score: number;
+};
+
+// GET /api/kb/articles/{id}
+export type KbChunk = { id: string; chunk_index: number; text: string; metadata: Record<string, unknown> };
+export type KbArticle = {
+  id: string;
+  dept: string;
+  category: string;
+  title: string;
+  body: string;
+  error_codes: string[] | null;
+  source_name: string | null;
+  version: number;
+  updated_at: string;
+  created_at: string;
+};
+export type KbArticleDetail = { article: KbArticle; chunks: KbChunk[] };

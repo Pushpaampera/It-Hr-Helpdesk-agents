@@ -1,6 +1,7 @@
 # 03 — Backend
 
-Updated through Phase 4.
+Updated through Phase 10 (endpoint table only — module list below is Phase 1-4, plus the Phase
+10 routers noted inline).
 
 ## Modules (Phase 1 state)
 - `app/config.py` — `Settings` (pydantic-settings), loads `.env` from the repo root. Every
@@ -73,6 +74,11 @@ Updated through Phase 4.
 - `app/routers/auth.py` (Phase 4) — `POST /api/auth/login`/`logout`, `GET /api/auth/me`.
 - `app/routers/{conversations,tickets,kb,analytics,agents,bandit,eval,admin,costs}.py`
   (Phase 4) — see the endpoint table below.
+- `app/routers/team.py` (Phase 10) — `GET /api/team`, a manager's direct reports plus real
+  per-person signal. Manager/admin only.
+- `app/routers/hr_insights.py` (Phase 10) — `GET /api/hr/overview`,
+  `GET`/`PATCH /api/hr/leave-requests` — company-wide headcount/leave posture and the real
+  pending leave requests HR has to act on. HR/admin only.
 
 ## API endpoints (through Phase 4)
 Every endpoint below (except `/api/health` and `/metrics`) requires a bearer JWT
@@ -111,6 +117,15 @@ enforced via `app/deps.py::ensure_self_or_roles`.
 | GET | `/api/eval/runs` | admin | — | list of past `eval_runs` |
 | POST | `/api/admin/reset-demo` | admin | — | `{success, message}` (wipes + reseeds all data) |
 | GET | `/api/costs` | manager/hr/admin | `?days=` | token/$ breakdown by day/route/model |
+| GET | `/api/team` | manager; admin (self or `?manager_id=`) | `?manager_id=` (admin only) | list of direct reports + ticket/leave/activity signal |
+| GET | `/api/hr/overview` | hr/admin | — | headcount by dept, leave-request counts, leave-balance utilization, upcoming approved leave |
+| GET | `/api/hr/leave-requests` | hr/admin | `?status=` | list of leave requests |
+| PATCH | `/api/hr/leave-requests/{id}/decide` | hr/admin | `{decision}` | `{id, status}` — approving increments the matching `leave_balances.used_days` |
+
+Phase 10 added `team`/`hr_insights` (above). Note `POST /api/approvals/{id}/decide` is a POST,
+not PATCH, despite every Phase 10 decide/update action otherwise being a PATCH — a real bug
+found during Phase 10 live verification came from assuming otherwise (see
+`docs/phases/PHASE_10.md`).
 
 Phase 3 shipped `chat`/`approvals`/`feedback` without auth — `user_id`/`approver_id` were passed
 directly in the request body. Phase 4 retrofitted all three onto the real JWT dependency

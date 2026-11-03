@@ -1,23 +1,25 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 9 — AI Assistant page (centerpiece): DONE.** Next up: **Phase 10 —
-  Remaining dashboard pages** (not started; awaiting operator go-ahead, since this session
+- Current phase: **Phase 10 — Remaining dashboard pages: DONE.** Next up: **Phase 10B — Demo
+  experience layer (HR showcase)** (not started; awaiting operator go-ahead, since this session
   pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 10 — the remaining `/app/*` pages currently marked "Soon" in
-  `src/layouts/navItems.ts`: Tickets, Approvals (the in-app decide UI — Phase 9's approval test
-  used direct API calls since no page existed yet), Team, HR Insights, Policy Knowledge Base.
+- Next step: start Phase 10B (check `docs/phases/` once created, or the master build prompt if
+  available, for its exact scope — HANDOFF.md flagged it only as "Demo experience layer (HR
+  showcase)" with no further detail yet).
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
-  9 built the real AI Assistant chat page against the live agent graph, with the Phase 5 3D
-  building blocks wired to real SSE events for the first time (handoff beams, active-agent
-  pulsing, a live caption log) and the full `request_access` approval pause/resume working
-  end to end through the actual UI. Found and fixed 3 real bugs via live verification (CRLF SSE
-  parsing, clipped 3D orbs, a duplicate-React-key edge case on resume) — see
-  `docs/06_DECISIONS.md` and `docs/phases/PHASE_09.md`. `LLM_MOCK_MODE=true` is set so
-  everything built so far works without GROQ/GEMINI keys. Langfuse tracing
-  (`app/observability.py`) stays a no-op until both keys are set and `poetry add langfuse` has
-  been run — neither is needed for the demo.
+  10 built the five remaining `/app/*` dashboard pages (Tickets, Approvals, Team, HR Insights,
+  Policy Knowledge Base), adding two new backend routers (`GET /api/team`,
+  `GET /api/hr/overview` + `GET`/`PATCH /api/hr/leave-requests`) since no "my direct reports" or
+  "company leave posture" endpoint existed before. Found and fixed a real bug via live
+  verification (Approvals' decide button called PATCH when the Phase 4 endpoint is POST — see
+  `docs/phases/PHASE_10.md`). `LLM_MOCK_MODE=true` is set so everything built so far works
+  without GROQ/GEMINI keys. Langfuse tracing (`app/observability.py`) stays a no-op until both
+  keys are set and `poetry add langfuse` has been run — neither is needed for the demo.
+- Known pre-existing (not Phase 10) issue: `test_agents_graph.py::test_e_unanswerable_question_
+  creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree too (not
+  caused by this phase's changes), not yet root-caused. See `docs/phases/PHASE_10.md`.
 
 ## Phase checklist
 
@@ -32,7 +34,7 @@
 | 7 | Login page | done | 2026-11-03 | Real email/password form + demo-account quick-picker calling `POST /api/auth/login`, RequireAuth route guard, role-aware "lands on" redirect, AppPlaceholder post-login stand-in. Verified end to end live against a running backend with a browser tool. |
 | 8 | Dashboard shell and Overview | done | 2026-11-03 | DashboardLayout (responsive sidebar+topbar shell, first CSS module), role-aware navItems with "Soon" placeholders for future phases, Overview page (staff KPIs+chart via recharts; employee own-tickets view). Verified live across all 4 roles, mobile, reduced motion. |
 | 9 | AI Assistant page (centerpiece) | done | 2026-11-03 | Real chat UI against POST /api/chat/stream (manual SSE client), 3D AgentOrb/DataPulse wired to live events, live caption log, feedback widget, full request_access pause/resume working end to end through the UI. Found/fixed 3 real bugs via live browser verification. |
-| 10 | Remaining dashboard pages | not started | | |
+| 10 | Remaining dashboard pages | done | 2026-11-03 | Tickets, Approvals, Team, HR Insights, Policy Knowledge Base pages, all wired to real data; two new backend routers (`team`, `hr_insights`) since no endpoint for direct-reports/company-leave-posture existed before. Found/fixed 1 real bug via live verification (Approvals decide used wrong HTTP method). |
 | 10B | Demo experience layer (HR showcase) | not started | | |
 | 11 | Evaluation and polish | not started | | |
 | 12 | Documentation and final verification | not started | | |
@@ -173,3 +175,25 @@
   runs (backend behavior was correct — Atlas genuinely re-emits on resume — frontend key choice
   was the bug).
 - Full details in `docs/phases/PHASE_09.md`.
+
+### Phase 10 — DONE
+- `poetry run pytest -q`: 24/25 pass; the one failure
+  (`test_e_unanswerable_question_creates_ticket`) reproduced identically with this phase's diff
+  `git stash`ed, confirming it's pre-existing on the Phase 9 tree and unrelated to this phase's
+  changes.
+- `npx tsc -b --noEmit` and `npm run build`: both succeed.
+- New `GET /api/team` and `GET /api/hr/overview`/`GET`+`PATCH /api/hr/leave-requests` endpoints
+  smoke-tested directly against the live seeded DB before any frontend existed: correct real
+  per-manager team data, correct company-wide HR numbers, correct `409` on re-deciding an
+  already-decided leave request, correct `403` for an employee token on all three.
+- Full live, functional end-to-end tests across all 4 demo roles (Chrome + playwright-core
+  driving real clicks, not static screenshots): Tickets (role-scoped lists, detail timeline,
+  live status/priority PATCH persisting after reload); Approvals (live decide moving an approval
+  from Pending to Approved with a real timestamp — this is where a real POST-vs-PATCH bug was
+  caught and fixed, see `docs/phases/PHASE_10.md`); Team (a real manager's 9 direct reports with
+  correct per-person ticket/leave counts); HR Insights (real company headcount/leave data, a
+  live leave-request approval, correct at 390px mobile); Policy Knowledge Base (search matching
+  Phase 2's CLI retrieval results exactly, side-by-side strategy comparison, article reader);
+  and confirmed an employee hitting `/app/team` directly gets the backend's real `403`, not a
+  silently-broken page — role enforcement is genuinely server-side.
+- Full details in `docs/phases/PHASE_10.md`.

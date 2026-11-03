@@ -1,8 +1,8 @@
 # 04 — Frontend
 
-Updated through Phase 9.
+Updated through Phase 10.
 
-## Routes (Phase 9 state)
+## Routes (Phase 10 state)
 | Path | Page | Notes |
 |------|------|-------|
 | `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
@@ -10,6 +10,11 @@ Updated through Phase 9.
 | `/app` (wrapped in `RequireAuth`) | `DashboardLayout` | Sidebar + top bar shell. `index` redirects to `overview`. |
 | `/app/overview` | `Overview` | Staff (manager/hr/admin): KPI cards + 30-day runs chart from `/api/analytics/*`. Employee: own open tickets + conversation count. |
 | `/app/assistant` | `Assistant` | The real chat UI against the live agent graph (`POST /api/chat/stream`, SSE) — the project's centerpiece. |
+| `/app/tickets` | `Tickets` | All roles; own vs. company-wide list (`GET /api/tickets`), detail + timeline (`GET /api/tickets/{id}`), staff status/priority edits (`PATCH /api/tickets/{id}`). |
+| `/app/approvals` | `Approvals` | Manager/admin; list by status (`GET /api/approvals`), decide (`POST /api/approvals/{id}/decide` — note **POST**, not PATCH, see `docs/phases/PHASE_10.md`). |
+| `/app/team` | `Team` | Manager only; a manager's direct reports + real signal (`GET /api/team`, new this phase). |
+| `/app/hr-insights` | `HrInsights` | HR only; company-wide headcount/leave posture + pending leave decisions (`GET /api/hr/overview`, `GET`/`PATCH /api/hr/leave-requests`, new this phase). |
+| `/app/kb` | `KnowledgeBase` | HR/admin; search/compare/read the real RAG knowledge base (`GET /api/kb/{search,compare,articles/{id}}`). |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -81,6 +86,17 @@ Updated through Phase 9.
   `active`, a `DataPulse` on each `handoff`, and a scrolling plain-English caption log.
 - `src/components/chat/FeedbackWidget.tsx` (Phase 9) — star rating, posts to `POST
   /api/feedback`.
+- `src/pages/dashboard/Tickets.tsx` (Phase 10) — role-scoped ticket list with status filter
+  chips, a detail side panel with the real event timeline, inline staff status/priority edits.
+- `src/pages/dashboard/Approvals.tsx` (Phase 10) — approval list by status, decide
+  (approve/reject) via `POST /api/approvals/{id}/decide`.
+- `src/pages/dashboard/Team.tsx` (Phase 10) — a manager's direct reports as cards, each showing
+  real open-ticket/pending-leave/last-activity signal.
+- `src/pages/dashboard/HrInsights.tsx` (Phase 10) — company-wide headcount/leave-balance/
+  upcoming-leave stats plus a live pending-leave-request decide list.
+- `src/pages/dashboard/KnowledgeBase.tsx` (Phase 10) — search/compare-strategies/article-reader
+  over the real RAG knowledge base; the "Compare strategies" view is the same lexical/semantic/
+  hybrid comparison the bandit picks between.
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px
@@ -95,8 +111,8 @@ docs/phases/PHASE_09.md)
 - `token` events stream into the assistant message bubble live; the `final` event replaces it
   with the canonical answer + sources + ticket number. **Live.**
 - `approval_required` → a visible "waiting on a human" banner; the still-open SSE connection
-  delivers `final` automatically once a manager decides elsewhere. **Live** (no in-app approve
-  UI yet — that's Phase 10's "Approvals" page).
+  delivers `final` automatically once a manager decides elsewhere. **Live** — Phase 10's
+  Approvals page (`/app/approvals`) now gives that decision a real in-app UI too.
 - `final` + a 1-5 star rating → `FeedbackWidget`, posts to `POST /api/feedback`. **Live.**
 - `agent_event` with `status: "retrieving"` highlighting a specific KB chunk (a dedicated
   `KnowledgeCore` visual, not just the caption log) is **not** built — deferred, not required for

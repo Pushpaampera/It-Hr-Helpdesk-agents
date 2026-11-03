@@ -1,14 +1,14 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_09.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_10.md`, in that order, before touching code.
 
 ## Current state (2026-11-03)
-**Phases 1-9 are all DONE and verified end to end**, including live browser-driven checks for
-Phases 6-9 — Phase 9 in particular was tested as real functional flows (a real chat turn, a real
-cross-session approval resume), not just static screenshots. Phase 10 (Remaining dashboard
-pages) has not started. This session pauses and asks the operator before starting each new
-phase (explicit operator instruction — see `docs/06_DECISIONS.md`).
+**Phases 1-10 are all DONE and verified end to end**, including live browser-driven checks for
+Phases 6-10 — each tested as real functional flows (real clicks/form submissions/decisions, not
+just static screenshots). Phase 10B (Demo experience layer / HR showcase) has not started. This
+session pauses and asks the operator before starting each new phase (explicit operator
+instruction — see `docs/06_DECISIONS.md`).
 
 What exists and is verified working:
 - **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated, Vite+React+TS
@@ -30,14 +30,32 @@ What exists and is verified working:
   `POST /api/chat/stream`), `src/api/sse.ts` (manual SSE client — native `EventSource` can't do
   POST + auth headers), `src/components/chat/{AgentActivityPanel,FeedbackWidget}.tsx` (Phase 5's
   3D building blocks now wired to real events for the first time: handoff beams, active-agent
-  pulsing, a live caption narrator log). `/app/assistant` is live; `Tickets`/`Approvals`/`Team`/
-  `HR Insights`/`Policy Knowledge Base`/etc. are still disabled "Soon" nav entries.
+  pulsing, a live caption narrator log).
+- **Remaining dashboard pages** (Phase 10): `src/pages/dashboard/{Tickets,Approvals,Team,
+  HrInsights,KnowledgeBase}.tsx` — all five `/app/*` nav items that were "Soon" placeholders
+  through Phase 9 are now real, live pages. Two new backend routers,
+  `backend/app/routers/{team,hr_insights}.py` (`GET /api/team`; `GET /api/hr/overview`,
+  `GET`/`PATCH /api/hr/leave-requests`), since no endpoint for "my direct reports" or
+  "company-wide leave posture" existed before. Every nav item is now `implemented: true` except
+  Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log (Phase 10B/11).
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
-  `poetry run pytest -q` → **24 passed**.
+  `poetry run pytest -q` → **24/25 passed** (one pre-existing, unrelated intermittent failure —
+  see "Known issues" below).
 - `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty.
-- Git repo on branch `main`; Phases 1-8 committed, Phase 9 pending this handoff's commit.
+- Git repo on branch `main`; Phases 1-9 committed, Phase 10 pending this handoff's commit.
 - **Environment quirk**: port 8000 has been occupied by unrelated system services in earlier
-  sessions in this sandbox but was free during Phases 5-9's verification — check before binding.
+  sessions in this sandbox but was free during Phases 5-10's verification — check before binding.
+
+## Important lesson from Phase 10 (read before wiring a frontend action to a new/pre-existing
+endpoint)
+Don't assume an HTTP method from a sibling page's convention — check the actual router. Phase
+10's Approvals page called `apiPatch(".../decide", ...)` because every other new page's
+decide/update action is a PATCH, but `app/routers/approvals.py`'s `/decide` route is a **POST**
+(built in Phase 4, untouched this phase). `tsc`/`npm run build` both passed and a static
+screenshot looked fine; only clicking "Approve" in a live browser surfaced the real
+`405 Method Not Allowed`. See `docs/phases/PHASE_10.md` for the full story — grep the actual
+router file for `@router.<verb>` before wiring a frontend call, don't infer it from pattern-
+matching other pages.
 
 ## Important lessons from Phase 9 (read before touching SSE or 3D-in-a-panel code)
 1. **SSE parsing**: sse-starlette terminates lines with `\r\n`, not `\n`. Any hand-written
@@ -69,25 +87,25 @@ Branch the render tree: `reduceMotion ? <div>...</div> : <motion.div variants={.
 </motion.div>`, or reuse `src/components/Reveal.tsx`. See `docs/06_DECISIONS.md` for the Phase
 6 bug this prevents.
 
-## Exact next step: start Phase 10 — Remaining dashboard pages
-Per `src/layouts/navItems.ts`, these are still `implemented: false`:
-1. **Tickets** (`/app/tickets`, all roles): list/detail using `GET /api/tickets`,
-   `GET /api/tickets/{id}`; staff (manager/hr/admin) can `PATCH` status/priority/assignee.
-2. **Approvals** (`/app/approvals`, manager/admin): list via `GET /api/approvals?status=pending`,
-   decide via `POST /api/approvals/{id}/decide` — this is what Phase 9's approval test did via
-   direct `fetch()` calls; now give it a real page so a manager doesn't need curl.
-3. **Team** (`/app/team`, manager only) and **HR Insights**/**Policy Knowledge Base**
-   (`/app/hr-insights`, `/app/kb`, hr only) — check the master build prompt (if available) for
-   exact scope; `GET /api/kb/search`/`/compare`/`/articles/{id}` back the KB page.
-4. Flip each page's `implemented` flag in `navItems.ts` as it's built; add routes in
-   `routes.tsx` wrapped the same way `/app/assistant` is.
-5. Respect the reduced-motion rule and verify visually/functionally per the lessons above.
-6. Run the documentation gate: `docs/phases/PHASE_10.md`, `PROGRESS.md`, this file,
-   `docs/07_CHANGELOG.md`, `docs/04_FRONTEND.md`, commit, **then stop and ask the operator
-   before starting Phase 10B/11**.
+## Exact next step: start Phase 10B — Demo experience layer (HR showcase)
+No detailed scope has been written down anywhere yet (checked — no master build prompt file
+exists in this repo). Before starting:
+1. Ask the operator what "Demo experience layer (HR showcase)" concretely means here, or check
+   for a master build prompt / design doc they may provide this session.
+2. Per `src/layouts/navItems.ts`, the still-unbuilt nav items are Control Room, Reinforcement
+   Lab, Evaluation, Costs, Audit Log (all admin-only) — these are more likely Phase 11's
+   "Evaluation and polish" scope than 10B's, so don't assume 10B means "build the rest of the
+   nav" without confirming.
+3. Whatever it turns out to be, keep following the reduced-motion rule and the live-verification
+   bar below, and grep the actual backend router for its HTTP verb before wiring any frontend
+   call to it (see the Phase 10 lesson above — don't infer it from another page's pattern).
+4. Run the documentation gate: a new `docs/phases/PHASE_10B.md` (or whatever the next phase is
+   actually named once scoped), `PROGRESS.md`, this file, `docs/07_CHANGELOG.md`,
+   `docs/04_FRONTEND.md`, commit, **then stop and ask the operator before starting the phase
+   after that**.
 
 ## Known issues
-None blocking. Seven things worth knowing about, not fixing:
+None blocking. Eight things worth knowing about, not fixing:
 - `MemorySaver`'s in-memory checkpointer means a backend restart loses any run that's
   mid-approval.
 - `app/eval/run_eval.py` doesn't resume paused (`request_access`) golden questions end to end.
@@ -96,11 +114,13 @@ None blocking. Seven things worth knowing about, not fixing:
   `AgentActivityPanel.tsx`'s `AGENT_ORDER`/`FRIENDLY_NAMES` all duplicate backend/token values
   by hand (SVG/WebGL need concrete values; frontend has no import path to Python constants).
 - The production JS bundle is past Vite's 500kB chunk-size warning (~1.6MB raw / ~450kB
-  gzipped). Still not worth code-splitting — revisit if Phase 10 adds enough weight to matter.
-- The Assistant page starts a fresh conversation every page visit — no history loading yet
-  (natural Phase 10 "Tickets"/conversation-list scope).
-- No in-app approval-deciding UI yet (Phase 10's "Approvals" page) — Phase 9 verified the pause/
-  resume flow via direct API calls, exactly how a manager would have to do it today.
+  gzipped after Phase 10). Still not worth code-splitting yet.
+- The Assistant page starts a fresh conversation every page visit — no history loading yet; the
+  new Tickets page is the closest thing to a "my past activity" view so far.
+- `test_agents_graph.py::test_e_unanswerable_question_creates_ticket` fails intermittently —
+  confirmed present on the clean Phase 9 tree (not caused by Phase 10), not yet root-caused. See
+  `docs/phases/PHASE_10.md`.
+- The Tickets table has no pagination — fine at the current ~200-row seed scale.
 
 ## Commands reference
 ```bash
