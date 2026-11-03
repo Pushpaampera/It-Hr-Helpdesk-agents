@@ -6,7 +6,9 @@ file, then `PROGRESS.md`, then `docs/phases/PHASE_10.md`, in that order, before 
 ## Current state (2026-11-03)
 **Phases 1-10 are all DONE and verified end to end**, including live browser-driven checks for
 Phases 6-10 — each tested as real functional flows (real clicks/form submissions/decisions, not
-just static screenshots). Phase 10B (Demo experience layer / HR showcase) has not started. This
+just static screenshots). Phase 10B (Demo experience layer / HR showcase) has been **skipped by
+explicit operator instruction (2026-11-03)** — not needed for this project; next up is Phase 11
+(Evaluation and polish). This
 session pauses and asks the operator before starting each new phase (explicit operator
 instruction — see `docs/06_DECISIONS.md`).
 
@@ -37,7 +39,8 @@ What exists and is verified working:
   `backend/app/routers/{team,hr_insights}.py` (`GET /api/team`; `GET /api/hr/overview`,
   `GET`/`PATCH /api/hr/leave-requests`), since no endpoint for "my direct reports" or
   "company-wide leave posture" existed before. Every nav item is now `implemented: true` except
-  Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log (Phase 10B/11).
+  Control Room/Reinforcement Lab/Evaluation/Costs/Audit Log, which are Phase 11 scope (Phase 10B
+  was skipped — see above).
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
   `poetry run pytest -q` → **24/25 passed** (one pre-existing, unrelated intermittent failure —
   see "Known issues" below).
@@ -87,22 +90,21 @@ Branch the render tree: `reduceMotion ? <div>...</div> : <motion.div variants={.
 </motion.div>`, or reuse `src/components/Reveal.tsx`. See `docs/06_DECISIONS.md` for the Phase
 6 bug this prevents.
 
-## Exact next step: start Phase 10B — Demo experience layer (HR showcase)
-No detailed scope has been written down anywhere yet (checked — no master build prompt file
-exists in this repo). Before starting:
-1. Ask the operator what "Demo experience layer (HR showcase)" concretely means here, or check
-   for a master build prompt / design doc they may provide this session.
+## Exact next step: start Phase 11 — Evaluation and polish
+Phase 10B (Demo experience layer / HR showcase) was explicitly skipped by the operator — don't
+build it unless asked again later. No detailed scope has been written down anywhere yet for
+Phase 11 (checked — no master build prompt file exists in this repo). Before starting:
+1. Ask the operator what "Evaluation and polish" concretely means here, or check for a master
+   build prompt / design doc they may provide this session.
 2. Per `src/layouts/navItems.ts`, the still-unbuilt nav items are Control Room, Reinforcement
-   Lab, Evaluation, Costs, Audit Log (all admin-only) — these are more likely Phase 11's
-   "Evaluation and polish" scope than 10B's, so don't assume 10B means "build the rest of the
-   nav" without confirming.
+   Lab, Evaluation, Costs, Audit Log (all admin-only) — these are the most likely candidates for
+   this phase's scope, but confirm rather than assume.
 3. Whatever it turns out to be, keep following the reduced-motion rule and the live-verification
    bar below, and grep the actual backend router for its HTTP verb before wiring any frontend
    call to it (see the Phase 10 lesson above — don't infer it from another page's pattern).
-4. Run the documentation gate: a new `docs/phases/PHASE_10B.md` (or whatever the next phase is
-   actually named once scoped), `PROGRESS.md`, this file, `docs/07_CHANGELOG.md`,
-   `docs/04_FRONTEND.md`, commit, **then stop and ask the operator before starting the phase
-   after that**.
+4. Run the documentation gate: a new `docs/phases/PHASE_11.md`, `PROGRESS.md`, this file,
+   `docs/07_CHANGELOG.md`, `docs/04_FRONTEND.md`, commit, **then stop and ask the operator
+   before starting the phase after that**.
 
 ## Known issues
 None blocking. Eight things worth knowing about, not fixing:

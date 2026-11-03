@@ -1,13 +1,14 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 10 — Remaining dashboard pages: DONE.** Next up: **Phase 10B — Demo
-  experience layer (HR showcase)** (not started; awaiting operator go-ahead, since this session
-  pauses between phases on request).
+- Current phase: **Phase 10 — Remaining dashboard pages: DONE.** **Phase 10B (Demo experience
+  layer / HR showcase) has been skipped by explicit operator instruction (2026-11-03)** — not
+  needed for this project. Next up: **Phase 11 — Evaluation and polish**, awaiting operator
+  go-ahead (this session pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 10B (check `docs/phases/` once created, or the master build prompt if
-  available, for its exact scope — HANDOFF.md flagged it only as "Demo experience layer (HR
-  showcase)" with no further detail yet).
+- Next step: start Phase 11 once the operator gives the go-ahead. No detailed scope has been
+  written down yet — ask what it should cover, or check for a master build prompt if the
+  operator provides one.
 - Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
   10 built the five remaining `/app/*` dashboard pages (Tickets, Approvals, Team, HR Insights,
   Policy Knowledge Base), adding two new backend routers (`GET /api/team`,
@@ -35,7 +36,7 @@
 | 8 | Dashboard shell and Overview | done | 2026-11-03 | DashboardLayout (responsive sidebar+topbar shell, first CSS module), role-aware navItems with "Soon" placeholders for future phases, Overview page (staff KPIs+chart via recharts; employee own-tickets view). Verified live across all 4 roles, mobile, reduced motion. |
 | 9 | AI Assistant page (centerpiece) | done | 2026-11-03 | Real chat UI against POST /api/chat/stream (manual SSE client), 3D AgentOrb/DataPulse wired to live events, live caption log, feedback widget, full request_access pause/resume working end to end through the UI. Found/fixed 3 real bugs via live browser verification. |
 | 10 | Remaining dashboard pages | done | 2026-11-03 | Tickets, Approvals, Team, HR Insights, Policy Knowledge Base pages, all wired to real data; two new backend routers (`team`, `hr_insights`) since no endpoint for direct-reports/company-leave-posture existed before. Found/fixed 1 real bug via live verification (Approvals decide used wrong HTTP method). |
-| 10B | Demo experience layer (HR showcase) | not started | | |
+| 10B | Demo experience layer (HR showcase) | skipped | 2026-11-03 | Skipped by explicit operator instruction — not needed for this project. |
 | 11 | Evaluation and polish | not started | | |
 | 12 | Documentation and final verification | not started | | |
 
