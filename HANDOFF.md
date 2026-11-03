@@ -1,82 +1,84 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_02.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_03.md`, in that order, before touching code.
 
 ## Current state (2026-11-03)
-**Phase 1 (Foundation) and Phase 2 (Seed data and RAG) are both DONE and verified end to end.**
-Phase 3 (Agents, graph, mock APIs and events) has not started. This session pauses and asks the
-operator before starting each new phase (explicit operator instruction overriding the master
-prompt's default — see `docs/06_DECISIONS.md`).
+**Phases 1-3 are all DONE and verified end to end.** Phase 4 (Auth, API surface, bandit and
+analytics) has not started. This session pauses and asks the operator before starting each new
+phase (explicit operator instruction — see `docs/06_DECISIONS.md`).
 
 What exists and is verified working:
-- **Backend foundation** (Phase 1): Poetry project, `app/config.py`/`db.py`/`security.py`/
-  `deps.py`/`main.py` (`/api/health`), `app/cli.py` script entry points, `app/models/user.py`.
-  `backend/migrations/0001_init.sql` applied against the operator's real Postgres 17 (port
-  5433), all 22 logical tables present, HNSW index working.
-- **RAG pipeline** (Phase 2): `app/rag/chunker.py`, `embedder.py` (local all-MiniLM-L6-v2),
-  `reranker.py` (cross-encoder/ms-marco-MiniLM-L-6-v2), `strategies.py` (3 arms), `retriever.py`
-  (hybrid lexical+vector+RRF, exact-match boost). `poetry run search "<query>" --strategy
-  <name> [--dept IT|HR]` works and is verified to rank correctly (see `docs/phases/PHASE_02.md`).
-- **Bandit foundations** (pulled forward from Phase 4): `app/bandit/features.py` (12-dim
-  context vector), `app/bandit/linucb.py` (`LinUCBArm`, `select_arm`, `compute_reward`).
-- **Seed data** (Phase 2): `poetry run seed` is idempotent and populates: 48 users (demo
-  accounts emma.employee/mark.manager/hannah.hr/alex.admin, password `Demo@1234` for all), 100
-  knowledge articles (60 IT, 40 HR) chunked into 130 embedded `kb_chunks`, leave balances +
-  3 months of payslips for everyone, 200 historical tickets, 80 approvals/access requests, 150
-  leave requests, 300 historical agent runs with 1206 events + 300 feedback rows + 249 bandit
-  decisions/rewards (bandit_state already "warmed up"), and a 70-question golden set (incl. 8
-  privacy traps).
-- `.env` is filled in and confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys
-  are still empty (fine until Phase 3 needs live-provider testing — mock mode covers it).
-- Git repo on branch `main`; Phase 1 and (pending this handoff) Phase 2 are committed.
+- **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated against the
+  operator's real Postgres 17 (port 5433), Vite+React+TS scaffold.
+- **RAG + seed data** (Phase 2): `app/rag/` hybrid retrieval (verified ranking quality),
+  `poetry run seed` idempotently populates 48 users (incl. the 4 demo accounts and a specific
+  named employee, Priya Sharma, needed for the privacy-guard demo), 100 knowledge articles (130
+  chunks), 200 tickets, 80 approvals, 150 leave requests, 300 historical runs, 70 golden
+  questions.
+- **Agents + graph** (Phase 3): all 7 agents (Gus/guard, Sage/supervisor, Iris/it_support,
+  Hana/hr_policy, Atlas/action, Tess/ticketing, Finn/feedback) in `app/agents/`, wired into a
+  LangGraph `StateGraph` (`app/agents/graph.py`) with a **real** pause/resume for
+  `request_access` (via `NodeInterrupt` + a module-level `MemorySaver` checkpointer — see
+  `docs/06_DECISIONS.md` for why this is fine for a local demo but would need a persistent
+  checkpointer in a real deployment). `app/mock_apis/` (directory, hr_system, it_system,
+  approvals) write to the real tables and log to `audit_log`. `app/agents/llm.py` supports both
+  `LLM_MOCK_MODE=true` (current default, zero API keys needed) and real Groq/Gemini calls with
+  retry/fallback — not yet tested against real keys since none are configured.
+- **HTTP surface** (Phase 3, intentionally minimal/unauthenticated): `POST /api/chat/stream`
+  (SSE), `GET /api/runs/{id}/events`, `POST /api/approvals/{id}/decide`, `POST /api/feedback` —
+  all take `user_id`/`approver_id` directly in the request body since JWT auth doesn't exist
+  yet. **Phase 4 must wrap these with real auth and remove those body fields.**
+- `backend/tests/test_agents_graph.py` — all 7 of the master prompt's Phase 3 verification
+  scenarios pass (`poetry run pytest -q` → 12 passed total).
+- `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty (fine
+  — mock mode is fully functional; Phase 4 doesn't require real keys either).
+- Git repo on branch `main`; Phases 1-2 committed, Phase 3 pending this handoff's commit.
+- **Environment quirk**: ports 8000 and 8001 are occupied by unrelated system services in this
+  sandbox (not part of this project — don't touch them). Use a different port (e.g. 8077) for
+  manual `poetry run dev` testing, or just rely on `vite.config.ts`'s proxy once the frontend
+  exists and both are on their expected ports in a clean environment.
 
-## Exact next step: start Phase 3 — Agents, graph, mock APIs and events
+## Exact next step: start Phase 4 — Auth, API surface, bandit and analytics
 Per the master build prompt:
-1. `backend/app/agents/llm.py` — single provider wrapper: Groq + Gemini SDKs, `tenacity`
-   retries/backoff, automatic fallback (Gemini fails → try Groq and vice versa), per-provider
-   rate limiting, token/latency accounting, and full `LLM_MOCK_MODE` support (deterministic
-   canned responses per agent, still emitting the full event schema).
-2. `backend/app/agents/events.py` — the SSE event emitter/schema helper (see
-   `docs/01_ARCHITECTURE.md`'s event envelope), including the plain-English `caption` templates
-   per agent/status (reuse the caption style already used in `app/seed/generators/ops.py`'s
-   historical event generation — e.g. "Sage is reading your message...", "Iris is checking the
-   IT runbooks...", "Gus stopped this request...").
-3. The 7 agents in `backend/app/agents/`: `guard.py` (no LLM — rules + prompt-injection
-   detection, blocks cross-user payroll/personal data access, logs to `audit_log`),
-   `supervisor.py` (Sage — Groq `llama-3.1-8b-instant`, strict JSON `{route, confidence,
-   needs_action, intent}`, routes to OTHER below 0.55 confidence), `it_support.py` (Iris —
-   Gemini Flash-Lite, calls `app.rag.retriever.retrieve` with `dept="IT"` and the bandit-chosen
-   strategy via `app.bandit.linucb.select_arm`), `hr_policy.py` (Hana — same pattern,
-   `dept="HR"`, also reads the requester's own `leave_balances`), `action.py` (Atlas — Groq
-   `openai/gpt-oss-20b` tool calling: `reset_password`, `request_access` [pauses the graph via a
-   LangGraph interrupt pending manager approval], `apply_leave`, `get_leave_balance`,
-   `unlock_account`), `ticketing.py` (Tess — Groq `openai/gpt-oss-20b`, creates/updates a
-   ticket with a context summary), `feedback.py` (Finn — no LLM, computes
-   `app.bandit.linucb.compute_reward` and calls `LinUCBArm.update`).
-4. `backend/app/agents/graph.py` — LangGraph wiring: `guard -> supervisor -> (it_support |
-   hr_policy | other_reply) -> action (if needs_action) -> ticketing (if unresolved/escalated)
-   -> feedback`, conditional edges, shared typed state, every step persisted to `agent_events`.
-5. `backend/app/mock_apis/`: `directory.py`, `hr_system.py` (leave balances/requests,
-   payslips), `it_system.py` (password reset, unlock, access grant) — write to the real tables,
-   log every action to `audit_log`.
-6. SSE endpoint (`POST /api/chat/stream`) with the full event schema from
-   `docs/01_ARCHITECTURE.md`, plus `GET /api/runs/{id}/events` for replay.
-7. **Verify** (CLI or pytest, per the master prompt): (a) "VPN error 619" → IT route + cited
-   answer; (b) "how many sick days do I have" → HR route + own balance; (c) "reset my password"
-   → action runs; (d) "I need access to the finance system" → pauses for manager approval,
-   resumes after; (e) unanswerable question → ticket with summary; (f) "show me Priya's
-   payslip" → blocked by Guard, logged to `audit_log`; (g) every step appears in `agent_events`
-   with sequence numbers.
-8. Run the documentation gate: `docs/phases/PHASE_03.md`, `PROGRESS.md`, this file,
-   `docs/07_CHANGELOG.md`, `docs/06_DECISIONS.md`, `docs/01_ARCHITECTURE.md`/`03_BACKEND.md` (add
-   the real prompts used by each agent), `scripts/backup.sh`, commit, **then stop and ask the
-   operator before starting Phase 4**.
+1. JWT login (`app/routers/auth.py`): `POST /api/auth/login` (email+password, bcrypt verify via
+   `app/security.py::verify_password`, issue via `create_access_token`), `POST
+   /api/auth/logout`, `GET /api/auth/me`. Wire `app/deps.py::get_current_user`/`require_roles`
+   onto every existing and new router — **including retrofitting `chat.py`, `approvals.py`,
+   `feedback.py` from Phase 3** to use the authenticated identity instead of body-supplied
+   `user_id`/`approver_id`.
+2. Remaining routers: `conversations` (list/get), `tickets` (list/detail/update — employees see
+   only their own), `approvals` (list pending, in addition to the existing decide endpoint),
+   `kb` (search, article detail, the lexical-vs-vector-vs-hybrid comparison endpoint for one
+   query — this can mostly just call `app.rag.retriever.retrieve` three times),
+   `analytics` (KPIs, timeseries, per-department — query the historical seed data), `agents`
+   (status, and `GET /api/agents/live` — the always-on aggregated SSE stream mentioned in
+   `docs/01_ARCHITECTURE.md` but not yet built), `bandit` (`GET /api/bandit/stats`: arm pulls,
+   average reward over time, regret estimate, per-context win rates — query
+   `bandit_decisions`/`bandit_rewards`/`bandit_state`), `eval` (trigger a golden-set run, list
+   past runs), `admin` (reset-demo button's backend, covered more fully in Phase 10B), `costs`.
+3. `app/bandit/simulator.py` + wire `poetry run simulate-feedback --n 500` (stubbed in
+   `app/cli.py::simulate_feedback` already, calling a not-yet-existing `run_simulation`) —
+   generates synthetic feedback demonstrating the "lexical wins for error-code queries, semantic
+   wins for vague ones" pattern, updating `bandit_state` incrementally like
+   `app/seed/generators/ops.py::generate_historical_runs` already does for the seeded 300 runs.
+4. Prometheus `/metrics`. Optional Langfuse hook (only if `LANGFUSE_PUBLIC_KEY`/
+   `LANGFUSE_SECRET_KEY` are present — they're currently empty).
+5. **Verify** (pytest): login works for all 4 demo roles; forbidden cross-role access is
+   rejected (e.g. an employee calling an admin-only endpoint gets 403); a `POST /api/feedback`
+   call visibly updates `bandit_state`; the simulator produces a learning curve (arm pulls/
+   average reward change over successive calls).
+6. Run the documentation gate: `docs/phases/PHASE_04.md`, `PROGRESS.md`, this file,
+   `docs/07_CHANGELOG.md`, `docs/06_DECISIONS.md`, `docs/03_BACKEND.md` (full endpoint table),
+   `scripts/backup.sh`, commit, **then stop and ask the operator before starting Phase 5**.
 
 ## Known issues
-None blocking. GROQ_API_KEY/GEMINI_API_KEY are still empty in `.env` — Phase 3's agents must
-work correctly under `LLM_MOCK_MODE=true` regardless; live-provider testing can happen whenever
-the operator adds real keys (not required to finish Phase 3).
+None blocking. Two things worth knowing about, not fixing:
+- The Phase 3 HTTP endpoints have no auth — by design, since Phase 4 is where auth is built.
+  Don't treat this as a regression to silently patch; it's the next phase's actual job.
+- `MemorySaver`'s in-memory checkpointer means a backend restart loses any run that's
+  mid-approval (`awaiting_approval` status with no way to resume). Fine for a local demo; just
+  don't restart the backend while a demo scenario has a pending approval.
 
 ## Commands reference
 ```bash
@@ -85,10 +87,10 @@ poetry install
 poetry run migrate
 poetry run seed
 poetry run pytest -q
-poetry run dev                                              # backend on :8000
-poetry run search "VPN error 619" --strategy hybrid_rerank    # retrieval sanity check
+poetry run dev                                              # pick a free port in this sandbox
+poetry run search "VPN error 619" --strategy hybrid_rerank
 
 cd frontend
 npm install
-npm run dev                                                   # frontend on :5173
+npm run dev
 ```

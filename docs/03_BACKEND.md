@@ -40,16 +40,47 @@ Updated as of Phase 1. Module-by-module description grows through Phase 3/4.
   leave requests, and 300 historical agent runs/events/feedback/bandit decisions.
 - `app/seed/generators/golden.py` — the 70-question golden set (incl. 8 privacy traps).
 - `app/seed/seed.py` — orchestrates all of the above inside one transaction; idempotent.
+- `app/agents/llm.py` — single provider wrapper (Groq + Gemini), retries/fallback,
+  `LLM_MOCK_MODE` support. See `docs/phases/PHASE_03.md` for the exact mock-vs-real contract.
+- `app/agents/events.py` — SSE event builder (`build_caption`, `EventSink`), replay
+  (`load_events_for_run`), live-queue registry for pause/resume streaming.
+- `app/agents/guard.py`, `supervisor.py`, `knowledge_agent.py`, `it_support.py`, `hr_policy.py`,
+  `action.py`, `ticketing.py`, `feedback.py` — the 7 agents (Gus, Sage, Iris, Hana, Atlas, Tess,
+  Finn). See `docs/phases/PHASE_03.md` for what each one does.
+- `app/agents/graph.py` — LangGraph wiring (`guard -> supervisor -> (it_support|hr_policy|
+  other_reply) -> action? -> ticketing? -> feedback`), the `request_access` pause/resume
+  (`NodeInterrupt` + a module-level `MemorySaver` checkpointer), `start_chat()`,
+  `resume_after_approval()`.
+- `app/agents/runs_store.py` — `agent_runs` row lifecycle + `messages` persistence.
+- `app/mock_apis/` — `directory.py`, `hr_system.py`, `it_system.py`, `approvals.py`. Every call
+  writes to the real tables and logs to `audit_log` via `mock_apis/__init__.py::log_action`.
+- `app/bandit/store.py` — loads/saves `LinUCBArm` state from `bandit_arms`/`bandit_state`,
+  records `bandit_decisions`/`bandit_rewards`.
 
 ## API endpoints (Phase 1)
 | Method | Path | Roles | Request | Response |
 |--------|------|-------|---------|----------|
 | GET | `/api/health` | public | — | `{status, service, mock_mode, database: {connected, detail}, pgvector: {enabled, detail}}` |
+| POST | `/api/chat/stream` | **none yet (Phase 4 adds JWT)** | `{user_id, message, conversation_id?}` | SSE stream of the event schema in `docs/01_ARCHITECTURE.md` |
+| GET | `/api/runs/{run_id}/events` | none yet | — | `{run_id, status, events: [...]}` (replay) |
+| POST | `/api/approvals/{id}/decide` | none yet (Phase 4 adds: must be the approver) | `{decision: "approved"\|"rejected", comment?, approver_id}` | `{approval_id, status}` |
+| POST | `/api/feedback` | none yet | `{run_id, rating (1-5), resolved, comment?}` | `{reward, updated_bandit}` |
 
-Further endpoints (auth, chat, tickets, approvals, kb, analytics, agents, bandit, eval, admin)
-are added in Phases 3–4 and documented here as they land, with method/path/roles/request/
-response shape and the prompts used by each agent.
+Phase 3 deliberately ships these without auth/role enforcement — `user_id`/`approver_id` are
+passed directly in the request body. Phase 4 wraps each with the real JWT dependency
+(`app/deps.py::get_current_user`/`require_roles`) and removes the body fields in favor of the
+authenticated identity.
 
-## Agent prompts
-None yet — agents are built in Phase 3. This section will list, per agent, the exact system
-prompt template and the variables it's filled with.
+## Agent prompts (verbatim system prompts, Phase 3)
+- **Sage** (`app/agents/supervisor.py::SYSTEM_PROMPT`): routing classifier instructions, strict
+  JSON output `{route, confidence, needs_action, intent}`, IT vs. HR vs. OTHER routing guide.
+- **Iris** (`app/agents/it_support.py::SYSTEM_PROMPT`) / **Hana**
+  (`app/agents/hr_policy.py::SYSTEM_PROMPT`): "answer using only the knowledge base excerpts
+  provided", numbered steps where relevant, under 150 words, never invent unsupported info. The
+  user prompt (built in `app/agents/knowledge_agent.py::answer_from_knowledge`) is the question
+  plus the top 3 retrieved chunks, separated by `---`.
+- **Atlas** (`app/agents/action.py::SYSTEM_PROMPT`): "call exactly one tool", resolve relative
+  dates, always explain that `request_access` needs manager approval. Tool schemas: `TOOLS` in
+  the same file.
+- **Gus** and **Tess** have no LLM prompts (rules-based / template-based respectively).
+- **Finn** has no LLM prompt (pure computation: `compute_reward` + LinUCB update).

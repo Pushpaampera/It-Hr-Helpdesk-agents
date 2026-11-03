@@ -173,6 +173,11 @@ def run_seed() -> None:
                 "INSERT INTO ticket_events (ticket_id, actor, type, note, created_at) VALUES (%s,%s,%s,%s,%s)",
                 [(e["ticket_id"], e["actor"], e["type"], e["note"], e["created_at"]) for e in ticket_events],
             )
+            # Seeded tickets use hand-assigned numbers (TCK-1000..TCK-1199) rather than
+            # ticket_number_seq, so the sequence must be advanced past them here — otherwise
+            # Tess (app/agents/ticketing.py) would mint a number that already exists the first
+            # time a ticket is created live. See docs/06_DECISIONS.md.
+            cur.execute("SELECT setval('ticket_number_seq', 1199, true)")
         print(f"[seed] inserted {len(tickets)} tickets, {len(ticket_events)} ticket events")
 
         employees = [u for u in users if u["role"] == "employee"]

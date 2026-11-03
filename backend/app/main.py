@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import check_db_connection
+from app.routers import approvals, chat, feedback
 
 settings = get_settings()
 
@@ -15,6 +16,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat.router)
+app.include_router(approvals.router)
+app.include_router(feedback.router)
 
 
 @app.get("/api/health")

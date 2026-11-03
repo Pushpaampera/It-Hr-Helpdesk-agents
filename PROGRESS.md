@@ -1,18 +1,21 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 2 — Seed data and RAG: DONE.** Next up: **Phase 3 — Agents, graph,
-  mock APIs and events** (not started; awaiting operator go-ahead, since this session pauses
-  between phases on request).
+- Current phase: **Phase 3 — Agents, graph, mock APIs and events: DONE.** Next up: **Phase 4 —
+  Auth, API surface, bandit and analytics** (not started; awaiting operator go-ahead, since this
+  session pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 3 — implement `backend/app/agents/llm.py` (Groq/Gemini wrapper with
-  retries, fallback, `LLM_MOCK_MODE`), the 7 agents (guard, supervisor, it_support, hr_policy,
-  action, ticketing, feedback), the LangGraph flow, `backend/app/mock_apis/`, the approval
-  interrupt/resume, and the `/api/chat/stream` SSE endpoint.
-- Blocker/dependency: none currently. `.env` is filled in and verified working (DB connects,
-  pgvector enabled, seeded with 48 users/100 articles/130 chunks/300 historical runs/etc.).
-  `LLM_MOCK_MODE=true` is set so Phase 3 can be built and demoed without GROQ/GEMINI keys;
-  the operator can add real keys later for live-provider testing.
+- Next step: start Phase 4 — implement JWT login + role dependencies wired onto the Phase 3
+  routers (chat/approvals/feedback currently take `user_id`/`approver_id` directly in the body;
+  these need to switch to the authenticated identity), plus the remaining routers
+  (conversations, tickets, kb, analytics, agents, bandit, eval, costs), the live LinUCB stats
+  endpoint, and `poetry run simulate-feedback --n 500`.
+- Blocker/dependency: none currently. `.env` is filled in and verified working end to end
+  (DB connects, pgvector enabled, seeded, and the full 7-agent LangGraph flow — including a real
+  manager-approval pause/resume — verified against a live HTTP server). `LLM_MOCK_MODE=true` is
+  set so everything built so far works without GROQ/GEMINI keys; the operator can add real keys
+  later for live-provider testing (the provider wrapper in `app/agents/llm.py` already supports
+  both paths).
 
 ## Phase checklist
 
@@ -20,7 +23,7 @@
 |---|-------|--------|------|--------|
 | 1 | Foundation | done | 2026-11-03 | Repo layout, Poetry project, 22-table SQL migration (24 tables incl. bookkeeping), `/api/health` verified against a real DB with pgvector/HNSW enabled, Vite+React+TS scaffold verified serving and proxying to the backend. |
 | 2 | Seed data and RAG | done | 2026-11-03 | 48 users, 100 KB articles (130 chunks), 200 tickets, 80 approvals, 150 leave requests, 300 historical runs, 70 golden questions. Hybrid retrieval verified: exact error codes rank #1, semantic search sensible, dept filter correct. |
-| 3 | Agents, graph, mock APIs and events | not started | | |
+| 3 | Agents, graph, mock APIs and events | done | 2026-11-03 | 7 agents + LangGraph flow with real NodeInterrupt pause/resume for manager approval. All 7 master-prompt verification scenarios (a)-(g) pass. SSE streaming confirmed end to end over real HTTP. |
 | 4 | Auth, API surface, bandit and analytics | not started | | |
 | 5 | Frontend design system and 3D building blocks | not started | | |
 | 6 | Landing page | not started | | |
@@ -65,3 +68,23 @@
   HR-dept parental-leave articles, confirming the dept filter.
 - `poetry run pytest -q`: `5 passed` (health check + 4 retrieval regression tests).
 - Full details, exact commands and problems-fixed in `docs/phases/PHASE_02.md`.
+
+### Phase 3 — DONE
+- `poetry run pytest -q`: **12 passed** (1 health + 4 retrieval + 7 agent-graph scenarios).
+- Scenario (a) VPN 619 → IT route, cited "VPN Error 619" source, `status=resolved`.
+- Scenario (b) sick days → HR route, answer uses the employee's own real leave balance.
+- Scenario (c) reset password → `action` tool_call `reset_password`, resolved.
+- Scenario (d) "I need access to the Finance system" → `approval_required` event,
+  `status=awaiting_approval`; after a manager approves via `approvals_api.decide()` +
+  `resume_after_approval()`, run becomes `resolved`.
+- Scenario (e) unanswerable question → ticket created, `status=escalated`, ticket summary
+  mentions the original question.
+- Scenario (f) "Show me Priya's payslip" → Guard blocks it, logs `audit_log` action
+  `guard_blocked` for the requester.
+- Scenario (g) every run's `agent_events` have strictly increasing, unique `seq` numbers.
+- Manual HTTP smoke test: `POST /api/chat/stream` streamed real SSE events (`agent_event`,
+  `handoff`, `token`, `final`) end to end through a live `uvicorn` server.
+- Two real bugs found and fixed via this scenario testing: a missing `Priya` seed user, and a
+  ticket-number sequence that wasn't advanced past the hand-seeded ticket numbers (both in
+  `docs/phases/PHASE_03.md` and `docs/06_DECISIONS.md`).
+- Full details, exact commands and problems-fixed in `docs/phases/PHASE_03.md`.

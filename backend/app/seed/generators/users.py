@@ -68,7 +68,15 @@ def generate_users(seed: int = 42) -> list[dict]:
         })
         manager_emails_by_dept.setdefault(dept, email)
 
-    # Remaining employees up to 48 total (currently 4 + 2 + 5 = 11, need 37 more)
+    # A specific named employee the showcase scenarios reference by name (master prompt
+    # section 0.7, scenario 5: "Show me Priya's payslip" — the privacy-guard demo needs a real
+    # target to ask about). See docs/06_DECISIONS.md.
+    users.append({
+        "name": "Priya Sharma", "email": "priya.sharma@acme.test", "role": "employee",
+        "department": "Finance", "title": "Financial Analyst", "manager_email": manager_emails_by_dept.get("Finance"),
+    })
+
+    # Remaining employees up to 48 total (currently 4 + 2 + 5 + 1 = 12, need 36 more)
     used_emails = {u["email"] for u in users}
     target_total = 48
     remaining = target_total - len(users)

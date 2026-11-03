@@ -1,5 +1,28 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 3: Agents, graph, mock APIs and events
+- Added: `backend/app/agents/llm.py` (provider wrapper, retries, fallback, mock mode),
+  `events.py` (SSE event builder + live-queue registry), `guard.py`, `supervisor.py`,
+  `knowledge_agent.py` + `it_support.py`/`hr_policy.py`, `action.py`, `ticketing.py`,
+  `feedback.py`, `graph.py` (LangGraph wiring + pause/resume), `runs_store.py`.
+- Added: `backend/app/mock_apis/` (`directory.py`, `hr_system.py`, `it_system.py`,
+  `approvals.py`), `backend/app/bandit/store.py`.
+- Added: `backend/app/routers/chat.py` (`POST /api/chat/stream` SSE, `GET /api/runs/{id}/events`),
+  `approvals.py` (`POST /api/approvals/{id}/decide`), `feedback.py` (`POST /api/feedback`);
+  wired into `app/main.py`.
+- Added: `backend/tests/test_agents_graph.py` — the master prompt's 7 Phase 3 verification
+  scenarios, all passing.
+- Fixed: `app/seed/generators/users.py` now seeds a specific named employee (Priya Sharma) for
+  the privacy-guard showcase scenario; `app/seed/seed.py` now advances `ticket_number_seq` past
+  the hand-assigned seeded ticket numbers so live-created tickets don't collide. Database was
+  truncated and re-seeded to pick up both fixes.
+- Verified: `poetry run pytest -q` → 12 passed; manual HTTP/SSE smoke test confirmed real
+  end-to-end streaming through `POST /api/chat/stream`. Full detail in
+  `docs/phases/PHASE_03.md`.
+- Why: this is the functional core of the product — a real multi-agent graph with a genuine
+  human-in-the-loop approval pause, producing the exact event stream the Phase 5+ frontend will
+  animate against.
+
 ### 2026-11-03 — Phase 2: Seed data and RAG
 - Added: `backend/app/rag/` — `chunker.py`, `embedder.py` (local all-MiniLM-L6-v2),
   `reranker.py` (cross-encoder/ms-marco-MiniLM-L-6-v2), `strategies.py` (3 bandit arms),

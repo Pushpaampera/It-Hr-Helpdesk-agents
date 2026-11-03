@@ -1,5 +1,49 @@
 # 06 — Decision Log
 
+### 2026-11-03 — `NodeInterrupt` + a module-level `MemorySaver` for the approval pause/resume
+**Decision**: `request_access` pauses the LangGraph flow by raising
+`langgraph.errors.NodeInterrupt`, with a single process-wide `MemorySaver()` checkpointer
+instance (keyed by `thread_id=run_id`) shared by every graph build.
+**Reason**: verified directly (see `docs/phases/PHASE_03.md`) that `NodeInterrupt` + a shared
+checkpointer across two separately-compiled `StateGraph` objects correctly resumes from the
+interrupted node via `update_state()` + `ainvoke(None, config)`. The langgraph version pinned
+(`0.2.34`) predates the newer functional `interrupt()`/`Command(resume=...)` API, so the static
+`NodeInterrupt` exception is the correct mechanism for this version. `MemorySaver` is in-memory
+only (not persisted to disk/Postgres), which is fine for a local demo where the backend process
+stays up between a pause and its resume, but means a server restart loses any run that's
+mid-approval — acceptable for this project's scope; a real deployment would swap in a
+Postgres-backed checkpointer.
+**Alternatives rejected**: implementing the pause/resume as fully custom application logic with
+no LangGraph interrupt primitive at all — would satisfy the demo's behavior but contradicts the
+master prompt's explicit instruction ("request_access must pause the graph (LangGraph
+interrupt)").
+
+### 2026-11-03 — Graph nodes are closures over a per-run context, not state-embedded
+**Decision**: `app/agents/graph.py::build_graph(ctx)` builds all node functions as closures
+capturing a `RunContext` (the user dict + an `EventSink`), rather than putting the `EventSink`
+or a DB handle inside the LangGraph `AgentState` TypedDict.
+**Reason**: `AgentState` needs to stay a plain, update-mergeable TypedDict (LangGraph requires
+every node to return a dict of state updates); stuffing a non-trivial object like an
+`asyncio.Queue`-backed `EventSink` into it works with `MemorySaver` (which holds Python objects
+in memory, not JSON) but conflates "data that describes this conversation turn" with "plumbing
+for event delivery," and `resume_after_approval` needs a *fresh* `EventSink` anyway (continuing
+the `seq` counter from where it left off) — so the closure approach, rebuilding the graph with a
+new context each time `start_chat`/`resume_after_approval` is called, is simpler and keeps the
+state schema honest.
+**Alternatives rejected**: embedding `EventSink` in state — works but means the state schema and
+the event-delivery plumbing would be the same object, with no clean seam for resuming with a
+fresh `EventSink`.
+
+### 2026-11-03 — Added Priya Sharma as a specific named seed employee
+**Decision**: `app/seed/generators/users.py` seeds one specific employee, Priya Sharma
+(`priya.sharma@acme.test`, Finance), rather than leaving all 48 users randomly generated.
+**Reason**: master prompt section 0.7's showcase scenario 5 is literally "Show me Priya's
+payslip" (the privacy-guard "wow moment") — the Guard-block demo needs a real person by that
+exact first name to exist in the seed, or the scenario can't be run as written.
+**Alternatives rejected**: rewriting the showcase scenario text to use a randomly-generated
+name — rejected, since the scenario wording comes directly from the master prompt and future
+phases (10B) will hard-code this scenario's script.
+
 ### 2026-11-03 — Pulled `app/bandit/features.py` and `app/bandit/linucb.py` forward into Phase 2
 **Decision**: built the 12-dim context feature vector and a small, self-contained disjoint
 LinUCB implementation (`LinUCBArm.score`/`update`, `select_arm`, `compute_reward`) during Phase
