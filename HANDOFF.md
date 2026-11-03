@@ -1,13 +1,12 @@
 # HANDOFF.md — paste-ready continuation prompt
 
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
-file, then `PROGRESS.md`, then `docs/phases/PHASE_05.md`, in that order, before touching code.
+file, then `PROGRESS.md`, then `docs/phases/PHASE_06.md`, in that order, before touching code.
 
 ## Current state (2026-11-03)
-**Phases 1-5 are all DONE and verified end to end (Phase 5's visual check is the one exception
-— see below).** Phase 6 (Landing page) has not started. This session pauses and asks the
-operator before starting each new phase (explicit operator instruction — see
-`docs/06_DECISIONS.md`).
+**Phases 1-6 are all DONE and verified end to end, including a real visual/browser check for
+Phase 6.** Phase 7 (Login page) has not started. This session pauses and asks the operator
+before starting each new phase (explicit operator instruction — see `docs/06_DECISIONS.md`).
 
 What exists and is verified working:
 - **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated, Vite+React+TS
@@ -17,64 +16,66 @@ What exists and is verified working:
   `request_access` pause/resume.
 - **Auth, API surface, bandit and analytics** (Phase 4): every backend endpoint is behind real
   JWT auth (`POST /api/auth/login` — demo password `Demo@1234` for every seeded user — `GET
-  /api/auth/me`, `POST /api/auth/logout`). Ten routers beyond the Phase 3 three: `conversations`,
-  `tickets`, `kb`, `analytics`, `agents` (incl. `/live` aggregated SSE), `bandit`, `eval`,
-  `admin` (`/reset-demo`), `costs`. `app/bandit/simulator.py` (`poetry run simulate-feedback`),
-  `app/eval/run_eval.py` (`poetry run eval`), `GET /metrics`, optional Langfuse hook. See
-  `docs/03_BACKEND.md` for the full endpoint table.
-- **Frontend design system and 3D building blocks** (Phase 5): `src/store/{uiStore,authStore}.ts`
-  (zustand, persisted), `src/api/{client,types}.ts` (fetch wrapper + typed response shapes),
-  `src/three/{Scene,AgentOrb,DataPulse,ParticleField}.tsx` (the 3D primitives later pages
-  compose — `Scene` enforces the `dpr`-cap/pause-when-hidden performance budget from CLAUDE.md),
-  `src/components/ReduceMotionToggle.tsx`, `src/components/ui/{Button,Badge,Panel}.tsx` (no UI
-  kit, no Tailwind — plain CSS variable styling). `PlaceholderHome.tsx` now showcases all of it
-  and still live-pings `/api/health`; Phase 6 replaces this page outright.
+  /api/auth/me`, `POST /api/auth/logout`). See `docs/03_BACKEND.md` for the full endpoint table.
+- **Frontend design system and 3D building blocks** (Phase 5): `src/store/{uiStore,authStore}.ts`,
+  `src/api/{client,types}.ts`, `src/three/{Scene,AgentOrb,DataPulse,ParticleField}.tsx`,
+  `src/components/ReduceMotionToggle.tsx`, `src/components/ui/{Button,Badge,Panel}.tsx`.
+- **Landing page** (Phase 6): `src/pages/Landing.tsx` (hero with `Scene`+`bloom`, 7 `AgentOrb`s,
+  `DataPulse` beams, `ParticleField`, radial scrim for text legibility; "Meet the team"; "How it
+  works"; closing CTA), `src/components/Reveal.tsx` (scroll-triggered fade-up, the pattern to
+  copy for reduced-motion-safe animation — see the decision log entry below),
+  `src/pages/LoginPlaceholder.tsx` (temporary, Phase 7 replaces it). `PlaceholderHome.tsx` is
+  deleted — fully superseded.
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
   `poetry run pytest -q` → **24 passed**.
 - `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty.
-- Git repo on branch `main`; Phases 1-4 committed, Phase 5 pending this handoff's commit.
+- Git repo on branch `main`; Phases 1-5 committed, Phase 6 pending this handoff's commit.
 - **Environment quirk**: port 8000 has been occupied by unrelated system services in earlier
-  sessions in this sandbox but was free during Phase 5's verification — don't assume either way;
-  check before binding, and use a different port (e.g. 8077) for manual testing if it's busy.
+  sessions in this sandbox but was free during Phases 5-6's verification — check before binding.
 
-## Known gap carried from Phase 5: no visual browser check
-Phase 5's `tsc`/`npm run build`/dev-server checks confirm the code is correct and wired
-together, and a live full-stack check confirmed `/api/health` resolves through the Vite proxy —
-but no browser/screenshot tool was available in that session, so the 3D scene's actual
-appearance, frame rate, and the Reduce-motion toggle's visible effect have **not** been
-confirmed by eye. Before — or early in — Phase 6, either the operator should open
-`http://localhost:5173/` themselves and confirm it looks right, or a session with browser/
-screenshot tooling available should do it. If something looks wrong, it's almost certainly in
-`src/three/*` or `PlaceholderHome.tsx`, both small and self-contained.
+## Important: how to do reduced-motion-safe animation (read before writing any new page)
+**Do not** conditionally pass `undefined` for a `motion.*` component's `initial`/`animate`/
+`variants` props to "turn off" an animation under `useUIStore().reduceMotion`, while a child
+`motion.*` component keeps an unconditional `variants={...}`. This was tried in Phase 6's first
+hero implementation and the entire hero content silently went **invisible** under reduced
+motion — Framer Motion children stuck at a `"hidden"` variant's styles never resolve without an
+actively-animating parent. Caught only because a browser tool was available to screenshot it
+with the toggle on; see `docs/06_DECISIONS.md` for the full writeup. **Instead**: branch the
+render itself — reuse `src/components/Reveal.tsx` for scroll-reveals, or write
+`reduceMotion ? <div>...</div> : <motion.div variants={...}>...</motion.div>` directly, the
+pattern `Landing.tsx`'s hero now uses. Every new page from Phase 7 onward should follow this.
 
-## Exact next step: start Phase 6 — Landing page
-Per the master build prompt, this is the first real page, replacing `PlaceholderHome` outright:
-1. The cinematic landing page composed from Phase 5's building blocks: `Scene` +
-   `AgentOrb`/`DataPulse`/`ParticleField` as the hero visual, design tokens for layout/typography,
-   `src/design/motion.ts` variants for scroll/entrance animation (gsap + ScrollTrigger is in
-   `package.json` if the master prompt calls for scroll-driven sequences here — check its exact
-   Phase 6 wording if available, otherwise Framer Motion's variants are enough).
-2. A clear call-to-action into the login page (Phase 7) — `react-router-dom` route, probably
-   `/login`, not yet added to `src/routes.tsx`.
-3. Respect the "Reduce motion" toggle throughout (already wired at the store level — just don't
-   bypass it with ad-hoc animation that ignores `uiStore.reduceMotion`).
-4. **Verify**: `npm run build` succeeds, `npm run dev` serves the new page, and — this time —
-   confirm visually (browser tool, or ask the operator) since Phase 5 couldn't.
-5. Run the documentation gate: `docs/phases/PHASE_06.md`, `PROGRESS.md`, this file,
+## Exact next step: start Phase 7 — Login page
+Per the master build prompt, this replaces `LoginPlaceholder.tsx`:
+1. A real login form: email + password, `POST /api/auth/login` via `useAuthStore().login()`
+   (already built in Phase 5 — just needs a UI), loading/error states, the 4 demo accounts
+   quick-picker (`emma.employee@acme.test` / `mark.manager@acme.test` / `hannah.hr@acme.test` /
+   `alex.admin@acme.test`, all password `Demo@1234`) for fast demo use.
+2. Role-aware post-login redirect, per `docs/00_PROJECT_OVERVIEW.md`'s "lands on" column:
+   employee → AI Assistant, manager → Overview, hr → HR Insights, admin → Control Room. None of
+   those dashboard routes/pages exist yet (Phase 8+) — this phase can redirect to a placeholder
+   `/app` route if the real ones aren't built yet, or coordinate with Phase 8's actual route
+   names once decided; don't invent dashboard page content here.
+3. Respect the reduced-motion rule above for any entrance animation.
+4. **Verify visually** (a browser tool was available this session at
+   `/usr/bin/google-chrome` + `playwright-core` installed ad hoc into the scratchpad directory —
+   do the same if it's not already set up, and actually screenshot both the default and
+   reduced-motion states before calling this done, the way Phase 6 did after getting burned by
+   not doing this in Phase 5).
+5. Run the documentation gate: `docs/phases/PHASE_07.md`, `PROGRESS.md`, this file,
    `docs/07_CHANGELOG.md`, `docs/04_FRONTEND.md`, commit, **then stop and ask the operator
-   before starting Phase 7**.
+   before starting Phase 8**.
 
 ## Known issues
-None blocking. Four things worth knowing about, not fixing:
+None blocking. Five things worth knowing about, not fixing:
 - `MemorySaver`'s in-memory checkpointer means a backend restart loses any run that's
   mid-approval. Don't restart the backend while a demo scenario has a pending approval.
-- `app/eval/run_eval.py` doesn't resume paused (`request_access`) golden questions end to end —
-  scored as a correctness penalty instead.
-- `GET /api/agents/live` polls `agent_events` every second (no real pub/sub) — fine for this
-  local single-process demo.
-- `src/three/AgentOrb.tsx`'s `AGENT_COLORS` duplicates `tokens.css`'s `--agent-*` values by
-  hand (Three.js materials need real color values, not CSS var references) — keep both in sync
-  if the palette is ever retuned.
+- `app/eval/run_eval.py` doesn't resume paused (`request_access`) golden questions end to end.
+- `GET /api/agents/live` polls `agent_events` every second (no real pub/sub) — fine locally.
+- `src/three/AgentOrb.tsx`'s `AGENT_COLORS` duplicates `tokens.css`'s `--agent-*` values by hand.
+- The production JS bundle is past Vite's 500kB chunk-size warning (~1.1MB raw / 330kB gzipped)
+  now that `@react-three/postprocessing` is in it. Not worth code-splitting yet — one real page
+  exists. Revisit once Phase 8+ adds enough routes that splitting actually pays off.
 
 ## Commands reference
 ```bash
@@ -84,7 +85,6 @@ poetry run migrate
 poetry run seed
 poetry run pytest -q
 poetry run dev                                              # pick a free port if 8000 is busy
-poetry run search "VPN error 619" --strategy hybrid_rerank
 poetry run simulate-feedback --n 500
 poetry run eval
 
@@ -92,6 +92,7 @@ cd frontend
 npm install
 npm run dev
 npm run build
+npx tsc -b --noEmit
 ```
 
 ## Demo accounts (all password `Demo@1234`)

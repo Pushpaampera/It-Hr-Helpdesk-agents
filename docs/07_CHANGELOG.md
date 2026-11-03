@@ -1,5 +1,27 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 6: Landing page
+- Added: `frontend/src/pages/Landing.tsx` (real cinematic landing page), `LoginPlaceholder.tsx`
+  (temporary, Phase 7 replaces it), `frontend/src/components/Reveal.tsx` (scroll-reveal wrapper,
+  reduced-motion-safe).
+- Changed: `frontend/src/routes.tsx` (`/` → `Landing`, `/login` → `LoginPlaceholder`),
+  `frontend/src/three/Scene.tsx` (added an opt-in `bloom` prop via
+  `@react-three/postprocessing`).
+- Deleted: `frontend/src/pages/PlaceholderHome.tsx` (fully superseded by `Landing.tsx`).
+- Fixed: a real bug caught via screenshot — the hero section's headline/subtext/CTA went fully
+  invisible with Reduce-motion toggled on, because child `motion.*` components with only a
+  `variants` prop never resolve off their hidden state without an actively-animating parent.
+  Fixed by branching the render tree instead of conditionally nulling motion props; full
+  writeup in `docs/06_DECISIONS.md`.
+- Verified: `npx tsc -b --noEmit` and `npm run build` both succeed. A browser tool (Chrome +
+  an ad hoc `playwright-core` install) was available this phase — screenshotted every section in
+  both default and reduced-motion states, confirmed the fix, and confirmed zero app-level
+  console errors.
+- Why: this is the project's first real page and the first phase with actual visual
+  verification tooling, which is exactly how it caught a bug that `tsc`/`npm run build` alone
+  (Phase 5's only available checks) could never have found — a useful case study for why
+  Phase 5's "not verified visually" caveat mattered.
+
 ### 2026-11-03 — Phase 5: Frontend design system and 3D building blocks
 - Added: `frontend/src/store/uiStore.ts` (reduce-motion + tab-visibility), `authStore.ts`
   (JWT + user, persisted).

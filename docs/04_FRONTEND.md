@@ -1,11 +1,12 @@
 # 04 — Frontend
 
-Updated through Phase 5.
+Updated through Phase 6.
 
-## Routes (Phase 5 state)
+## Routes (Phase 6 state)
 | Path | Page | Notes |
 |------|------|-------|
-| `/` | `PlaceholderHome` | Temporary: live-pings `/api/health` and showcases every Phase 5 design-system/3D building block. Replaced by the cinematic landing page in Phase 6. |
+| `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
+| `/login` | `LoginPlaceholder` | Temporary stand-in until Phase 7 builds the real login page. |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -29,8 +30,10 @@ Updated through Phase 5.
 - `src/api/client.ts` / `src/api/types.ts` (Phase 5) — `apiFetch`/`apiGet`/`apiPost`/`apiPatch`
   (attaches the bearer token, normalizes FastAPI error responses, logs out on `401`) and the
   typed response shapes every later page will reuse.
-- `src/three/Scene.tsx` (Phase 5) — shared `<Canvas>` wrapper: `dpr={[1, 2]}`,
-  `frameloop` switches to `"demand"` when the tab is hidden, base lighting.
+- `src/three/Scene.tsx` (Phase 5; `bloom` option added Phase 6) — shared `<Canvas>` wrapper:
+  `dpr={[1, 2]}`, `frameloop` switches to `"demand"` when the tab is hidden, base lighting, and
+  an opt-in `bloom` prop (`@react-three/postprocessing`'s `EffectComposer`/`Bloom`) for scenes
+  worth the extra render pass — the landing hero is the first to use it.
 - `src/three/AgentOrb.tsx` (Phase 5) — one agent's glowing sphere in its identity color
   (`AGENT_COLORS`, kept in sync by hand with `tokens.css`'s `--agent-*` values); idle rotation +
   an `active` pulse, both skipped under reduced motion.
@@ -42,7 +45,12 @@ Updated through Phase 5.
   `reduceMotion` flag.
 - `src/components/ui/{Button,Badge,Panel}.tsx` (Phase 5) — hand-rolled UI atoms (no UI kit, no
   Tailwind), styled from the CSS variable tokens.
-- `src/pages/PlaceholderHome.tsx` — Phase 5 showcase page; only page so far.
+- `src/components/Reveal.tsx` (Phase 6) — scroll-triggered fade-up wrapper (`whileInView`,
+  once). Renders a plain `<div>` with no Framer Motion component at all under reduced motion —
+  see the Phase 6 decision log entry on why this is the pattern to copy, not the conditional-
+  prop approach that briefly shipped broken.
+- `src/pages/Landing.tsx` (Phase 6) — the real landing page.
+- `src/pages/LoginPlaceholder.tsx` (Phase 6) — temporary; Phase 7 replaces it.
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px

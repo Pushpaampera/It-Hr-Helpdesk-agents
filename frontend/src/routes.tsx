@@ -1,15 +1,18 @@
 import { Route, Routes } from "react-router-dom";
 
-import PlaceholderHome from "./pages/PlaceholderHome";
+import Landing from "./pages/Landing";
+import LoginPlaceholder from "./pages/LoginPlaceholder";
 
 /**
- * Phase 1: only the placeholder route exists. Phase 6+ adds the real landing,
- * login, and /app/* dashboard routes described in docs/04_FRONTEND.md.
+ * Phase 6: the real cinematic landing page replaces PlaceholderHome. `/login` is a temporary
+ * stand-in until Phase 7 builds the real login page; Phase 8+ adds the `/app/*` dashboard
+ * routes described in docs/04_FRONTEND.md.
  */
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PlaceholderHome />} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<LoginPlaceholder />} />
     </Routes>
   );
 }

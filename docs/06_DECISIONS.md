@@ -1,5 +1,29 @@
 # 06 — Decision Log
 
+### 2026-11-03 — Reduced motion must branch the render tree, not neuter motion props in place
+**Decision**: when a component needs to skip animation under `uiStore.reduceMotion`, it must
+render a genuinely different tree — a plain `<div>` instead of `motion.div`, or reuse
+`src/components/Reveal.tsx`, which already does this — rather than conditionally passing
+`undefined` for a `motion.*` component's `initial`/`animate`/`variants` props while leaving
+child components with their own unconditional `variants={...}`.
+**Reason**: found live, by screenshotting Phase 6's landing-page hero with Reduce-motion toggled
+on (see `docs/phases/PHASE_06.md`) — the entire hero headline, subtext, and CTA button were
+invisible. Framer Motion child components that only carry a `variants` map, with no actively
+resolving `initial`/`animate` state from a parent (because the parent's own `variants` had been
+set to `undefined`), get stuck at their `"hidden"` variant's styles (`opacity: 0`) and never
+recover. This is **not** an edge case specific to one page — the same pattern was used in three
+separate places in the same file before being caught, and would have shipped visibly broken
+(literally invisible page content) to anyone with reduced-motion preferences, undercutting the
+entire point of the toggle.
+**Alternatives rejected**: passing `initial={false}` instead of `undefined` — closer, but still
+leaves per-child `variants={fadeUp}` able to apply hidden styles if the component is ever
+re-mounted rather than re-rendered (e.g. inside a list with changing `key`s), and is a subtler
+rule to remember correctly every time versus a tree-level branch that's impossible to get wrong
+the same way. Keeping the conditional-props version and "fixing it in place" by chasing every
+instance — rejected in favor of refactoring the two scroll-revealed grids to reuse `Reveal` per
+item, which removes the parent/child variants-coupling pattern entirely rather than patching
+each occurrence of it.
+
 ### 2026-11-03 — `POST /api/conversations` added beyond Phase 4's literal "list/get" spec
 **Decision**: added a `POST /api/conversations` endpoint (and that's it — no update/delete)
 alongside the `list`/`get` the master prompt's Phase 4 plan named.
