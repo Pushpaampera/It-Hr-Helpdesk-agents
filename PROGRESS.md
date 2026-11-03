@@ -1,23 +1,23 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- Current phase: **Phase 7 — Login page: DONE.** Next up: **Phase 8 — Dashboard shell and
-  Overview** (not started; awaiting operator go-ahead, since this session pauses between phases
-  on request).
+- Current phase: **Phase 8 — Dashboard shell and Overview: DONE.** Next up: **Phase 9 — AI
+  Assistant page (centerpiece)** (not started; awaiting operator go-ahead, since this session
+  pauses between phases on request).
 - Last updated: 2026-11-03
-- Next step: start Phase 8 — the real per-role dashboard shell (nav, layout) and the Overview
-  page, replacing `AppPlaceholder`. `src/components/RequireAuth.tsx` is ready to wrap every new
-  dashboard route.
-- Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Every
-  backend endpoint through Phase 4 is behind real JWT auth. Phase 7 built the real login page
-  (`src/pages/Login.tsx`) and exercised `authStore.login()` for the first time against a live
-  backend + frontend dev server pair, scripted end to end with a browser tool (Chrome +
-  playwright-core, the same ad hoc setup from Phase 6) — confirmed the route guard, manual
-  login, the demo quick-picker, the per-role "lands on" text, logout, the wrong-password error
-  state, and reduced-motion all work correctly. `LLM_MOCK_MODE=true` is set so everything built
-  so far works without GROQ/GEMINI keys. Langfuse tracing (`app/observability.py`) stays a no-op
-  until both `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` are set and `poetry add langfuse` has
-  been run — neither is needed for the demo.
+- Next step: start Phase 9 — the AI Assistant page, the project's centerpiece: the real chat UI
+  against `POST /api/chat/stream`, wired to the Phase 5 3D building blocks
+  (`AgentOrb`/`DataPulse`/etc.) per the event→animation mapping documented in
+  `docs/04_FRONTEND.md`. Replaces the "AI Assistant" nav item's `implemented: false` in
+  `src/layouts/navItems.ts`.
+- Blocker/dependency: none currently. `.env` is filled in and verified working end to end. Phase
+  8 built the real dashboard shell (`DashboardLayout` + role-aware `navItems`) and the first
+  real dashboard page (`Overview`, with staff/employee variants and the project's first
+  `recharts` chart), verified end to end live (real backend + frontend, Chrome +
+  playwright-core) across admin/manager/hr/employee roles, mobile viewport, and reduced motion.
+  `LLM_MOCK_MODE=true` is set so everything built so far works without GROQ/GEMINI keys.
+  Langfuse tracing (`app/observability.py`) stays a no-op until both keys are set and
+  `poetry add langfuse` has been run — neither is needed for the demo.
 
 ## Phase checklist
 
@@ -30,7 +30,7 @@
 | 5 | Frontend design system and 3D building blocks | done | 2026-11-03 | zustand stores (`uiStore`, `authStore`), API client, `Scene`/`AgentOrb`/`DataPulse`/`ParticleField` 3D primitives, hand-rolled `Button`/`Badge`/`Panel` UI atoms, `ReduceMotionToggle`; showcased in an extended `PlaceholderHome`. |
 | 6 | Landing page | done | 2026-11-03 | Cinematic hero (Scene+bloom, 7 AgentOrbs, DataPulse, ParticleField), "Meet the team"/"How it works" sections, Reveal scroll animations, LoginPlaceholder stub. Found and fixed a real Reduce-motion bug via screenshot verification. |
 | 7 | Login page | done | 2026-11-03 | Real email/password form + demo-account quick-picker calling `POST /api/auth/login`, RequireAuth route guard, role-aware "lands on" redirect, AppPlaceholder post-login stand-in. Verified end to end live against a running backend with a browser tool. |
-| 8 | Dashboard shell and Overview | not started | | |
+| 8 | Dashboard shell and Overview | done | 2026-11-03 | DashboardLayout (responsive sidebar+topbar shell, first CSS module), role-aware navItems with "Soon" placeholders for future phases, Overview page (staff KPIs+chart via recharts; employee own-tickets view). Verified live across all 4 roles, mobile, reduced motion. |
 | 9 | AI Assistant page (centerpiece) | not started | | |
 | 10 | Remaining dashboard pages | not started | | |
 | 10B | Demo experience layer (HR showcase) | not started | | |
@@ -145,3 +145,16 @@
   wrong password shows "Invalid email or password" inline; Reduce-motion toggled on the login
   page keeps the form fully visible (no repeat of Phase 6's bug).
 - Full details in `docs/phases/PHASE_07.md`.
+
+### Phase 8 — DONE
+- `npx tsc -b --noEmit` and `npm run build`: both succeed (one real type error caught and fixed:
+  `navItems.ts`'s hand-rolled icon prop type didn't structurally match lucide-react's actual
+  `LucideIcon` type — fixed by importing that type directly).
+- Full end-to-end live test across all 4 demo roles, mobile viewport, and reduced motion (real
+  backend + frontend dev server, Chrome + playwright-core): admin sees the full nav set and real
+  KPI/chart data; employee sees only Overview/AI Assistant/Tickets and their own real open-
+  ticket list (not another employee's); manager sees Overview/AI Assistant/Tickets/Approvals/
+  Team; clicking a disabled "Soon" nav item does nothing (confirmed via unchanged URL); mobile
+  (420px) sidebar correctly collapses to a hamburger-triggered drawer; HR dashboard renders
+  correctly under Reduce-motion.
+- Full details in `docs/phases/PHASE_08.md`.

@@ -1,0 +1,152 @@
+/* Responsive behavior (the sidebar collapsing to an off-canvas drawer) needs real media
+   queries, which inline styles can't express — a CSS module is the sanctioned escape hatch
+   per CLAUDE.md ("CSS variables + CSS modules"). Everything else in the dashboard still uses
+   inline styles from the design tokens, same as every other page so far. */
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100%;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-4);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.closeButton,
+.menuButton {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--space-1);
+}
+
+.main {
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.navItem,
+.navItemDisabled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.navItem:hover {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+
+.navItemActive {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--agent-supervisor);
+}
+
+.navItemDisabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.soonBadge {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 1px 6px;
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-4);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--agent-supervisor);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.iconButton:hover {
+  color: var(--text-primary);
+}
+
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 260px;
+    transform: translateX(-100%);
+    transition: transform var(--duration-medium) var(--ease-standard);
+    z-index: 30;
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .closeButton,
+  .menuButton {
+    display: inline-flex;
+  }
+
+  .backdrop.backdropOpen {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 20;
+  }
+}

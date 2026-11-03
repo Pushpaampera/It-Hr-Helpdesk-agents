@@ -1,13 +1,14 @@
 # 04 — Frontend
 
-Updated through Phase 7.
+Updated through Phase 8.
 
-## Routes (Phase 7 state)
+## Routes (Phase 8 state)
 | Path | Page | Notes |
 |------|------|-------|
 | `/` | `Landing` | The real cinematic landing page: hero (Scene + 7 AgentOrbs + DataPulse + ParticleField, bloom on), "Meet the team", "How it works", closing CTA. |
 | `/login` | `Login` | Real email/password form + demo-account quick-picker. Redirects to `/app` (or wherever `RequireAuth` remembered) on success. |
-| `/app` (wrapped in `RequireAuth`) | `AppPlaceholder` | Temporary post-login landing; Phase 8 replaces it with the real per-role dashboard shell. |
+| `/app` (wrapped in `RequireAuth`) | `DashboardLayout` | Sidebar + top bar shell. `index` redirects to `overview`. |
+| `/app/overview` | `Overview` | Staff (manager/hr/admin): KPI cards + 30-day runs chart from `/api/analytics/*`. Employee: own open tickets + conversation count. |
 
 ## Structure
 - `src/main.tsx` — React root, wraps `<App>` in `<BrowserRouter>`, imports `design/global.css`.
@@ -54,10 +55,20 @@ Updated through Phase 7.
 - `src/components/RequireAuth.tsx` (Phase 7) — route guard; redirects to `/login` (remembering
   the attempted destination in router state) when `authStore.isAuthenticated` is false. Every
   real dashboard route Phase 8+ adds should wrap in this the same way `/app` does.
+- `src/layouts/DashboardLayout.tsx` + `.module.css` (Phase 8) — the persistent `/app/*` shell:
+  sidebar (nav + user card), top bar (`ReduceMotionToggle`), `<Outlet>`. Collapses to an
+  off-canvas drawer under 860px — the first real `@media` breakpoint in the project, hence the
+  first `.module.css` file (CLAUDE.md sanctions "CSS variables + CSS modules"; every other page
+  still uses inline styles).
+- `src/layouts/navItems.ts` (Phase 8) — the role-aware nav table from
+  `docs/00_PROJECT_OVERVIEW.md`'s role list. Each entry has an `implemented` flag; only
+  `Overview` is true so far, everything else renders as a role-filtered, disabled "Soon" row
+  until its own phase builds it.
 - `src/pages/Landing.tsx` (Phase 6) — the real landing page.
 - `src/pages/Login.tsx` (Phase 7) — real login form + demo-account quick-picker, calls
   `authStore.login()`, redirects on success/if-already-authenticated.
-- `src/pages/AppPlaceholder.tsx` (Phase 7) — temporary; Phase 8 replaces it.
+- `src/pages/dashboard/Overview.tsx` (Phase 8) — the first real dashboard page and the first use
+  of `recharts` (a day-one dependency, unused until now).
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
 Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px

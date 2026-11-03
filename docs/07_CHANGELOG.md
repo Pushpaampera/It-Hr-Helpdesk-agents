@@ -1,5 +1,26 @@
 # 07 — Changelog
 
+### 2026-11-03 — Phase 8: Dashboard shell and Overview
+- Added: `frontend/src/layouts/DashboardLayout.tsx` + `.module.css` (responsive sidebar+topbar
+  shell, the project's first CSS module/real `@media` breakpoint), `navItems.ts` (role-aware nav
+  table with "Soon" placeholders for every unbuilt dashboard page), `frontend/src/pages/
+  dashboard/Overview.tsx` (staff KPI cards + `recharts` 30-day chart; employee own-activity
+  view).
+- Changed: `frontend/src/routes.tsx` (`/app` → `DashboardLayout` → `overview` nested route),
+  `frontend/src/api/types.ts` (added `Kpis`, `TimeseriesPoint`, `TicketSummary`,
+  `ConversationSummary`).
+- Deleted: `frontend/src/pages/AppPlaceholder.tsx` (fully superseded by the real shell).
+- Fixed: a real `tsc` type error in `navItems.ts` — a hand-rolled `ComponentType<{size}>` prop
+  type for nav icons didn't structurally match lucide-react's actual `LucideIcon` type; fixed by
+  importing that type directly instead of re-deriving it.
+- Verified: `npx tsc -b --noEmit`/`npm run build` succeed; a full live end-to-end test (real
+  backend + frontend dev server, Chrome + playwright-core) confirmed correct role-filtered
+  navigation and Overview content for all 4 demo roles, that disabled nav items are inert, that
+  the sidebar collapses to a mobile drawer correctly, and correct rendering under Reduce-motion.
+- Why: this is the shell every Phase 9-11 dashboard page renders inside, and the first page to
+  prove the Phase 4 role boundaries (`analytics` 403s for employee) actually shape what the UI
+  shows, not just what the API allows.
+
 ### 2026-11-03 — Phase 7: Login page
 - Added: `frontend/src/pages/Login.tsx` (real form + demo-account quick-picker),
   `AppPlaceholder.tsx` (temporary post-login landing, Phase 8 replaces it),
