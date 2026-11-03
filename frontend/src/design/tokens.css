@@ -1,0 +1,71 @@
+:root {
+  /* Base surface */
+  --bg: #05060f;
+  --bg-elevated: #0a0c1b;
+  --bg-panel: rgba(16, 19, 38, 0.6);
+  --border-subtle: rgba(148, 163, 255, 0.12);
+  --border-strong: rgba(148, 163, 255, 0.28);
+
+  /* Text */
+  --text-primary: #f3f4ff;
+  --text-secondary: #a6acd6;
+  --text-muted: #6b7097;
+
+  /* Agent identity colors */
+  --agent-supervisor: #8b5cf6;
+  --agent-it: #22d3ee;
+  --agent-hr: #f472b6;
+  --agent-action: #fbbf24;
+  --agent-ticketing: #fb7185;
+  --agent-feedback: #34d399;
+  --agent-knowledge: #60a5fa;
+  --agent-guard: #f87171;
+
+  /* Semantic */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  /* Typography */
+  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-full: 999px;
+
+  /* Shadows / glow */
+  --glow-violet: 0 0 32px rgba(139, 92, 246, 0.35);
+  --glow-cyan: 0 0 32px rgba(34, 211, 238, 0.35);
+  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.45);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-medium: 320ms;
+  --duration-slow: 600ms;
+
+  color-scheme: dark;
+}
+
+[data-reduce-motion="true"] * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
