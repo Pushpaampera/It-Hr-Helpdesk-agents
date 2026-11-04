@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 
 import { apiGet, apiPatch } from "../../api/client";
-import type { TicketDetail, TicketSummary } from "../../api/types";
+import type { AgentEventPayload, RunEventsResponse, TicketDetail, TicketSummary } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Panel from "../../components/ui/Panel";
@@ -191,6 +191,8 @@ function TicketDetailPanel({
         <>
           <p style={{ fontSize: 13, marginBottom: "var(--space-4)" }}>{detail.ticket.summary}</p>
 
+          {detail.ticket.run_id && <TicketConversation runId={detail.ticket.run_id} />}
+
           {isStaff ? (
             <div style={{ display: "grid", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
               <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
@@ -244,5 +246,52 @@ function TicketDetailPanel({
         </>
       )}
     </Panel>
+  );
+}
+
+/** The real conversation that led to this ticket — every ticket is created automatically from
+ * a specific agent run, and until now the only thing shown for it was Tess's one-line "Ticket
+ * created automatically..." timeline entry, with no way to see what the employee actually asked
+ * or how the agents got there. Fetched lazily (only once expanded) since it's not needed for
+ * every ticket view. */
+function TicketConversation({ runId }: { runId: string }) {
+  const [open, setOpen] = useState(false);
+  const [run, setRun] = useState<RunEventsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle() {
+    if (!open && !run) {
+      apiGet<RunEventsResponse>(`/runs/${runId}/events`)
+        .then(setRun)
+        .catch((err) => setError(err instanceof Error ? err.message : "Failed to load the conversation"));
+    }
+    setOpen((o) => !o);
+  }
+
+  return (
+    <div style={{ marginBottom: "var(--space-5)" }}>
+      <button
+        onClick={toggle}
+        style={{
+          fontSize: 12, color: "var(--accent-primary)", background: "none", border: "none",
+          cursor: "pointer", padding: 0, marginBottom: open ? "var(--space-3)" : 0,
+        }}
+      >
+        {open ? "Hide conversation" : "View the conversation that created this ticket"}
+      </button>
+
+      {open && (
+        <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 280, overflowY: "auto", paddingLeft: "var(--space-2)", borderLeft: "2px solid var(--border-subtle)" }}>
+          {error && <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>}
+          {!run && !error && <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Loading...</p>}
+          {run?.events.map((e: AgentEventPayload, i: number) => (
+            <div key={i} style={{ fontSize: 12 }}>
+              <strong style={{ color: "var(--text-secondary)" }}>{e.agent}</strong>{" "}
+              <span style={{ color: "var(--text-muted)" }}>{e.caption}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

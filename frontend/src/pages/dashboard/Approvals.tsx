@@ -8,6 +8,7 @@ import { apiGet, apiPost } from "../../api/client";
 import type { Approval } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import Panel from "../../components/ui/Panel";
 
 function statusTone(status: string): "success" | "warning" | "danger" {
@@ -21,6 +22,7 @@ export default function Approvals() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<{ approval: Approval; decision: "approved" | "rejected" } | null>(null);
 
   function load() {
     apiGet<Approval[]>(`/approvals?status=${statusFilter}`)
@@ -30,10 +32,13 @@ export default function Approvals() {
 
   useEffect(load, [statusFilter]);
 
-  async function decide(id: string, decision: "approved" | "rejected") {
-    setDecidingId(id);
+  async function confirmDecision() {
+    if (!pendingDecision) return;
+    const { approval, decision } = pendingDecision;
+    setDecidingId(approval.id);
     try {
-      await apiPost(`/approvals/${id}/decide`, { decision });
+      await apiPost(`/approvals/${approval.id}/decide`, { decision });
+      setPendingDecision(null);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to record decision");
@@ -97,10 +102,10 @@ export default function Approvals() {
 
                 {a.status === "pending" && (
                   <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
-                    <Button variant="danger" disabled={decidingId === a.id} onClick={() => decide(a.id, "rejected")}>
+                    <Button variant="danger" disabled={decidingId === a.id} onClick={() => setPendingDecision({ approval: a, decision: "rejected" })}>
                       Reject
                     </Button>
-                    <Button variant="primary" disabled={decidingId === a.id} onClick={() => decide(a.id, "approved")}>
+                    <Button variant="primary" disabled={decidingId === a.id} onClick={() => setPendingDecision({ approval: a, decision: "approved" })}>
                       Approve
                     </Button>
                   </div>
@@ -109,6 +114,39 @@ export default function Approvals() {
             </Panel>
           ))}
         </div>
+      )}
+
+      {pendingDecision && (
+        <ConfirmModal
+          title={pendingDecision.decision === "approved" ? "Approve this access request?" : "Reject this access request?"}
+          description={
+            <>
+              <strong>{pendingDecision.approval.requester_name}</strong> is requesting{" "}
+              <strong>{String(pendingDecision.approval.payload.access_level ?? "access")}</strong> on{" "}
+              <strong>{String(pendingDecision.approval.payload.system ?? pendingDecision.approval.type)}</strong>
+              {pendingDecision.approval.payload.justification
+                ? <> — justified as "{String(pendingDecision.approval.payload.justification)}"</>
+                : null}
+              .
+              {pendingDecision.decision === "approved" ? (
+                <p style={{ marginTop: "var(--space-3)" }}>
+                  Approving grants them this access immediately and resumes their paused AI Assistant
+                  conversation. This can't be undone from here — a new request would be needed to revoke it.
+                </p>
+              ) : (
+                <p style={{ marginTop: "var(--space-3)" }}>
+                  Rejecting tells the requester this access was denied and resumes their paused AI Assistant
+                  conversation with that outcome.
+                </p>
+              )}
+            </>
+          }
+          confirmLabel={pendingDecision.decision === "approved" ? "Yes, approve" : "Yes, reject"}
+          confirmVariant={pendingDecision.decision === "approved" ? "primary" : "danger"}
+          busy={decidingId === pendingDecision.approval.id}
+          onConfirm={confirmDecision}
+          onCancel={() => setPendingDecision(null)}
+        />
       )}
     </div>
   );

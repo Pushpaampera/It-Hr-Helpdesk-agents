@@ -64,6 +64,7 @@ export type TicketSummary = {
   assignee_name: string | null;
   resolved_at: string | null;
   created_at: string;
+  run_id: string | null;
 };
 
 // GET /api/conversations

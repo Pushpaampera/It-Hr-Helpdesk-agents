@@ -7,6 +7,7 @@ import { apiGet, apiPatch } from "../../api/client";
 import type { HrOverview, LeaveRequest } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import Panel from "../../components/ui/Panel";
 
 function statusTone(status: string): "success" | "warning" | "danger" {
@@ -20,6 +21,7 @@ export default function HrInsights() {
   const [pending, setPending] = useState<LeaveRequest[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<{ request: LeaveRequest; decision: "approved" | "rejected" } | null>(null);
 
   function load() {
     Promise.all([
@@ -35,10 +37,13 @@ export default function HrInsights() {
 
   useEffect(load, []);
 
-  async function decide(id: string, decision: "approved" | "rejected") {
-    setDecidingId(id);
+  async function confirmDecision() {
+    if (!pendingDecision) return;
+    const { request, decision } = pendingDecision;
+    setDecidingId(request.id);
     try {
-      await apiPatch(`/hr/leave-requests/${id}/decide`, { decision });
+      await apiPatch(`/hr/leave-requests/${request.id}/decide`, { decision });
+      setPendingDecision(null);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to record decision");
@@ -128,13 +133,41 @@ export default function HrInsights() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
-                  <Button variant="danger" disabled={decidingId === r.id} onClick={() => decide(r.id, "rejected")}>Reject</Button>
-                  <Button variant="primary" disabled={decidingId === r.id} onClick={() => decide(r.id, "approved")}>Approve</Button>
+                  <Button variant="danger" disabled={decidingId === r.id} onClick={() => setPendingDecision({ request: r, decision: "rejected" })}>Reject</Button>
+                  <Button variant="primary" disabled={decidingId === r.id} onClick={() => setPendingDecision({ request: r, decision: "approved" })}>Approve</Button>
                 </div>
               </div>
             </Panel>
           ))}
         </div>
+      )}
+
+      {pendingDecision && (
+        <ConfirmModal
+          title={pendingDecision.decision === "approved" ? "Approve this leave request?" : "Reject this leave request?"}
+          description={
+            <>
+              <strong>{pendingDecision.request.user_name}</strong> ({pendingDecision.request.department}) requested{" "}
+              <strong>{pendingDecision.request.leave_type}</strong> leave from{" "}
+              <strong>{pendingDecision.request.start_date}</strong> to <strong>{pendingDecision.request.end_date}</strong>{" "}
+              ({pendingDecision.request.days} day{pendingDecision.request.days === 1 ? "" : "s"})
+              {pendingDecision.request.reason ? <> — "{pendingDecision.request.reason}"</> : null}.
+              {pendingDecision.decision === "approved" ? (
+                <p style={{ marginTop: "var(--space-3)" }}>
+                  Approving immediately deducts {pendingDecision.request.days} day(s) from their{" "}
+                  {pendingDecision.request.leave_type} balance.
+                </p>
+              ) : (
+                <p style={{ marginTop: "var(--space-3)" }}>Rejecting leaves their leave balance unchanged.</p>
+              )}
+            </>
+          }
+          confirmLabel={pendingDecision.decision === "approved" ? "Yes, approve" : "Yes, reject"}
+          confirmVariant={pendingDecision.decision === "approved" ? "primary" : "danger"}
+          busy={decidingId === pendingDecision.request.id}
+          onConfirm={confirmDecision}
+          onCancel={() => setPendingDecision(null)}
+        />
       )}
     </div>
   );

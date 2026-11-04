@@ -71,9 +71,9 @@ export default function Landing() {
           padding: "var(--space-4) var(--space-6)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <img src={amperaLogo} alt="Ampera" style={{ height: 24, width: "auto" }} />
-          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 16, color: "var(--text-secondary)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <img src={amperaLogo} alt="Ampera" style={{ height: 34, width: "auto" }} />
+          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 22, color: "var(--accent-primary)" }}>
             Helpdesk
           </span>
         </div>

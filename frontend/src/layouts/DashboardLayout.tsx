@@ -31,8 +31,8 @@ export default function DashboardLayout() {
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
           <Link to="/app/overview" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <img src={amperaLogo} alt="Ampera" style={{ height: 22, width: "auto" }} />
-            <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 14, color: "var(--text-secondary)" }}>
+            <img src={amperaLogo} alt="Ampera" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 17, color: "var(--accent-primary)" }}>
               Helpdesk
             </span>
           </Link>

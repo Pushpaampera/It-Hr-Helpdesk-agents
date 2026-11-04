@@ -17,7 +17,20 @@ import FeedbackWidget from "../../components/chat/FeedbackWidget";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Panel from "../../components/ui/Panel";
+import RoboCompanion from "../../three/RoboCompanion";
+import Scene from "../../three/Scene";
 import { useUIStore } from "../../store/uiStore";
+
+// A mix of IT and HR starter questions — the same Assistant page serves every role, so this
+// covers both departments rather than branching by the logged-in user's role.
+const SUGGESTED_QUESTIONS = [
+  "My laptop won't connect to the VPN, error 619",
+  "I'm having Wi-Fi problems on my laptop",
+  "How do I reset my password?",
+  "How many sick days do I have left?",
+  "What's the parental leave policy?",
+  "I need access to the Finance system",
+];
 
 type ChatMessage = {
   id: string;
@@ -64,8 +77,8 @@ export default function Assistant() {
     return conv.id;
   }
 
-  async function handleSend() {
-    const query = input.trim();
+  async function handleSend(override?: string) {
+    const query = (override ?? input).trim();
     if (!query || isStreaming) return;
     setInput("");
     setError(null);
@@ -173,9 +186,33 @@ export default function Assistant() {
         <Panel style={{ flex: 1, display: "flex", flexDirection: "column", padding: "var(--space-4)", overflow: "hidden" }}>
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingRight: "var(--space-2)" }}>
             {messages.length === 0 && (
-              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                Try: "My laptop won't connect to the VPN, error 619" or "How many sick days do I have left?"
-              </p>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "var(--space-6) var(--space-4)" }}>
+                <div style={{ width: 140, height: 140 }}>
+                  <Scene cameraPosition={[0, 0, 5]} fov={45}>
+                    <RoboCompanion position={[0, -0.2, 0]} scale={1.1} color="#94a3b8" accentColor="#5da9c9" />
+                  </Scene>
+                </div>
+                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
+                  Ask me anything IT or HR — or try one of these:
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
+                  {SUGGESTED_QUESTIONS.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleSend(q)}
+                      disabled={isStreaming}
+                      style={{
+                        fontSize: 12, fontFamily: "var(--font-body)", padding: "8px 14px",
+                        borderRadius: "var(--radius-full)", border: "1px solid var(--border-strong)",
+                        background: "var(--bg-elevated)", color: "var(--text-secondary)",
+                        cursor: isStreaming ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
@@ -223,7 +260,7 @@ export default function Assistant() {
             />
             <Button
               variant="primary"
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={isStreaming || !input.trim()}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}
             >
