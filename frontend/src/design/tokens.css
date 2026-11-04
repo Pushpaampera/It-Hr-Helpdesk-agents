@@ -1,31 +1,37 @@
 :root {
-  /* Base surface */
-  --bg: #05060f;
-  --bg-elevated: #0a0c1b;
-  --bg-panel: rgba(16, 19, 38, 0.6);
-  --border-subtle: rgba(148, 163, 255, 0.12);
-  --border-strong: rgba(148, 163, 255, 0.28);
+  /* Base surface — graphite/steel, not the violet-tinted "AI startup" dark. Robotics/industrial
+     HUD reference: matte graphite body + signal-light accents (amber/steel-blue/copper), not
+     purple-to-pink gradients. */
+  --bg: #0a0a0c;
+  --bg-elevated: #131417;
+  --bg-panel: rgba(22, 23, 27, 0.65);
+  --border-subtle: rgba(255, 140, 26, 0.10);
+  --border-strong: rgba(255, 140, 26, 0.28);
 
   /* Text */
-  --text-primary: #f3f4ff;
-  --text-secondary: #a6acd6;
-  --text-muted: #6b7097;
+  --text-primary: #f2f0ec;
+  --text-secondary: #a8a49c;
+  --text-muted: #6b6860;
 
-  /* Agent identity colors */
-  --agent-supervisor: #8b5cf6;
-  --agent-it: #22d3ee;
-  --agent-hr: #f472b6;
-  --agent-action: #fbbf24;
-  --agent-ticketing: #fb7185;
+  /* Brand/primary accent — robot signal-light orange, replaces the violet "AI" accent
+     everywhere a single primary color is needed (buttons, primary chart line, chat bubble). */
+  --accent-primary: #ff8c1a;
+
+  /* Agent identity colors — industrial, each distinct, none violet/pink */
+  --agent-supervisor: #ff8c1a;
+  --agent-it: #38bdf8;
+  --agent-hr: #c4915c;
+  --agent-action: #facc15;
+  --agent-ticketing: #94a3b8;
   --agent-feedback: #34d399;
-  --agent-knowledge: #60a5fa;
-  --agent-guard: #f87171;
+  --agent-knowledge: #2dd4bf;
+  --agent-guard: #ef4444;
 
   /* Semantic */
   --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
-  --info: #60a5fa;
+  --warning: #facc15;
+  --danger: #ef4444;
+  --info: #38bdf8;
 
   /* Typography */
   --font-heading: "Space Grotesk", system-ui, sans-serif;
@@ -49,8 +55,8 @@
   --radius-full: 999px;
 
   /* Shadows / glow */
-  --glow-violet: 0 0 32px rgba(139, 92, 246, 0.35);
-  --glow-cyan: 0 0 32px rgba(34, 211, 238, 0.35);
+  --glow-amber: 0 0 32px rgba(255, 140, 26, 0.35);
+  --glow-steel: 0 0 32px rgba(56, 189, 248, 0.35);
   --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.45);
 
   /* Motion */

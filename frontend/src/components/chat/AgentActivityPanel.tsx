@@ -70,7 +70,7 @@ export default function AgentActivityPanel({ activeAgent, pulse, captions }: Age
               from={positionFor(fromIndex)}
               to={positionFor(toIndex)}
               trigger={pulse.trigger}
-              color={isKnownAgent(pulse.to) ? AGENT_COLORS[pulse.to] : "#8b5cf6"}
+              color={isKnownAgent(pulse.to) ? AGENT_COLORS[pulse.to] : "#ff8c1a"}
             />
           )}
         </Scene>

@@ -15,7 +15,7 @@ type DataPulseProps = {
   duration?: number;
 };
 
-export default function DataPulse({ from, to, trigger, color = "#8b5cf6", duration = 0.8 }: DataPulseProps) {
+export default function DataPulse({ from, to, trigger, color = "#ff8c1a", duration = 0.8 }: DataPulseProps) {
   const particleRef = useRef<THREE.Mesh>(null);
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const active = useRef(false);

@@ -57,10 +57,20 @@ async def answer_from_knowledge(
     mock_text = _mock_answer(query, chunks, dept_label)
 
     if unresolved:
-        answer = mock_text if not chunks else (
-            f"I found some related material but I'm not confident enough to answer \"{query}\" "
-            f"precisely. I'll create a ticket so a human can take a closer look."
-        )
+        if not chunks:
+            answer = mock_text
+        else:
+            # Retrieval found real candidates, just not confidently enough to answer outright —
+            # show them instead of discarding them. A flat "I'm not confident" message with no
+            # content behind it reads as the agent having done nothing at all, even though it
+            # genuinely searched and found plausibly-related material.
+            top_titles = ", ".join(dict.fromkeys(c["title"] for c in chunks[:3]))
+            answer = (
+                f"I couldn't find a precise match for \"{query}\", but here's the closest related "
+                f"material I found:\n\n{mock_text}\n\n"
+                f"If that doesn't cover it, I've also created a ticket so a human can take a "
+                f"closer look (related topics: {top_titles})."
+            )
         return {
             "answer": answer, "sources": sources, "unresolved": True, "arm_name": arm_name,
             "decision_id": decision_id, "tokens_in": 0, "tokens_out": 0, "latency_ms": 0, "model": "n/a",

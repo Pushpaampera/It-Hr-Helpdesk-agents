@@ -27,7 +27,7 @@ from app.routers import (
 
 settings = get_settings()
 
-app = FastAPI(title="Helpdesk AI Agents API", version="0.1.0")
+app = FastAPI(title="Ampera Helpdesk API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

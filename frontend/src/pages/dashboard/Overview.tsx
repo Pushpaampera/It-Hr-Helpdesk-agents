@@ -81,29 +81,29 @@ function StaffOverview() {
         ) : (
           <div style={{ height: 220 }}>
             {/* recharts needs concrete color strings, not CSS var() references, for SVG gradient
-                stops to render reliably — #8b5cf6/#6b7097 mirror tokens.css's --agent-supervisor/
+                stops to render reliably — #ff8c1a/#6b6860 mirror tokens.css's --accent-primary/
                 --text-muted, same duplication tradeoff as AgentOrb's AGENT_COLORS. */}
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series}>
                 <defs>
                   <linearGradient id="runsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#ff8c1a" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#ff8c1a" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="day"
                   tickFormatter={(d: string) => d.slice(5)}
-                  tick={{ fill: "#6b7097", fontSize: 11 }}
+                  tick={{ fill: "#6b6860", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                 />
-                <YAxis tick={{ fill: "#6b7097", fontSize: 11 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+                <YAxis tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: "#0a0c1b", border: "1px solid rgba(148,163,255,0.12)", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "#a6acd6" }}
+                  contentStyle={{ background: "#131417", border: "1px solid rgba(255,140,26,0.12)", borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: "#a8a49c" }}
                 />
-                <Area type="monotone" dataKey="total_runs" stroke="#8b5cf6" fill="url(#runsGradient)" strokeWidth={2} />
+                <Area type="monotone" dataKey="total_runs" stroke="#ff8c1a" fill="url(#runsGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

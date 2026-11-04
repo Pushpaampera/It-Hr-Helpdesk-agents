@@ -30,7 +30,7 @@ export default function DashboardLayout() {
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
           <Link to="/app/overview" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 16 }}>
-            Helpdesk AI Agents
+            Ampera Helpdesk
           </Link>
           <button className={styles.closeButton} onClick={() => setSidebarOpen(false)} aria-label="Close menu">
             <X size={18} />

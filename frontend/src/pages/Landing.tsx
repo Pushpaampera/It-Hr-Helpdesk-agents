@@ -70,7 +70,7 @@ export default function Landing() {
         }}
       >
         <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 18 }}>
-          Helpdesk AI Agents
+          Ampera Helpdesk
         </span>
         <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
           <ReduceMotionToggle />

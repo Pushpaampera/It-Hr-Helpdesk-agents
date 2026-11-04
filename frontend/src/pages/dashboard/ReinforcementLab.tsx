@@ -12,9 +12,9 @@ import Badge from "../../components/ui/Badge";
 import Panel from "../../components/ui/Panel";
 
 const ARM_COLORS: Record<string, string> = {
-  hybrid_rerank: "#8b5cf6",
-  lexical_heavy: "#22d3ee",
-  semantic_heavy: "#fbbf24",
+  hybrid_rerank: "#ff8c1a",
+  lexical_heavy: "#38bdf8",
+  semantic_heavy: "#facc15",
 };
 
 export default function ReinforcementLab() {
@@ -86,9 +86,9 @@ export default function ReinforcementLab() {
           <div style={{ height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#6b7097", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 1]} tick={{ fill: "#6b7097", fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip contentStyle={{ background: "#0a0c1b", border: "1px solid rgba(148,163,255,0.12)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a6acd6" }} />
+                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 1]} tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={{ background: "#131417", border: "1px solid rgba(255,140,26,0.12)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a8a49c" }} />
                 {Object.keys(ARM_COLORS).map((arm) => (
                   <Line key={arm} type="monotone" dataKey={arm} stroke={ARM_COLORS[arm]} strokeWidth={2} dot={false} connectNulls />
                 ))}

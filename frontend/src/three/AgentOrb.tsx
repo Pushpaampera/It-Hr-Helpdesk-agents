@@ -10,14 +10,14 @@ import { useUIStore } from "../store/uiStore";
 // Mirrors the --agent-* custom properties in src/design/tokens.css. Three.js materials need a
 // real color value, not a CSS variable reference, so these are kept in sync by hand.
 export const AGENT_COLORS: Record<string, string> = {
-  supervisor: "#8b5cf6",
-  it_support: "#22d3ee",
-  hr_policy: "#f472b6",
-  action: "#fbbf24",
-  ticketing: "#fb7185",
+  supervisor: "#ff8c1a",
+  it_support: "#38bdf8",
+  hr_policy: "#c4915c",
+  action: "#facc15",
+  ticketing: "#94a3b8",
   feedback: "#34d399",
-  knowledge: "#60a5fa",
-  guard: "#f87171",
+  knowledge: "#2dd4bf",
+  guard: "#ef4444",
 };
 
 type AgentOrbProps = {
@@ -30,7 +30,7 @@ type AgentOrbProps = {
 export default function AgentOrb({ agent, position = [0, 0, 0], active = false, radius = 0.6 }: AgentOrbProps) {
   const meshRef = useRef<Mesh>(null);
   const reduceMotion = useUIStore((s) => s.reduceMotion);
-  const color = AGENT_COLORS[agent] ?? "#60a5fa";
+  const color = AGENT_COLORS[agent] ?? "#38bdf8";
 
   useFrame((state, delta) => {
     const mesh = meshRef.current;
