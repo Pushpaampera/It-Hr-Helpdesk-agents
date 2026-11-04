@@ -1,15 +1,55 @@
 # PROGRESS.md
 
-## RESUME HERE (2026-11-04, mid "bright agent-world" redesign — see below, not yet committed)
-- **Operator ordered a full visual redesign** (see this file's new "Bright agent-world redesign"
-  section below) — away from the dark navy/black theme to a bright, colorful "AI agent world"
-  look, 7 visually distinct procedural robots, and the same look applied to every page. Working
-  through it **in the operator's given order**: colours+logo (done) → landing (done) → AI
-  Assistant workroom (next) → Overview + ticket-dedup data bug (next) → every other page (last).
-- **Nothing from this redesign is committed yet** — all current changes are uncommitted working-
-  tree edits on top of the pre-existing uncommitted post-Phase-12 work already in `git status`.
-- If resuming: read "Bright agent-world redesign" below for exact file list and what's left, then
-  continue with the AI Assistant "Agent Workroom" page (Page 2 in the operator's brief).
+## RESUME HERE (2026-11-04, bright agent-world redesign is committed; now closing real brief gaps)
+- **Correction to this file's own stale claim**: the text below used to say the redesign
+  (Phases 0-4) was "not yet committed" — that was wrong by the time this entry was written. It
+  landed in `63682da` (6-step overhaul commit) and a follow-up `66144e3` (back-arrow nav). `git
+  status`/`git log` are the source of truth, not this file's own prose — always verify against
+  them before trusting a "not committed yet" claim here.
+- **Re-checked the operator's original full brief against the actual running app** (not just
+  against what this file claimed was done) and found several real, verifiable gaps the prior
+  "DONE end to end" phase write-ups missed:
+  - AI Assistant answers were plain `white-space: pre-wrap` text, not real Markdown — **fixed**:
+    `react-markdown`+`remark-gfm` now render every answer (`Assistant.tsx`'s `MessageBubble`).
+  - **Found and fixed the exact "doubled numbering" bug the brief named**: seeded KB article
+    bodies are already hand-written as numbered steps ("1. ...\n2. ... wraps onto an indented
+    continuation line\n3. ..."); `knowledge_agent.py`'s `_format_steps` blindly re-numbered every
+    physical line on top of that, producing literal "1. 1.", "2. 2." text and splitting wrapped
+    continuation lines into their own bogus un-numbered items. Rewrote it to merge continuation
+    lines back into their step and strip any pre-existing "N. " marker before re-numbering once.
+    Verified against the real "VPN Error 619" article's actual stored text.
+  - Chat answers listed every retrieved chunk (up to 5) as a source chip regardless of relevance
+    — **fixed**: `answer_from_knowledge` now only returns the 1-2 chunks actually cited in the
+    answer (same "is the second chunk close enough in score" check `_mock_answer` already used
+    to decide whether to cite it), not the full top-5 retrieval set.
+  - No routing strip and no agent *role* shown on answers — **fixed**: `Assistant.tsx` now tracks
+    the real per-turn agent chain from `agent_event`/`handoff` SSE events and renders it above
+    the answer (e.g. "Gus (Privacy) → Sage (Router)"), plus the answering agent's name *and role*
+    ("Iris, IT Support" not just "Iris"). The confirm-resolution gate message (before "Yes"/"No")
+    previously showed no agent identity at all since `confirmation_required` events carry no
+    `route` field — fixed by tracking the last specialist agent seen in the stream and attaching
+    it to that message too.
+  - All verified live end to end (Chrome + playwright-core): a real VPN-619 IT question (numbered
+    steps, 1 source chip, routing strip, "Iris, IT Support" label) and a real parental-leave HR
+    question through the full confirm-resolution "Yes" resume path (2 near-equal-score source
+    chips, feedback stars on the final resolved message) — zero console errors both times.
+    `poetry run pytest -q` 25/25, `npx tsc -b --noEmit` clean.
+- **Still open from the operator's original brief, not yet re-verified or fixed this pass**
+  (found by reading the brief against the code, not assumed from old phase write-ups — treat
+  prior "DONE end to end" claims for these areas as unverified until re-checked):
+  - 30-real-question answer-quality test pass + written report — never actually run.
+  - Agent Workroom's exact per-state visuals from the brief (waiting = dimmed + pulsing ring +
+    hourglass + "waiting for X" label; blocked = red shield pulse) — `AgentMascot`'s state
+    machine exists (idle/waving/thinking/working/success/blocked) but hasn't been checked
+    against these exact visual specifics live.
+  - Robots were built procedurally (brief's explicit fallback-if-cannot-download clause), not
+    from `RobotExpressive.glb`/a CC0 pack — acceptable per the brief's own wording, not a gap,
+    but noting it since no actual download attempt is on record.
+  - Landing page's "camera moves from desk to desk on scroll" — already disclosed as
+    intentionally simplified to a fixed hero + separate scrolled "meet the team" grid (see Phase
+    1 below); still true, not revisited this pass.
+- If resuming: don't re-trust old "done" labels at face value for chat/KB-answer behavior —
+  re-verify live, the same way this pass did, before building on top of them.
 
 ## RESUME HERE (pre-redesign state, still accurate for everything below)
 - **All 12 planned phases are DONE** (Phase 10B explicitly skipped by operator instruction,

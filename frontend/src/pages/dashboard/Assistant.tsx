@@ -8,7 +8,9 @@
  */
 import { AlertTriangle, BookOpen, Clock, Send, ShieldAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import { useSearchParams } from "react-router-dom";
+import remarkGfm from "remark-gfm";
 
 import { apiPost } from "../../api/client";
 import { streamSSE } from "../../api/sse";
@@ -62,6 +64,10 @@ type ChatMessage = {
   runId?: string;
   pending?: boolean;
   route?: string | null;
+  /** The chain of agents this turn actually passed through, in order (e.g. ["guard",
+   * "supervisor", "it_support"]) — rendered as a routing strip above the answer so the
+   * employee can see who handled it, not just the final author. */
+  routeChain?: AgentKey[];
 };
 
 type PulseState = { from: string; to: string; trigger: number };
@@ -148,6 +154,13 @@ export default function Assistant() {
     const controller = new AbortController();
     abortRef.current = controller;
     let streamedAnswer = "";
+    const routeChain: AgentKey[] = [];
+    let lastSpecialist: "it_support" | "hr_policy" | null = null;
+    function pushRoute(agent: string | null) {
+      if (!isKnownMascotAgent(agent)) return;
+      if (agent === "it_support" || agent === "hr_policy") lastSpecialist = agent;
+      if (routeChain[routeChain.length - 1] !== agent) routeChain.push(agent);
+    }
 
     try {
       const convId = await ensureConversation();
@@ -159,6 +172,7 @@ export default function Assistant() {
           switch (event.type) {
             case "agent_event": {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: event.agent, caption: event.caption }]);
+              pushRoute(event.agent);
               const agentKey = event.agent as AgentKey;
               if (["started", "working", "retrieving", "tool_call"].includes(event.status)) {
                 setActiveAgent(event.agent);
@@ -172,6 +186,8 @@ export default function Assistant() {
 
             case "handoff": {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: event.from, caption: event.caption }]);
+              pushRoute(event.from);
+              pushRoute(event.to);
               setPulse((p) => ({ from: event.from, to: event.to, trigger: (p?.trigger ?? 0) + 1 }));
               setActiveAgent(event.to);
               const toKey = event.to as AgentKey;
@@ -189,22 +205,25 @@ export default function Assistant() {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: "action", caption: event.caption }]);
               break;
 
-            case "confirmation_required":
+            case "confirmation_required": {
               setPendingGate({ gate: event.gate });
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: "feedback", caption: event.caption }]);
+              const gateRoute = lastSpecialist === "it_support" ? "IT" : lastSpecialist === "hr_policy" ? "HR" : null;
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantMsgId
-                    ? { ...msg, content: event.prompt, sources: event.sources, pending: false }
+                    ? { ...msg, content: event.prompt, sources: event.sources, route: gateRoute, routeChain: [...routeChain], pending: false }
                     : msg,
                 ),
               );
               break;
+            }
 
             case "final":
               setApproval(null);
               setPendingGate(null);
               setActiveAgent(null);
+              pushRoute(event.route ? routeToAgentKey(event.route) : null);
               const finalRouteKey = routeToAgentKey(event.route);
               if (finalRouteKey) {
                 setAgentStates((s) => ({ ...s, [finalRouteKey]: { working: false, done: true, bubble: s[finalRouteKey]?.bubble ?? null } }));
@@ -224,6 +243,7 @@ export default function Assistant() {
                         resolved: event.resolved,
                         runId: event.run_id,
                         route: event.route,
+                        routeChain: [...routeChain],
                         pending: false,
                       }
                     : msg,
@@ -374,6 +394,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   const routeKey = !isUser ? routeToAgentKey(message.route ?? null) : null;
   const identity = routeKey ? AGENTS[routeKey] : null;
+  const chain = !isUser ? (message.routeChain ?? []).filter((k) => k !== routeKey || (message.routeChain?.length ?? 0) === 1) : [];
   return (
     <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
       <div
@@ -382,9 +403,26 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           background: isUser ? "var(--agent-supervisor)" : "var(--bg-elevated)",
           color: isUser ? "#fff" : "var(--text-primary)",
           border: isUser ? "none" : "1px solid var(--border-subtle)",
-          whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5,
+          fontSize: 14, lineHeight: 1.5,
         }}
       >
+        {!isUser && chain.length > 1 && (
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", fontSize: 11,
+              color: "var(--text-muted)", marginBottom: "var(--space-2)",
+            }}
+          >
+            {chain.map((key, i) => (
+              <span key={key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontWeight: 600, color: AGENTS[key].color }}>
+                  {AGENTS[key].name} ({AGENTS[key].role})
+                </span>
+                {i < chain.length - 1 && <span>→</span>}
+              </span>
+            ))}
+          </div>
+        )}
         {identity && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "var(--space-2)" }}>
             <span
@@ -395,10 +433,18 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             >
               {identity.name[0]}
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: identity.color }}>{identity.name}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: identity.color }}>
+              {identity.name}, {identity.role}
+            </span>
           </div>
         )}
-        {message.content || (message.pending ? "..." : "")}
+        {isUser || message.pending ? (
+          message.content || (message.pending ? "..." : "")
+        ) : (
+          <div className="markdown-answer">
+            <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
+          </div>
+        )}
 
         {!isUser && message.ticketNumber && (
           <div style={{ marginTop: "var(--space-3)" }}>

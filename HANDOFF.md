@@ -3,18 +3,29 @@
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
 file, then `PROGRESS.md`, then `docs/phases/PHASE_12.md`, in that order, before touching code.
 
-## Current state (2026-11-04, latest) — mid a full visual redesign, not committed
+## Current state (2026-11-04, latest) — redesign IS committed; closing real brief gaps now
+**Correction**: this section used to say the "bright AI agent world" redesign was uncommitted —
+that was stale. It's in `git log` as `63682da`/`66144e3`. Always check `git status`/`git log`
+directly rather than trusting this file's own prose about what's committed.
+
 **The operator ordered a full "bright AI agent world" visual redesign**, away from the dark navy
 theme to a light/colorful one with 7 distinct procedural robots, real logo, glass panels — see
 `PROGRESS.md`'s "Bright agent-world redesign" section for the complete file-by-file breakdown.
-**All 4 phases are done and verified live** (Chrome + playwright-core, zero console errors across
-every page/role): Phase 0 (colours + logo), Phase 1 (Landing), Phase 2 (AI Assistant "Agent
-Workroom"), Phase 3 (Overview), Phase 4 (every other page — `Tickets/Approvals/Team/HrInsights/
-KnowledgeBase/Costs/Evaluation/AuditLog/ControlRoom/ReinforcementLab.tsx`). The operator's full
-redesign brief is complete end to end, in the order they asked for. **Nothing from this redesign
-is committed yet** — ask the operator before committing this much uncommitted work in one shot. If
-resuming, read `PROGRESS.md`'s "Bright agent-world redesign" section for the complete file-by-file
-breakdown; there is no further planned work on this unless the operator gives new direction.
+All 4 of its phases (colours+logo, Landing, AI Assistant "Agent Workroom", Overview, every other
+page) are committed.
+
+**This session re-read the operator's original full brief against the live app** (not just
+against old phase write-ups claiming "DONE end to end") and found real gaps in the AI Assistant
+that are now fixed — see `PROGRESS.md`'s latest "RESUME HERE" entry for the full list: Markdown
+rendering (`react-markdown`), the exact "doubled numbering" bug the brief named (root-caused to
+`knowledge_agent.py`'s `_format_steps` re-numbering already-numbered KB article text), sources
+limited to the 1-2 actually cited instead of all 5 retrieved, and a routing strip + agent
+name+role label on every answer including the confirm-resolution gate message. All verified live,
+zero console errors, `pytest` 25/25, `tsc` clean. **Still open, not yet done**: the 30-question
+answer-quality test pass + report, and live verification of the Agent Workroom's exact per-state
+visuals (dimmed/pulsing-ring/hourglass for waiting, red shield pulse for blocked) against the
+brief's specifics — treat these as the next things to pick up, not as already covered by old
+phase write-ups.
 
 Phase 4 also caught a real leftover bug via grep (not visible in a screenshot): `tokens.css`'s
 `--accent-primary`/`--accent-secondary` — used by every button/link/focus ring — were still the

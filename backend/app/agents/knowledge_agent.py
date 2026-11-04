@@ -1,6 +1,7 @@
 """Shared retrieval + answer-synthesis logic used by both Iris (IT Support) and Hana (HR
 Policy). Picks a retrieval strategy via the live LinUCB bandit, retrieves from kb_chunks, and
 synthesizes a cited answer (real LLM call, or a deterministic template in LLM_MOCK_MODE)."""
+import re
 from datetime import datetime, timezone
 
 from app.agents.llm import call_gemini_with_groq_fallback
@@ -16,13 +17,32 @@ UNRESOLVED_SCORE_FLOOR = {
 }
 
 
+_STEP_MARKER = re.compile(r"^\d+[.)]\s+")
+
+
 def _format_steps(body: str) -> str:
-    """Formats a chunk's body as a numbered step list when it has multiple lines worth
-    stepping through, or returns it as-is for a single-line/paragraph body."""
-    lines = [ln.strip() for ln in body.split("\n")[:6] if ln.strip()]
-    if len(lines) <= 1:
-        return body.strip()
-    return "\n".join(f"{i}. {line}" for i, line in enumerate(lines, start=1))
+    """Formats a chunk's body as a numbered Markdown step list, or returns it as a single
+    paragraph for freeform prose. Seeded KB article bodies that are step-by-step guides are
+    already hand-written as "1. ...\\n2. ...", wrapping long steps onto an indented
+    continuation line rather than a new numbered line — so this merges each continuation line
+    back into the step above it before re-numbering, instead of treating every physical line
+    as its own step (which produced literal doubled numbering like "1. 1." once the caller's
+    own "N. " prefix was added on top of the source text's own "N. " marker)."""
+    steps: list[str] = []
+    for raw in body.split("\n")[:12]:
+        line = raw.strip()
+        if not line:
+            continue
+        if _STEP_MARKER.match(line):
+            steps.append(_STEP_MARKER.sub("", line))
+        elif steps:
+            steps[-1] = f"{steps[-1]} {line}"
+        else:
+            steps.append(line)
+    steps = steps[:6]
+    if len(steps) <= 1:
+        return steps[0] if steps else body.strip()
+    return "\n".join(f"{i}. {line}" for i, line in enumerate(steps, start=1))
 
 
 def _mock_answer(query: str, chunks: list[dict], dept_label: str) -> str:
@@ -76,16 +96,12 @@ async def answer_from_knowledge(
     floor = UNRESOLVED_SCORE_FLOOR[arm_name]
     unresolved = not chunks or chunks[0]["score"] < floor
 
-    sources = [
-        {"chunk_id": c["chunk_id"], "article_id": c["article_id"], "title": c["title"], "score": round(c["score"], 3)}
-        for c in chunks
-    ]
-
     mock_text = _mock_answer(query, chunks, dept_label)
 
     if unresolved:
         if not chunks:
             answer = mock_text
+            used_sources = []
         else:
             # Retrieval found real candidates, just not confidently enough to answer outright —
             # show them instead of discarding them. A flat "I'm not confident" message with no
@@ -97,10 +113,27 @@ async def answer_from_knowledge(
                 f"material I found:\n\n{mock_text}\n\n"
                 f"(related topics: {top_titles})"
             )
+            used_sources = chunks[:2]
+        sources = [
+            {"chunk_id": c["chunk_id"], "article_id": c["article_id"], "title": c["title"], "score": round(c["score"], 3)}
+            for c in used_sources
+        ]
         return {
             "answer": answer, "sources": sources, "unresolved": True, "arm_name": arm_name,
             "decision_id": decision_id, "tokens_in": 0, "tokens_out": 0, "latency_ms": 0, "model": "n/a",
         }
+
+    # Resolved answers only ever cite the top chunk, plus a second one when `_mock_answer`
+    # judged it close enough in score to genuinely be used too — never the full top_k=5
+    # retrieval set, most of which was never shown to the employee (the operator's "don't list
+    # loosely related articles" complaint).
+    second = chunks[1] if len(chunks) > 1 else None
+    cites_second = second is not None and (chunks[0]["score"] - second["score"]) <= 0.15 and second["title"] != chunks[0]["title"]
+    used_sources = chunks[:2] if cites_second else chunks[:1]
+    sources = [
+        {"chunk_id": c["chunk_id"], "article_id": c["article_id"], "title": c["title"], "score": round(c["score"], 3)}
+        for c in used_sources
+    ]
 
     context_block = "\n\n---\n\n".join(c["text"] for c in chunks[:3])
     user_prompt = (
