@@ -15,7 +15,7 @@ type DataPulseProps = {
   duration?: number;
 };
 
-export default function DataPulse({ from, to, trigger, color = "#7c70af", duration = 0.8 }: DataPulseProps) {
+export default function DataPulse({ from, to, trigger, color = "#8b5cf6", duration = 0.8 }: DataPulseProps) {
   const particleRef = useRef<THREE.Mesh>(null);
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const active = useRef(false);
@@ -60,8 +60,8 @@ export default function DataPulse({ from, to, trigger, color = "#7c70af", durati
         <primitive object={lineGeometry} attach="geometry" />
         <lineBasicMaterial color={color} transparent opacity={0.25} />
       </line>
-      <mesh ref={particleRef} visible={false}>
-        <sphereGeometry args={[0.08, 12, 12]} />
+      <mesh ref={particleRef} visible={false} rotation={[0.4, 0.4, 0]}>
+        <boxGeometry args={[0.13, 0.13, 0.13]} />
         <meshBasicMaterial color={color} />
       </mesh>
     </group>

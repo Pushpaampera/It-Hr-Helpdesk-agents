@@ -1,0 +1,20 @@
+/* Shared hover utilities for interactive cards/panels. The global
+   [data-reduce-motion="true"] * rule in tokens.css already zeroes transition-duration, so these
+   need no extra reduce-motion guard of their own. */
+
+.liftOnHover {
+  transition: transform var(--duration-medium) var(--ease-standard), box-shadow var(--duration-medium) var(--ease-standard);
+}
+
+.liftOnHover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--glow-primary);
+}
+
+.glowOnHover {
+  transition: box-shadow var(--duration-medium) var(--ease-standard);
+}
+
+.glowOnHover:hover {
+  box-shadow: var(--glow-steel);
+}

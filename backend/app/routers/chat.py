@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents.events import load_events_for_run, new_run_id
-from app.agents.graph import start_chat
-from app.agents.runs_store import get_run, save_message
+from app.agents.graph import resume_after_user_reply, start_chat
+from app.agents.runs_store import find_awaiting_reply_run, get_run, save_message
 from app.deps import ensure_self_or_roles, get_current_user
 from app.models.user import User
 
@@ -32,13 +32,29 @@ async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current
         "manager_id": str(current_user.manager_id) if current_user.manager_id else None,
     }
 
-    run_id = new_run_id()
     queue: asyncio.Queue = asyncio.Queue()
 
-    if req.conversation_id:
-        save_message(req.conversation_id, "user", req.message, run_id=run_id)
+    # A reply to a pending "did this solve your problem?"/"want a ticket?" gate continues the
+    # SAME run instead of starting a fresh one — that's how the chatbot avoids ever creating a
+    # ticket without an explicit "yes" from the user.
+    awaiting = find_awaiting_reply_run(req.conversation_id) if req.conversation_id else None
 
-    task = asyncio.create_task(start_chat(user, req.message, req.conversation_id, run_id, queue))
+    if awaiting:
+        # agent_runs.id is a Postgres `uuid` column — psycopg deserializes it as a uuid.UUID,
+        # not a str, unlike new_run_id() below. Every subsequent emitted event carries this as
+        # its `run_id` field, so an un-stringified UUID here crashes json.dumps mid-stream on
+        # the very first event after a resume (TypeError: Object of type UUID is not JSON
+        # serializable) — only reachable via the confirm_resolution/offer_ticket resume path,
+        # never a fresh run, which is why it didn't show up in the original happy-path tests.
+        run_id = str(awaiting["id"])
+        if req.conversation_id:
+            save_message(req.conversation_id, "user", req.message, run_id=run_id)
+        task = asyncio.create_task(resume_after_user_reply(run_id, req.message, queue=queue))
+    else:
+        run_id = new_run_id()
+        if req.conversation_id:
+            save_message(req.conversation_id, "user", req.message, run_id=run_id)
+        task = asyncio.create_task(start_chat(user, req.message, req.conversation_id, run_id, queue))
 
     async def event_generator():
         try:

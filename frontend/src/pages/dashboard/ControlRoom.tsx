@@ -3,13 +3,20 @@
  * "Replay" control that opens a run's full event timeline (GET /api/runs/{id}/events) — the
  * operator-facing view of the same multi-agent system the Assistant page shows one conversation
  * of at a time. */
+import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 import { apiGet } from "../../api/client";
 import { streamGetSSE } from "../../api/sse";
 import type { AgentEventPayload, AgentStatus, LiveAgentEvent, RunEventsResponse, RunSummary } from "../../api/types";
 import Badge from "../../components/ui/Badge";
+import InfoBanner from "../../components/ui/InfoBanner";
+import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import { fadeUp, staggerContainer } from "../../design/motion";
+import PageTransition from "../../design/pageTransition";
+import hover from "../../design/hoverEffects.module.css";
 
 const LIVE_FEED_LIMIT = 40;
 
@@ -58,33 +65,44 @@ export default function ControlRoom() {
   if (error) return <Panel style={{ padding: "var(--space-5)", color: "var(--danger)" }}>{error}</Panel>;
 
   return (
+    <PageTransition routeKey="control-room">
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Control Room</h1>
-      <p style={{ marginBottom: "var(--space-5)" }}>Live health and activity across every agent, for every user.</p>
+      <DashboardHeader title="Control Room" subtitle="Live health and activity across every agent, for every user." />
+      <InfoBanner id="control-room">
+        This is the operator's view into what every AI specialist is doing right now, across every employee — how busy each one is, a live feed of activity, and a way to replay any past conversation step by step.
+      </InfoBanner>
 
       {!statuses ? (
         <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>Loading...</Panel>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer()}
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}
+        >
           {statuses.map((s) => (
-            <Panel key={s.agent} style={{ padding: "var(--space-4)" }}>
+            <motion.div key={s.agent} variants={fadeUp}>
+            <Panel className={hover.liftOnHover} style={{ padding: "var(--space-4)" }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{s.job}</div>
               <div style={{ fontSize: 20, fontFamily: "var(--font-heading)" }}>{s.events_24h}</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>events / 24h</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>actions in the last 24h</div>
               <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.avg_latency_ms}ms avg</span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.avg_latency_ms}ms avg response time</span>
                 {s.errors_24h > 0 && <Badge label={`${s.errors_24h} errors`} tone="danger" />}
               </div>
             </Panel>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: selectedRunId ? "1fr 1fr 380px" : "1fr 1fr", gap: "var(--space-5)" }}>
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>
+          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             Live feed <span style={{ fontSize: 11, color: "var(--success)" }}>●</span>
+            <InfoTooltip text="What every AI specialist is doing right now, across all employees, as it happens." />
           </h2>
           <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto" }}>
             {liveFeed.length === 0 ? (
@@ -102,7 +120,10 @@ export default function ControlRoom() {
         </Panel>
 
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>Recent runs</h2>
+          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            Recent conversations
+            <InfoTooltip text="Click any conversation to replay it step by step and see exactly what each specialist did." />
+          </h2>
           {!runs ? (
             <p style={{ fontSize: 13 }}>Loading...</p>
           ) : (
@@ -111,6 +132,7 @@ export default function ControlRoom() {
                 <div
                   key={r.id}
                   onClick={() => setSelectedRunId(r.id)}
+                  className={hover.glowOnHover}
                   style={{
                     cursor: "pointer", fontSize: 12, padding: "var(--space-2)", borderRadius: "var(--radius-sm)",
                     background: selectedRunId === r.id ? "var(--bg-elevated)" : "transparent",
@@ -134,6 +156,7 @@ export default function ControlRoom() {
         {selectedRunId && <RunReplay runId={selectedRunId} onClose={() => setSelectedRunId(null)} />}
       </div>
     </div>
+    </PageTransition>
   );
 }
 

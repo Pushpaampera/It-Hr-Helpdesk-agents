@@ -197,6 +197,16 @@ class EventSink:
         await self._publish(event)
         return event
 
+    async def emit_confirmation_required(self, prompt: str, gate: str, sources: list[dict] | None = None) -> dict:
+        self.seq += 1
+        event = {
+            "run_id": self.run_id, "seq": self.seq, "type": "confirmation_required", "prompt": prompt,
+            "gate": gate, "sources": sources or [], "caption": "Waiting for your reply before continuing.",
+            "ts": self._ts(),
+        }
+        await self._publish(event)
+        return event
+
     async def emit_final(self, answer: str, sources: list[dict], route: str | None, resolved: bool,
                           ticket_number: str | None = None) -> dict:
         # Stream the final answer as word-chunk "token" events first, for a typing effect.

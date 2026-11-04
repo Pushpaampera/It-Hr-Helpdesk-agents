@@ -1,12 +1,18 @@
 /** Team page (manager). A manager's direct reports with enough real signal — open tickets,
  * pending leave requests, last AI Assistant activity — to spot who needs attention without
  * digging through Tickets/Approvals one person at a time. Backed by GET /api/team. */
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import { apiGet } from "../../api/client";
 import type { TeamMember } from "../../api/types";
 import Badge from "../../components/ui/Badge";
+import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import { fadeUp, staggerContainer } from "../../design/motion";
+import PageTransition from "../../design/pageTransition";
+import hover from "../../design/hoverEffects.module.css";
 
 export default function Team() {
   const [members, setMembers] = useState<TeamMember[] | null>(null);
@@ -22,18 +28,27 @@ export default function Team() {
   if (!members) return <Panel style={{ padding: "var(--space-5)" }}>Loading...</Panel>;
 
   return (
+    <PageTransition routeKey="team">
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Team</h1>
-      <p style={{ marginBottom: "var(--space-5)" }}>Your {members.length} direct reports.</p>
+      <DashboardHeader title="Team" subtitle={`Your ${members.length} direct reports.`} />
+      <InfoBanner id="team">
+        A quick view of your direct reports — open tickets, pending leave, and when they last used the AI assistant — so you can spot who needs attention.
+      </InfoBanner>
 
       {members.length === 0 ? (
         <Panel style={{ padding: "var(--space-5)" }}>
           <p style={{ fontSize: 13 }}>No one currently reports to you.</p>
         </Panel>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--space-4)" }}>
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer()}
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--space-4)" }}
+        >
           {members.map((m) => (
-            <Panel key={m.id} style={{ padding: "var(--space-5)" }}>
+            <motion.div key={m.id} variants={fadeUp}>
+            <Panel className={hover.liftOnHover} style={{ padding: "var(--space-5)" }}>
               <div style={{ marginBottom: "var(--space-3)" }}>
                 <strong style={{ fontSize: 15 }}>{m.name}</strong>
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.title} · {m.department}</div>
@@ -54,9 +69,11 @@ export default function Team() {
                 {m.last_activity_at && ` · Last active ${new Date(m.last_activity_at).toLocaleDateString()}`}
               </p>
             </Panel>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
+    </PageTransition>
   );
 }

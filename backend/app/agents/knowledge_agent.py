@@ -16,17 +16,44 @@ UNRESOLVED_SCORE_FLOOR = {
 }
 
 
+def _format_steps(body: str) -> str:
+    """Formats a chunk's body as a numbered step list when it has multiple lines worth
+    stepping through, or returns it as-is for a single-line/paragraph body."""
+    lines = [ln.strip() for ln in body.split("\n")[:6] if ln.strip()]
+    if len(lines) <= 1:
+        return body.strip()
+    return "\n".join(f"{i}. {line}" for i, line in enumerate(lines, start=1))
+
+
 def _mock_answer(query: str, chunks: list[dict], dept_label: str) -> str:
+    """Builds a deterministic answer from real retrieved chunk text — no LLM call, no
+    randomness, so the same chunks always produce the same answer (required for test
+    stability under LLM_MOCK_MODE). Formats step-like bodies as a numbered list and cites
+    every article actually used, synthesizing from the top two chunks when they're close
+    enough in score to both be genuinely relevant."""
     if not chunks:
         return (
             f"I searched the {dept_label} knowledge base but couldn't find anything that "
             f"confidently answers \"{query}\". I'll hand this to a human who can help further."
         )
+
     top = chunks[0]
-    body = top["text"].split("\n", 1)[-1].strip()
-    lines = body.split("\n")
-    snippet = "\n".join(lines[:6]).strip()
-    return f"{snippet}\n\n(Source: {top['title']})"
+    top_body = top["text"].split("\n", 1)[-1].strip()
+    steps = _format_steps(top_body)
+
+    second = chunks[1] if len(chunks) > 1 else None
+    use_second = second is not None and (top["score"] - second["score"]) <= 0.15 and second["title"] != top["title"]
+
+    if use_second:
+        second_body = second["text"].split("\n", 1)[-1].strip()
+        second_lines = [ln.strip() for ln in second_body.split("\n")[:2] if ln.strip()]
+        related = " ".join(second_lines)
+        return (
+            f"{steps}\n\nAlso relevant — \"{second['title']}\": {related}\n\n"
+            f"(Sources: {top['title']}, {second['title']})"
+        )
+
+    return f"{steps}\n\n(Source: {top['title']})"
 
 
 async def answer_from_knowledge(
@@ -68,8 +95,7 @@ async def answer_from_knowledge(
             answer = (
                 f"I couldn't find a precise match for \"{query}\", but here's the closest related "
                 f"material I found:\n\n{mock_text}\n\n"
-                f"If that doesn't cover it, I've also created a ticket so a human can take a "
-                f"closer look (related topics: {top_titles})."
+                f"(related topics: {top_titles})"
             )
         return {
             "answer": answer, "sources": sources, "unresolved": True, "arm_name": arm_name,

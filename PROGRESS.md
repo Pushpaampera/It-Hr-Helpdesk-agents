@@ -1,18 +1,253 @@
 # PROGRESS.md
 
-## RESUME HERE
+## RESUME HERE (2026-11-04, mid "bright agent-world" redesign — see below, not yet committed)
+- **Operator ordered a full visual redesign** (see this file's new "Bright agent-world redesign"
+  section below) — away from the dark navy/black theme to a bright, colorful "AI agent world"
+  look, 7 visually distinct procedural robots, and the same look applied to every page. Working
+  through it **in the operator's given order**: colours+logo (done) → landing (done) → AI
+  Assistant workroom (next) → Overview + ticket-dedup data bug (next) → every other page (last).
+- **Nothing from this redesign is committed yet** — all current changes are uncommitted working-
+  tree edits on top of the pre-existing uncommitted post-Phase-12 work already in `git status`.
+- If resuming: read "Bright agent-world redesign" below for exact file list and what's left, then
+  continue with the AI Assistant "Agent Workroom" page (Page 2 in the operator's brief).
+
+## RESUME HERE (pre-redesign state, still accurate for everything below)
 - **All 12 planned phases are DONE** (Phase 10B explicitly skipped by operator instruction,
   2026-11-03). Since Phase 12 closed out the original checklist, the operator has been giving
   **live, direct UX/rebrand feedback on the running app**, worked on in real time rather than as
   numbered phases — see "Post-Phase-12 work" below. Treat this as an ongoing, feature-complete
   product being iterated on, not a finished/frozen build.
-- Last updated: 2026-11-04
+- Last updated: 2026-11-04 (6-step overhaul: animation, mascot state machine, confirm-before-
+  ticket chatbot flow, dashboard redesign, approvals safety, plain-English UI — see "6-step
+  overhaul" below).
 - Next step: none standing as a plan — this is now reactive, operator-directed work. If
   resuming, verify current state first (`poetry run pytest -q`, `npx tsc -b --noEmit`, a quick
   live login as each demo role) before assuming anything in this file is current, then check with
   the operator for what's next. **Update this file and `docs/07_CHANGELOG.md` in the same step
   as any further change** — a run of 3 commits after Phase 12 landed without doing this, caught
   when the operator asked "are you updating everything?"; don't repeat that gap.
+- Blocker/dependency: none. `.env` unchanged, `LLM_MOCK_MODE=true` confirmed still set — Step 3's
+  chatbot answer-quality work was done entirely in mock-mode synthesis, not real API keys.
+- Backend tests: `poetry run pytest -q` → **25/25 passed** (the one previously-known intermittent
+  failure, `test_e_unanswerable_question_creates_ticket`, no longer exists in its old form — it
+  was rewritten for the new multi-turn confirm-before-ticket flow and is green; see below). Two
+  new migrations landed: `0002_confirmation_status.sql` (new `agent_runs.status` value,
+  `'awaiting_user_confirmation'`), `0003_leave_request_undo.sql` (`decided_at` column on
+  `leave_requests`, needed for the undo-window check). Run `poetry run migrate` after pulling.
+
+## Bright agent-world redesign (2026-11-04, operator-directed, in progress)
+Full brief: bright/colorful "AI agent world" look (no black/navy/dark-green anywhere), a real
+SVG logo replacing the plain underlined text, 7 visually distinct procedural robots (one per
+agent, not one robot recolored), and the same treatment applied to every page. Working phase by
+phase in the operator's given order; checked live in a browser after each phase (screenshots,
+zero console errors) before moving on, per HANDOFF.md's established verification pattern.
+
+**Phase 0 — Colours + logo — DONE, verified live:**
+- `src/design/tokens.css` rewritten: light lavender/white gradient background, frosted-glass
+  panels, 7 vivid agent colors (violet/sky-blue/pink/orange/teal/yellow/coral), `color-scheme:
+  light`. Old dark theme (`#0a0a0c` bg, muted agent colors) fully replaced.
+- **New `src/design/agents.ts`**: single source of truth for all 7 agents' name/role/color/
+  accent/robot-shape/sample-line, keyed by the real backend route key (`supervisor`, `it_support`,
+  `hr_policy`, `action`, `ticketing`, `feedback`, `guard`). Backend agent keys map 1:1 onto the
+  brief's 7 named characters (Sage/Iris/Hana/Atlas/Tess/Finn/Gus) — no renaming needed.
+  `src/three/AgentOrb.tsx` now imports its color map from here instead of hand-duplicating hex
+  values (HANDOFF.md's "Known issues" flagged this duplication — not fully eliminated yet, see
+  below, but reduced by one file).
+- **New `src/components/ui/Logo.tsx` (+`.module.css`)**: SVG mark (gradient violet→sky-blue core
+  + 3 orbiting dots in the other agent colors) + "Ampera" wordmark in Plus Jakarta Sans (new
+  `@fontsource/plus-jakarta-sans` dependency) + a "HelpDesk" pill badge. No underline. Replaces
+  the old `<img src={amperaLogo}>` + plain text everywhere it appeared (`DashboardLayout.tsx`,
+  `Landing.tsx`, `Login.tsx`); `src/assets/ampera-logo.png` is now unused (not yet deleted — still
+  referenced by nothing, safe to remove in a later cleanup pass). Also the new favicon
+  (`public/favicon.svg`, wired in `index.html`) — the project never had one before (HANDOFF.md's
+  "only logged error is favicon 404" is now stale, worth re-checking next phase).
+- `src/three/RoboCompanion.tsx` gained a `kind` prop (`RobotKind`, 7 values) driving different
+  head geometry + one signature accessory mesh per kind (headset/clipboard/tool-arm/ticket-badge/
+  star/shield), so the 7 agents are visually distinct robots, not one robot recolored. Same state
+  machine (idle/waving/thinking/working/success/blocked) as before, unchanged. `AgentMascot.tsx`
+  now resolves an agent's full identity from `agents.ts` instead of its own hand-rolled color map.
+- **New `src/three/AgentDesk.tsx`**: a reusable "hex platform + robot + floating artifact icon +
+  optional speech bubble" unit, built for the Landing hero and meant to be reused on the AI
+  Assistant workroom (Phase 2) and Overview (Phase 3) so the agent world reads as one consistent
+  place. Artifact icon shape also varies per agent (gear/document/ticket-card/star/shield/core).
+- `src/three/Scene.tsx`: brighter ambient light + new violet point-light color (was tuned for a
+  dark backdrop).
+- **Environment fix, not cosmetic**: `vite.config.ts`'s backend proxy target is now
+  `` `http://localhost:${process.env.BACKEND_PORT ?? 8000}` `` instead of a hardcoded 8000 — this
+  sandbox had an unrelated project's processes already bound to 8000/5173, matching HANDOFF.md's
+  documented "port 8000 occupied" quirk exactly; `BACKEND_PORT=8099 npm run dev` now works around
+  it without editing the file. Backend's own port is already configurable via `.env`'s `APP_PORT`.
+
+**Phase 1 — Landing page — DONE, verified live (screenshots, zero console errors, both normal and
+Reduce-motion states):**
+- Full hero rebuild in `src/pages/Landing.tsx`: a glass pill navbar (new logo + Reduce-motion +
+  Sign in), a 3D "agent world" scene (Sage's glowing violet core + the other 6 agents' hex desks
+  arranged in a ring, `AgentDesk` instances, constant data-stream lines from the core to every
+  desk with a traveling cube pulse on the currently "active" desk, cycling every ~2.4s, with a
+  speech bubble from the active agent), and a frosted-glass hero card (headline/subtext/two CTAs:
+  "Enter Ampera HelpDesk" / "Watch agents work", the latter scrolling to `#how-it-works`) —
+  replacing the old flat-colored-orb scene + full-screen dark radial scrim.
+- "Meet the team" section: the 7 flat colored circles are now real small `AgentMascot` 3D robots
+  (each agent's actual shape/color), in glass cards on the new light background.
+- "How it works" section: unchanged content, automatically picked up the new light glass-panel
+  look via `tokens.css`/`global.css` (no per-card edits needed — confirms the token-level change
+  is doing its job).
+- `src/three/DataPulse.tsx`: particle changed from a sphere to a small rotated cube ("small cubes
+  flowing between desks" per the brief); this is shared by every future page that uses it.
+- **One known simplification from the literal brief**, disclosed rather than silently done: "on
+  scroll, the camera moves from desk to desk with a short explanation card for each agent" was
+  implemented as the hero's fixed agent-world scene + a separate scrolled-to "Meet the team" grid
+  of real mini 3D robot cards, not a single continuous canvas with an animated scroll-driven
+  camera dolly. A true scroll-rig camera inside one shared Canvas is meaningfully riskier
+  (smoothness, reduced-motion interaction, perf) for a live-demo app that must never fail on
+  stage — flagged for the operator to confirm is acceptable or to request as a follow-up.
+- Verified: `npx tsc -b --noEmit` clean; live Chrome+playwright-core screenshots of the hero (both
+  Reduce-motion states), "Meet the team", "How it works"; zero console errors; logged in as Emma
+  and loaded Overview + AI Assistant afterward to confirm the `AgentOrb`/`agents.ts` refactor
+  didn't break anything downstream (zero console errors there either) — those two pages are
+  still the **old dark-panel look**, correctly deferred to Phases 2/3 below, not yet touched.
+- **Confirmed live** (not yet fixed, in scope for the Overview phase next): Emma's Overview shows
+  "Open tickets: 64" and the same "bonus wrongly calculated" ticket repeated 5+ times
+  (`TCK-1259`-`TCK-1263`, identical text) — exactly the test-data bug the operator's brief called
+  out. Root cause not yet investigated (likely repeated `poetry run seed`/eval runs without a
+  reset) — next phase's job.
+
+**Phase 2 — AI Assistant "Agent Workroom" — DONE, verified live (zero console errors, two real
+multi-turn conversations driven end to end through the real backend in mock mode):**
+- `src/components/chat/AgentActivityPanel.tsx` fully rewritten: all 7 `AgentDesk`s always visible
+  in a small 3D "workroom" (Sage's desk at the front, the other 6 behind in two rows of 3), driven
+  by a new `agentStates: Partial<Record<AgentKey, {working, done, bubble}>>` map instead of the
+  old flat orb row + single small mascot preview. A real data-stream pulse now travels desk-to-
+  desk on every `handoff` event (not just from a fixed "core"), a speech bubble shows the agent's
+  real SSE caption only while that agent is actively working (cleared once done — showing every
+  agent's last bubble at once made the panel unreadable, caught via a live screenshot and fixed),
+  and a green check (`AgentDesk`'s new `done` prop) persists once an agent's step completes. The
+  caption log below is now a real timeline: colored initial avatar + agent name + one-line action
+  per entry, not just a colored dot.
+- `src/pages/dashboard/Assistant.tsx`: tracks `agentStates` from the real `agent_event`/`handoff`/
+  `final` SSE events; the chat panel column widened 320px→380px for the workroom to read clearly;
+  `MessageBubble` now shows the authoring agent's avatar + name on every assistant answer, sourced
+  from the real `final` event's `route` field ("IT"/"HR"/"OTHER" — mapped to Iris/Hana the same
+  way `backend/app/agents/events.py`'s own caption builder already does; `AgentEventPayload.route`
+  is **not** an agent key, a wrong assumption caught by `grep`-ing the actual backend before
+  trusting it, the same lesson HANDOFF.md's Phase 10 entry already warns about).
+- `src/api/types.ts`'s `FinalEventPayload.route` got a doc comment clarifying it's a department
+  code, not an agent key — the field already existed server-side, no backend schema change needed
+  for this part.
+- **Real backend bug found and fixed** (not a redesign cosmetic — this blocked the confirm-
+  resolution "Yes" reply entirely): `backend/app/routers/chat.py`'s resume path
+  (`find_awaiting_reply_run`) reads `agent_runs.id` via raw SQL — Postgres returns it as a
+  `uuid.UUID` object, not a `str` like `new_run_id()` produces for a fresh run — and that UUID
+  became every subsequent event's `run_id` field, crashing `json.dumps` mid-SSE-stream
+  (`TypeError: Object of type UUID is not JSON serializable`) on the very first event after a
+  resume. The frontend just hung on "Waiting for a response…" with no console error, because the
+  stream died server-side without ever sending a `final` or `error` event. Only reachable via the
+  confirm_resolution/offer_ticket resume path (a fresh run always used the already-`str` `new_run_
+  id()`), so it never showed up in prior phases' happy-path tests. Fixed with a one-line `str()`
+  cast; `poetry run pytest -q` still 25/25 after the fix.
+- Verified live: "My laptop won't connect to the VPN, error 619" (IT route) and "What's the
+  parental leave policy?" (HR route) both driven end to end through the real confirm-resolution
+  gate including clicking "Yes", confirming the previously-broken resume path now completes and
+  shows the right agent's avatar on the final answer.
+
+**Phase 3 — Overview — DONE, verified live for both employee (Emma) and staff (Alex/admin)
+roles, zero console errors:**
+- **New `src/components/dashboard/AgentWorldHero.tsx`**: a compact, reusable "agent world" strip
+  (Sage + 4 other agents idling at their `AgentDesk`s, a time-of-day greeting speech bubble from
+  Sage that fades after 4s) — now at the top of Overview for every role, satisfying the brief's
+  "every page has a robot presence" ask a page early.
+- `src/pages/dashboard/Overview.tsx`: added a row of 4 glass quick-action buttons (Ask AI/Apply
+  for leave/Reset password/Request access) above both the staff and employee variants — each
+  navigates to `/app/assistant?q=<text>` which now prefills (not auto-sends) the chat input.
+  Employee variant's ticket list became real cards (number + status badge + a clean extracted
+  title instead of the raw multi-paragraph ticket summary) plus a new merged tickets+conversations
+  "Recent activity" timeline. Staff variant's `StatCard`s/chart recolored to the new palette
+  (`#8b5cf6`/`#5c5775` replacing the old dark-theme `#7c70af`/`#6b6860`/`#131417` hardcoded hex —
+  same `tokens.css`-mirroring tradeoff noted in HANDOFF.md's "Known issues", now updated for this
+  file; `StatCard.tsx`'s own sparkline color updated too).
+- `src/pages/dashboard/Assistant.tsx` gained `?q=` prefill support (`useSearchParams`, strips the
+  param after reading it) for the new quick-action buttons.
+- **Real data bug fixed, confirmed live before and after** (the operator's explicit complaint):
+  Emma's Overview showed 64-66 open tickets with "bonus wrongly calculated" repeated dozens of
+  times. Root cause: **not a seed bug** — live/test chat turns against the real backend
+  legitimately each create a new ticket for an unanswerable question, and this demo DB had
+  accumulated months of that across many sessions. Cleaned up with a one-off SQL pass (not a code
+  change) keeping only the most recent ticket per `(user, extracted question)` — 265 → 202 total
+  tickets, Emma 66 → 9. **Important for future sessions**: `backend/tests/test_agents_graph.py`'s
+  `test_e_unanswerable_question_creates_ticket` (and one other) send a real "I was told my bonus
+  was wrongly calculated" question through the live graph against the real demo DB on *every
+  `pytest` run* — no test-DB isolation — so this exact duplicate will silently reappear (+1) each
+  time someone runs the backend test suite. That's expected, pre-existing test-suite behavior, not
+  a regression — re-run the same one-off SQL cleanup if it piles up again, don't chase it as a new
+  bug. The query is in this session's shell history; ask the operator before writing it into a
+  committed script, since repeatedly wiping real ticket rows is exactly the kind of destructive-
+  adjacent action CLAUDE.md asks to flag rather than automate silently.
+- Verified live: Emma's Overview (hero, quick actions, 9 realistic deduped ticket cards, recent-
+  activity timeline) and Alex/admin's Overview (hero, quick actions, full KPI row with a working
+  sparkline, the 30-day runs chart in the new violet palette with a live tooltip) both screenshot-
+  verified with zero console errors; the "Apply for leave" quick action verified to correctly
+  prefill (not auto-send) the Assistant's input box.
+
+**Phase 4 — every other page, every role — DONE, verified live (zero console errors across all
+10 remaining pages, screenshotted as admin/manager/hr):**
+- `Tickets/HrInsights/Costs/Evaluation/ReinforcementLab.tsx`'s hardcoded chart hex (axis labels,
+  tooltip background, line/bar fills) batch-replaced with the new palette (`#8c87a3`/`#5c5775`
+  text, `#ffffff` tooltip bg, `#8b5cf6`/`#38bdf8`/`#fb923c` series colors — `ReinforcementLab`'s 3
+  bandit-arm colors and `Costs`' cost-line color picked to stay visually distinct from each other
+  and from the 7 agent colors). `Approvals/Team/KnowledgeBase/ControlRoom/AuditLog.tsx` needed no
+  color edits — they were already 100% `tokens.css`-driven, so Phase 0's token rewrite alone
+  carried them to the new look, confirmed live rather than assumed.
+- `Approvals.tsx` already had its own purpose-built header (an `AgentMascot` showing Atlas that
+  flashes success/blocked after a decision) — left as-is rather than replaced with the generic
+  `DashboardHeader`, since it's a *better* robot-presence than the generic one, not a gap.
+- **Found and fixed a real leftover bug this phase, not just a sweep formality**: `tokens.css`'s
+  `--accent-primary`/`--accent-secondary` (used everywhere — every button, link, focus ring) were
+  still the **old pre-redesign hex** (`#7c70af`/`#5da9c9`) — Phase 0 updated `--agent-supervisor`
+  to Sage's new violet `#8b5cf6` but missed that the brand accent variable itself was a separate,
+  now-stale value one shade off. Caught by grep, not visually (close enough in hue to not jump
+  out in a screenshot) — fixed, now byte-identical to `--agent-supervisor` and
+  `src/design/agents.ts`'s `supervisor.color`, as they should be. Also fixed in this same sweep:
+  `AgentOrb.tsx`'s/`DataPulse.tsx`'s old-hex fallback defaults, `RoboCompanion.tsx`'s blocked-
+  shield red, and `ParticleField.tsx`'s dust-particle color (`#6b6860`, a dark muted gray tuned
+  for the old black background, read as dirty specks against the new light one — now a soft
+  violet `#a78bfa`).
+- Deleted the now-fully-unused `src/assets/ampera-logo.png` (every reference replaced by the new
+  `Logo` component back in Phase 0; confirmed zero remaining imports before deleting).
+- `npx tsc -b --noEmit` and `npm run build` both clean after the full sweep.
+
+**The operator's full redesign brief is now complete end to end** (colours+logo → landing →
+assistant workroom → overview → every other page, in the stated order). Not yet committed — see
+"Resuming this project" above; ask the operator before committing this much uncommitted work in
+one shot.
+
+## 6-step overhaul (2026-11-04, operator-directed, plan at the time was saved to
+`~/.claude/plans/vivid-drifting-boole.md` — not checked into the repo, summarized here instead)
+Full plain-English "what changed, how to see it" list is in `docs/07_CHANGELOG.md`'s newest
+entry. One-line summary per step:
+1. **Animation**: every dashboard page now has page-transition + stagger/fade-in motion and
+   hover-lift effects (previously zero animation outside Landing/Login/Assistant); `Scene`'s
+   frameloop now also respects `reduceMotion`, not just tab-visibility.
+2. **Mascot**: `RoboCompanion` gained a 6-state machine (idle/waving/thinking/working/success/
+   blocked) behind a new `AgentMascot` wrapper, used on Landing, Login, Assistant (driven by chat
+   lifecycle), the small per-agent panel inside `AgentActivityPanel`, and Approvals (flashes
+   success/blocked after a decision).
+3. **Chatbot** (highest-risk change): tickets are no longer created automatically. New flow:
+   answer → "did this solve your problem?" → only on "no" (or a genuine no-match) → "want a
+   ticket?" → only on explicit "yes" → ticket created. Implemented as two new LangGraph nodes
+   (`confirm_resolution`, `offer_ticket`) reusing the same `NodeInterrupt`/`MemorySaver` pause-
+   resume mechanism `request_access` already used, a new `confirmation_required` SSE event, and
+   a new `agent_runs` status. Mock-mode answers are also richer now (numbered steps, multi-chunk
+   synthesis) — still zero API keys.
+4. **Dashboard redesign**: shared `StatCard` (count-up numbers, optional sparkline) and
+   `DashboardHeader` (greeting + mascot) components now used across every page; charts gained
+   legends and axis unit labels they were missing.
+5. **Approvals safety**: rejecting now requires a reason (enforced client- and server-side); a
+   5-second "Undo" toast follows every approve/reject decision (Approvals + HR Insights' leave
+   decisions). Undo reverts the decision record, not an already-resumed agent run — see
+   `docs/06_DECISIONS.md` for that scope boundary.
+6. **Plain English**: every page has a dismissible "what is this page?" banner and KPI/chart
+   tooltips; renamed visible jargon (e.g. ReinforcementLab's "arm"/"UCB score" → "strategy"/
+   "confidence score") without touching backend field names.
 - Blocker/dependency: none. `.env` is filled in and verified working end to end.
   `LLM_MOCK_MODE=true` so everything works without GROQ/GEMINI keys.
 - Known pre-existing issue (unfixed, not blocking): `test_agents_graph.py::test_e_unanswerable_

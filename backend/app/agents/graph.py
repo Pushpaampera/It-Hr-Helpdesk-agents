@@ -36,6 +36,24 @@ GREETING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Keyword classifiers for the "did this solve your problem?" / "want a ticket?" confirmation
+# gates. Deliberately simple regex, not an LLM call — LLM_MOCK_MODE must stay deterministic and
+# key-free, and a plain yes/no reply doesn't need more than this.
+AFFIRMATIVE_RE = re.compile(
+    r"\b(yes|yep|yeah|yup|sure|please|correct|solved|that worked|thanks|ok|okay)\b", re.IGNORECASE
+)
+NEGATIVE_RE = re.compile(
+    r"\b(no|nope|not really|didn'?t|doesn'?t|still|not solved|not working)\b", re.IGNORECASE
+)
+
+
+def _is_affirmative(text: str) -> bool:
+    return bool(AFFIRMATIVE_RE.search(text)) and not bool(NEGATIVE_RE.search(text))
+
+
+def _is_negative(text: str) -> bool:
+    return bool(NEGATIVE_RE.search(text))
+
 
 class AgentState(TypedDict):
     run_id: str
@@ -54,6 +72,8 @@ class AgentState(TypedDict):
     ticket_number: NotRequired[str]
     approved: NotRequired[bool]
     ended: NotRequired[bool]
+    user_reply: NotRequired[str | None]
+    offered_ticket: NotRequired[bool]
 
 
 class RunContext:
@@ -168,6 +188,51 @@ def build_graph(ctx: RunContext):
         answer = (answer + ("\n\n" if answer else "") + result["message"]).strip()
         return {"answer": answer, "unresolved": False}
 
+    async def node_confirm_resolution(state: AgentState) -> dict:
+        # NodeInterrupt discards any returned state update (LangGraph only persists state from a
+        # *returned* dict, never from code reached after a raise) — so "first entry vs resumed"
+        # has to be read purely from whether user_reply is set, same trick node_action already
+        # uses with approvals_api.find_by_run instead of a pre-interrupt state field.
+        reply = state.get("user_reply")
+        if reply is None:
+            prompt = f"{state.get('answer', '')}\n\nDid this solve your problem?"
+            await ctx.sink.emit_confirmation_required(prompt, "resolution_confirm", sources=state.get("sources", []))
+            raise NodeInterrupt("awaiting_user_confirmation")
+
+        if _is_affirmative(reply):
+            return {"user_reply": None, "unresolved": False}
+        if _is_negative(reply):
+            return {"user_reply": None, "unresolved": True}
+
+        # Ambiguous reply: re-ask rather than guessing. This re-interrupts (so it can't carry a
+        # retry counter across the boundary either), but it's bounded by the user actually
+        # replying with something recognizable — not an unbounded background loop.
+        await ctx.sink.emit_confirmation_required(
+            "Sorry, I didn't quite catch that — did the answer solve your problem? (yes/no)",
+            "resolution_confirm", sources=state.get("sources", []),
+        )
+        raise NodeInterrupt("awaiting_user_confirmation")
+
+    async def node_offer_ticket(state: AgentState) -> dict:
+        reply = state.get("user_reply")
+        if reply is None:
+            await ctx.sink.emit_confirmation_required(
+                "Would you like me to open a support ticket so a human can help with this?",
+                "ticket_offer", sources=state.get("sources", []),
+            )
+            raise NodeInterrupt("awaiting_user_confirmation")
+
+        if _is_affirmative(reply):
+            return {"user_reply": None, "offered_ticket": True}
+        if _is_negative(reply):
+            return {"user_reply": None, "offered_ticket": False, "unresolved": False}
+
+        await ctx.sink.emit_confirmation_required(
+            "Sorry — would you like me to open a support ticket? (yes/no)",
+            "ticket_offer", sources=state.get("sources", []),
+        )
+        raise NodeInterrupt("awaiting_user_confirmation")
+
     async def node_ticketing(state: AgentState) -> dict:
         await ctx.sink.emit("ticketing", "working")
         summary_note = (
@@ -210,6 +275,8 @@ def build_graph(ctx: RunContext):
     graph.add_node("it_support", node_it_support)
     graph.add_node("hr_policy", node_hr_policy)
     graph.add_node("action", node_action)
+    graph.add_node("confirm_resolution", node_confirm_resolution)
+    graph.add_node("offer_ticket", node_offer_ticket)
     graph.add_node("ticketing", node_ticketing)
     graph.add_node("feedback", node_feedback)
 
@@ -221,22 +288,54 @@ def build_graph(ctx: RunContext):
         lambda s: {"IT": "it_support", "HR": "hr_policy"}.get(s.get("route"), "other_reply"),
     )
     graph.add_edge("other_reply", "feedback")
-    graph.add_conditional_edges(
-        "it_support", lambda s: "action" if s.get("needs_action") else ("ticketing" if s.get("unresolved") else "feedback")
-    )
-    graph.add_conditional_edges(
-        "hr_policy", lambda s: "action" if s.get("needs_action") else ("ticketing" if s.get("unresolved") else "feedback")
-    )
-    graph.add_conditional_edges("action", lambda s: "ticketing" if s.get("unresolved") else "feedback")
+
+    def _after_knowledge(s: AgentState) -> str:
+        if s.get("needs_action"):
+            return "action"
+        if s.get("unresolved") and not s.get("sources"):
+            # Genuinely no retrieved candidates at all — asking "did this solve your problem?"
+            # about an answer that doesn't exist reads as broken, so skip straight to the
+            # ticket offer.
+            return "offer_ticket"
+        return "confirm_resolution"
+
+    graph.add_conditional_edges("it_support", _after_knowledge)
+    graph.add_conditional_edges("hr_policy", _after_knowledge)
+    graph.add_conditional_edges("action", lambda s: "confirm_resolution")
+    graph.add_conditional_edges("confirm_resolution", lambda s: "offer_ticket" if s.get("unresolved") else "feedback")
+    graph.add_conditional_edges("offer_ticket", lambda s: "ticketing" if s.get("offered_ticket") else "feedback")
     graph.add_edge("ticketing", "feedback")
     graph.add_edge("feedback", END)
 
     return graph.compile(checkpointer=_CHECKPOINTER)
 
 
+async def _settle_or_pause(run_id: str, queue: asyncio.Queue, graph, config: dict) -> None:
+    """After a successful ainvoke(), figure out whether the graph finished, is waiting on a
+    manager approval (leave the queue open — the decision may arrive via a completely separate
+    HTTP request), or is waiting on the user's own next chat message (close this SSE turn; the
+    next POST /chat/stream on this conversation will detect and resume the paused run)."""
+    snapshot = graph.get_state(config)
+    next_node = snapshot.next[0] if snapshot.next else None
+
+    if next_node == "action":
+        update_run(run_id, status="awaiting_approval")
+        return  # queue stays open/registered for resume_after_approval()
+
+    if next_node in ("confirm_resolution", "offer_ticket"):
+        update_run(run_id, status="awaiting_user_confirmation")
+        drop_queue(run_id)
+        await queue.put(None)
+        return
+
+    # Finished — node_feedback already wrote the terminal status/outcome itself.
+    drop_queue(run_id)
+    await queue.put(None)
+
+
 async def start_chat(user: dict, query: str, conversation_id: str | None, run_id: str, queue: asyncio.Queue) -> None:
-    """Runs (or starts, if it pauses for approval) one full chat turn, streaming events into
-    `queue` as they happen. Returns once the graph finishes OR pauses for manager approval."""
+    """Runs (or starts, if it pauses for approval/confirmation) one full chat turn, streaming
+    events into `queue` as they happen. Returns once the graph finishes OR pauses."""
     sink = EventSink(run_id, queue)
     create_run(run_id, user["id"], conversation_id, query)
     observability.trace_run_start(run_id, user["id"], query)
@@ -244,24 +343,14 @@ async def start_chat(user: dict, query: str, conversation_id: str | None, run_id
     graph = build_graph(ctx)
     config = {"configurable": {"thread_id": run_id}}
 
-    paused = False
     try:
         await graph.ainvoke({"run_id": run_id, "user_id": user["id"], "query": query}, config=config)
-        # ainvoke() returns normally even when a node raised NodeInterrupt — check whether the
-        # graph actually finished or is sitting paused before a pending node.
-        snapshot = graph.get_state(config)
-        paused = bool(snapshot.next)
     except Exception as exc:  # noqa: BLE001
         await sink.emit_error(str(exc))
         update_run(run_id, status="failed", outcome="error")
+        return
 
-    if paused:
-        update_run(run_id, status="awaiting_approval")
-        # Leave the queue registered and open — resume_after_approval() will continue pushing
-        # into it once a manager decides, and the SSE connection stays open waiting.
-    else:
-        drop_queue(run_id)
-        await queue.put(None)  # sentinel: stream is done
+    await _settle_or_pause(run_id, queue, graph, config)
 
 
 async def resume_after_approval(run_id: str, approved: bool) -> None:
@@ -282,6 +371,32 @@ async def resume_after_approval(run_id: str, approved: bool) -> None:
     except Exception as exc:  # noqa: BLE001
         await sink.emit_error(str(exc))
         update_run(run_id, status="failed", outcome="error")
+        return
 
-    drop_queue(run_id)
-    await queue.put(None)
+    await _settle_or_pause(run_id, queue, graph, config)
+
+
+async def resume_after_user_reply(run_id: str, user_reply: str, queue: "asyncio.Queue | None" = None) -> None:
+    """Resumes a run paused at confirm_resolution/offer_ticket with the user's own next chat
+    message as the reply. Mirrors resume_after_approval's shape exactly."""
+    if queue is None:
+        queue = get_queue(run_id)
+        if queue is None:
+            queue = asyncio.Queue()
+    start_seq = last_event_seq(run_id)
+    sink = EventSink(run_id, queue, start_seq=start_seq)
+    run = get_run(run_id)
+    user = {"id": str(run["user_id"])} if run else {"id": None}
+    ctx = RunContext(run_id, user, sink)
+    graph = build_graph(ctx)
+    config = {"configurable": {"thread_id": run_id}}
+
+    try:
+        graph.update_state(config, {"user_reply": user_reply})
+        await graph.ainvoke(None, config=config)
+    except Exception as exc:  # noqa: BLE001
+        await sink.emit_error(str(exc))
+        update_run(run_id, status="failed", outcome="error")
+        return
+
+    await _settle_or_pause(run_id, queue, graph, config)

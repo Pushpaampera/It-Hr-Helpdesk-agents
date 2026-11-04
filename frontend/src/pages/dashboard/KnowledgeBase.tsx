@@ -9,10 +9,23 @@ import { apiGet } from "../../api/client";
 import type { KbArticleDetail, KbResult } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import InfoBanner from "../../components/ui/InfoBanner";
+import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
 import TextField from "../../components/ui/TextField";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import PageTransition from "../../design/pageTransition";
+import hover from "../../design/hoverEffects.module.css";
 
 const STRATEGIES = ["lexical_heavy", "semantic_heavy", "hybrid_rerank"] as const;
+
+// Visible labels only — the internal strategy id strings stay as-is for API calls/keys.
+function formatStrategyName(name: string): string {
+  return name
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 export default function KnowledgeBase() {
   const [query, setQuery] = useState("");
@@ -48,11 +61,15 @@ export default function KnowledgeBase() {
   }
 
   return (
+    <PageTransition routeKey="kb">
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Policy Knowledge Base</h1>
-      <p style={{ marginBottom: "var(--space-5)" }}>
-        Search the same knowledge base the AI Assistant retrieves from — see exactly what it cites.
-      </p>
+      <DashboardHeader
+        title="Policy Knowledge Base"
+        subtitle="Search the same knowledge base the AI Assistant retrieves from — see exactly what it cites."
+      />
+      <InfoBanner id="knowledge-base">
+        Search the same articles the AI assistant uses to answer questions, so you can check what it's citing or find a policy yourself.
+      </InfoBanner>
 
       <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
         <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -79,7 +96,8 @@ export default function KnowledgeBase() {
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-secondary)", paddingBottom: 10 }}>
             <input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} />
-            Compare strategies
+            Compare search strategies
+            <InfoTooltip text="See how 3 different search approaches rank the same query, side by side." />
           </label>
           <Button variant="primary" onClick={search} disabled={loading || !query.trim()} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
             <Search size={14} /> Search
@@ -94,19 +112,20 @@ export default function KnowledgeBase() {
       )}
 
       {!selectedArticleId && results && (
-        <ResultsList title="Results (hybrid_rerank)" results={results} onSelect={setSelectedArticleId} />
+        <ResultsList title="Results" results={results} onSelect={setSelectedArticleId} />
       )}
 
       {!selectedArticleId && compareResults && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-4)" }}>
           {STRATEGIES.map((s) => (
             <div key={s}>
-              <ResultsList title={s} results={compareResults[s] ?? []} onSelect={setSelectedArticleId} compact />
+              <ResultsList title={formatStrategyName(s)} results={compareResults[s] ?? []} onSelect={setSelectedArticleId} compact />
             </div>
           ))}
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
 
@@ -126,6 +145,7 @@ function ResultsList({
             <Panel
               key={r.chunk_id}
               onClick={() => onSelect(r.article_id)}
+              className={hover.liftOnHover}
               style={{ padding: compact ? "var(--space-3) var(--space-4)" : "var(--space-4) var(--space-5)", cursor: "pointer" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-3)", marginBottom: 6 }}>
@@ -135,7 +155,7 @@ function ResultsList({
               <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                 {r.text}
               </p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>score {r.score.toFixed(3)}</p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>match strength {r.score.toFixed(3)}</p>
             </Panel>
           ))}
         </div>

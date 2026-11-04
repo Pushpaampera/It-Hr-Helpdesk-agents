@@ -1,42 +1,49 @@
 :root {
-  /* Base surface — graphite, with the real Ampera brand purple (#7C70AF, extracted from
-     amperadei.com's logo SVG fill and menu accent) as the primary accent instead of a generic
-     "AI" color invented from scratch. --accent-secondary (#BDCFD6) is the brand's light
-     steel-blue-gray, also pulled from the real site. */
-  --bg: #0a0a0c;
-  --bg-elevated: #131417;
-  --bg-panel: rgba(22, 23, 27, 0.65);
-  --border-subtle: rgba(124, 112, 175, 0.14);
-  --border-strong: rgba(124, 112, 175, 0.32);
+  /* Base surface — bright "AI agent world" look: soft white-to-lavender gradient, frosted-glass
+     white panels on top. No black/navy/dark-green anywhere. Agent colors below live in
+     src/design/agents.ts as the single source of truth for anything that needs a real hex value
+     (Three.js materials, recharts, SVG) — these custom properties mirror that file by hand, so
+     if the palette changes again, update agents.ts first and grep its hex values in here. */
+  --bg-grad-start: #f7f6fd;
+  --bg-grad-mid: #eef1fd;
+  --bg-grad-end: #e3e9fb;
+  --bg: #eef1fd;
+  --bg-elevated: #ffffff;
+  --bg-panel: rgba(255, 255, 255, 0.68);
+  --bg-panel-strong: rgba(255, 255, 255, 0.86);
+  --border-subtle: rgba(124, 112, 175, 0.16);
+  --border-strong: rgba(124, 112, 175, 0.34);
 
-  /* Text */
-  --text-primary: #f2f0ec;
-  --text-secondary: #a8a49c;
-  --text-muted: #6b6860;
+  /* Text — dark violet-slate, not pure black, to stay warm against the lavender background */
+  --text-primary: #241f38;
+  --text-secondary: #5c5775;
+  --text-muted: #8c87a3;
+  --text-on-accent: #ffffff;
 
-  /* Brand accents — real Ampera colors, not invented ones */
-  --accent-primary: #7c70af;
-  --accent-secondary: #bdcfd6;
+  /* Brand accents — Sage's violet doubles as the primary accent everywhere (buttons, links,
+     focus rings), so it has to be the exact same hex as --agent-supervisor below and
+     src/design/agents.ts's supervisor.color, not just a close brand-adjacent shade. */
+  --accent-primary: #8b5cf6;
+  --accent-secondary: #38bdf8;
 
-  /* Agent identity colors — anchored to the real brand purple/steel-blue, each agent still
-     visually distinct */
-  --agent-supervisor: #7c70af;
-  --agent-it: #5da9c9;
-  --agent-hr: #c4915c;
-  --agent-action: #d4af37;
-  --agent-ticketing: #94a3b8;
-  --agent-feedback: #34d399;
-  --agent-knowledge: #2dd4bf;
-  --agent-guard: #ef4444;
+  /* Agent identity colors — vivid, distinct per agent. Mirrors src/design/agents.ts. */
+  --agent-supervisor: #8b5cf6; /* Sage — violet */
+  --agent-it_support: #38bdf8; /* Iris — sky blue */
+  --agent-hr_policy: #f472b6; /* Hana — pink */
+  --agent-action: #fb923c; /* Atlas — orange */
+  --agent-ticketing: #2dd4bf; /* Tess — teal */
+  --agent-feedback: #fbbf24; /* Finn — yellow */
+  --agent-guard: #fb7185; /* Gus — coral */
+  --agent-knowledge: #38bdf8;
 
   /* Semantic */
-  --success: #34d399;
-  --warning: #d4af37;
-  --danger: #ef4444;
-  --info: #5da9c9;
+  --success: #22c55e;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --info: #38bdf8;
 
   /* Typography */
-  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-heading: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
 
@@ -56,10 +63,11 @@
   --radius-lg: 22px;
   --radius-full: 999px;
 
-  /* Shadows / glow */
-  --glow-primary: 0 0 32px rgba(124, 112, 175, 0.35);
-  --glow-steel: 0 0 32px rgba(93, 169, 201, 0.35);
-  --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.45);
+  /* Shadows / glow — soft colored glows instead of black vignettes */
+  --glow-primary: 0 0 32px rgba(139, 92, 246, 0.28);
+  --glow-steel: 0 0 32px rgba(56, 189, 248, 0.28);
+  --shadow-panel: 0 8px 32px rgba(124, 112, 175, 0.16);
+  --shadow-panel-lift: 0 16px 48px rgba(124, 112, 175, 0.24);
 
   /* Motion */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
@@ -68,7 +76,7 @@
   --duration-medium: 320ms;
   --duration-slow: 600ms;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 [data-reduce-motion="true"] * {

@@ -1,5 +1,84 @@
 # 07 — Changelog
 
+### 2026-11-04 — 6-step overhaul: animation, mascot states, confirm-before-ticket chat, dashboard
+### redesign, approvals safety, plain-English UI
+
+Operator feedback on the first build: 3D/animation wasn't visibly working, the mascot was a
+single static pose, the chatbot fired tickets automatically, the dashboard looked too plain for
+an HR audience, approvals could be decided too easily, and some labels were jargon. Plan written
+and approved before implementation (`~/.claude/plans/vivid-drifting-boole.md`, not checked into
+the repo). All 6 steps verified: `poetry run pytest -q` → 25/25, `npx tsc -b --noEmit`/
+`npm run build` clean, `LLM_MOCK_MODE=true` and `.env` untouched throughout.
+
+**Step 1 — Animation.** Every dashboard page (`Approvals`, `AuditLog`, `ControlRoom`, `Costs`,
+`Evaluation`, `HrInsights`, `KnowledgeBase`, `Overview`, `ReinforcementLab`, `Team`, `Tickets`)
+had zero animation before this — now wrapped in a new `PageTransition` component and
+`staggerContainer`/`fadeUp` motion (cards fade/stagger in on load), with `liftOnHover`/
+`glowOnHover` CSS utilities on interactive cards. New `useCountUp` hook (used by Step 4).
+`Scene.tsx`'s render loop now also drops to `"demand"` under the reduce-motion toggle, not just
+when the tab is hidden. *See it:* open any dashboard page — cards animate in; toggle "Reduce
+motion" in the sidebar and reload — everything is instant with no animation.
+
+**Step 2 — One robot mascot everywhere.** `RoboCompanion` gained a real state machine — `idle`
+(float/bob), `waving` (greeting), `thinking` (head-tilt, eye-scan), `working` (holographic
+panel), `success` (jump + green flash), `blocked` (shield) — all still respecting reduce-motion.
+New `AgentMascot` wrapper centralizes a per-agent accent-color map and is now used on Landing,
+Login (new greeting robot), the AI Assistant's onboarding state (state driven by the live chat
+lifecycle), the small panel inside `AgentActivityPanel`, and Approvals (flashes success/blocked
+after a decision). *See it:* open Login — the robot waves then settles to idle; open AI
+Assistant and ask a question — the mascot shows "thinking" then "working" while the answer is
+built, then a brief "success" flash when resolved.
+
+**Step 3 — The chatbot no longer auto-creates tickets (highest-risk change).** Old behavior: a
+low-confidence answer created a ticket in the same turn, with no user input. New behavior: (1)
+try to resolve from the knowledge base — mock-mode answers are now richer, formatting multi-line
+source content as numbered steps and synthesizing from the top 2 chunks when their scores are
+close, always citing sources; (2) show the answer and ask "Did this solve your problem?"; (3)
+only on an explicit "no" (or a genuine no-match case) does it ask "Would you like me to open a
+support ticket?"; (4) only an explicit "yes" to that creates the ticket. Implemented as two new
+LangGraph nodes, `confirm_resolution`/`offer_ticket` (`backend/app/agents/graph.py`), reusing the
+same `NodeInterrupt`+`MemorySaver` pause/resume mechanism the existing manager-approval flow
+already proved out, plus a new `agent_runs` status (`awaiting_user_confirmation`, migration
+`0002_confirmation_status.sql`) and a new SSE event type (`confirmation_required`). The
+AI Assistant UI shows the answer plus Yes/No quick-reply buttons. Backend tests rewritten for the
+new multi-turn flow (`backend/tests/test_agents_graph.py`), including a new test asserting no
+ticket is ever created without an explicit "yes". *See it:* ask the AI Assistant a confident IT
+question, click "No" when asked if it solved your problem — you'll get a ticket *offer*, not an
+immediate ticket; click "Yes" on that offer and the ticket is created. Ask something with no
+good match and it skips straight to the ticket offer.
+
+**Step 4 — Dashboard redesign.** New shared `components/ui/StatCard` (count-up animated numbers,
+optional sparkline, gradient-glass styling) replaces four independently-duplicated stat-card
+implementations (`Overview`, `HrInsights`, `Costs`, `ReinforcementLab`). New
+`components/dashboard/DashboardHeader` (time-of-day greeting + waving mascot) replaces the plain
+`<h1>+<p>` intro on every page except Approvals, which already had its own bespoke
+decision-aware header. Every recharts chart (`Overview`, `Costs`, `ReinforcementLab`,
+`HrInsights`, `Evaluation`) gained a legend and proper axis unit labels it was missing; HR
+Insights' hand-rolled leave-utilization `<div>` progress bar is now a real chart.
+*See it:* open Overview/Costs/ReinforcementLab — KPI numbers count up on load, charts have
+legends and labeled axes.
+
+**Step 5 — Approvals safety.** Rejecting an access request or leave request now requires a
+written reason (blocked both in the UI and server-side, including if the "confirm" button were
+bypassed via devtools). A 5-second "Undo" toast follows every approve/reject decision on both
+Approvals and HR Insights' leave decisions — undo reverts the decision record itself, not an
+already-resumed agent run (that run has already continued by the time undo could fire; fully
+unwinding a completed LangGraph run was explicitly out of scope for a 5-second window — see
+`docs/06_DECISIONS.md`). New migration `0003_leave_request_undo.sql` adds a `decided_at` column
+to `leave_requests` to check the window. *See it:* on Approvals, click Reject and try to confirm
+with an empty reason — blocked; fill in a reason and confirm — a 5-second "Undo" toast appears.
+
+**Step 6 — Plain English.** Every page (all 11 dashboard pages + AI Assistant) now has a
+dismissible "what is this page?" banner with real, page-specific copy, and every KPI/chart has an
+`(i)` tooltip (keyboard-accessible, not hover-only) explaining it in plain words. Renamed visible
+jargon without touching any backend field name: ReinforcementLab's "arm"/"UCB score"/"pulls" →
+"strategy"/"confidence score"/"times used", raw snake_case strategy ids title-cased on screen,
+Costs' "By route" → "By specialist", AuditLog's "Actor"/"Target" → "Who"/"What it affected", and
+more (full list in the implementation notes). *See it:* open any dashboard page — a banner under
+the header explains it; hover or tab to any KPI's (i) icon for a plain-English explanation.
+
+---
+
 ### 2026-11-04 — Rebrand to Ampera Helpdesk: real logo/colors, a 3D robot, and real-use UX fixes
 Three commits from the same live-feedback session, after Phase 12 had already closed out the
 original build plan — operator-driven polish/rebrand work, not a numbered phase.

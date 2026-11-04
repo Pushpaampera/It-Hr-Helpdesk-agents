@@ -9,11 +9,12 @@ import uuid
 from sqlalchemy import text
 
 from app.agents.events import drop_queue
-from app.agents.graph import start_chat
+from app.agents.graph import resume_after_user_reply, start_chat
 from app.db import get_engine
 
 EVAL_USER_EMAIL = "emma.employee@acme.test"
 PASS_THRESHOLD = 0.66
+MAX_CONFIRM_HOPS = 5
 
 
 async def _run_one(user: dict, question: dict) -> dict:
@@ -22,20 +23,60 @@ async def _run_one(user: dict, question: dict) -> dict:
     await start_chat(user, question["question"], None, run_id, queue)
 
     final_event = None
-    while not queue.empty():
-        item = queue.get_nowait()
-        if item and item.get("type") == "final":
-            final_event = item
+    last_confirmation = None
+    last_unresolved = False
+
+    def _drain() -> None:
+        nonlocal final_event, last_confirmation, last_unresolved
+        while not queue.empty():
+            item = queue.get_nowait()
+            if not item:
+                continue
+            if item.get("type") == "final":
+                final_event = item
+            elif item.get("type") == "confirmation_required":
+                last_confirmation = item
+            elif (
+                item.get("type") == "agent_event"
+                and item.get("agent") in ("it_support", "hr_policy")
+                and item.get("status") == "completed"
+            ):
+                last_unresolved = bool((item.get("detail") or {}).get("unresolved"))
+
+    _drain()
 
     engine = get_engine()
-    with engine.connect() as conn:
-        run = conn.execute(text("SELECT status, route FROM agent_runs WHERE id = :id"), {"id": run_id}).mappings().first()
+
+    def _get_run() -> dict | None:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT status, route FROM agent_runs WHERE id = :id"), {"id": run_id}
+            ).mappings().first()
+        return dict(row) if row else None
+
+    run = _get_run()
+    # The AI Assistant now asks "did this solve your problem?" / "want a ticket?" before
+    # finishing a turn (see graph.py's confirm_resolution/offer_ticket nodes) instead of
+    # resolving or escalating in one pass. An ideal eval user answers those truthfully — accepts
+    # a genuinely resolved answer, declines (then accepts a ticket for) a genuinely unresolved
+    # one — so the run reaches the same real terminal outcome the pre-confirmation eval judged,
+    # instead of being scored mid-conversation with a route that was never written to the DB.
+    hops = 0
+    while run and run["status"] == "awaiting_user_confirmation" and hops < MAX_CONFIRM_HOPS:
+        hops += 1
+        gate = (last_confirmation or {}).get("gate")
+        reply = "no" if (gate == "resolution_confirm" and last_unresolved) else "yes"
+        await resume_after_user_reply(run_id, reply)
+        _drain()
+        run = _get_run()
+
     drop_queue(run_id)
 
     actual_route = (run["route"] if run else None) or "OTHER"
     paused = bool(run and run["status"] == "awaiting_approval")
     ticket_created = bool(run and run["status"] == "escalated")
-    sources = final_event["sources"] if final_event else []
+    sources_event = final_event or last_confirmation
+    sources = sources_event["sources"] if sources_event else []
     source_titles = {s.get("title") for s in sources}
 
     route_match = actual_route == question["expected_route"]

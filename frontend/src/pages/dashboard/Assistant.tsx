@@ -8,18 +8,38 @@
  */
 import { AlertTriangle, BookOpen, Clock, Send, ShieldAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { apiPost } from "../../api/client";
 import { streamSSE } from "../../api/sse";
 import type { ChatEvent, ChatSource, Conversation } from "../../api/types";
-import AgentActivityPanel, { type CaptionLogEntry } from "../../components/chat/AgentActivityPanel";
+import AgentActivityPanel, { type AgentDeskState, type CaptionLogEntry } from "../../components/chat/AgentActivityPanel";
 import FeedbackWidget from "../../components/chat/FeedbackWidget";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
-import RoboCompanion from "../../three/RoboCompanion";
-import Scene from "../../three/Scene";
+import { AGENT_ORDER, AGENTS, type AgentKey } from "../../design/agents";
+import AgentMascot, { type MascotAgent } from "../../three/AgentMascot";
 import { useUIStore } from "../../store/uiStore";
+
+const KNOWN_MASCOT_AGENTS: readonly MascotAgent[] = AGENT_ORDER;
+function isKnownMascotAgent(agent: string | null): agent is MascotAgent {
+  return !!agent && (KNOWN_MASCOT_AGENTS as readonly string[]).includes(agent);
+}
+
+function emptyAgentStates(): Partial<Record<AgentKey, AgentDeskState>> {
+  return {};
+}
+
+// The backend's `final` event's `route` is the department the supervisor picked — "IT"/"HR"/
+// "OTHER" (see backend/app/agents/supervisor.py) — not an agent key. Mirrors the same IT->Iris/
+// HR->Hana convention backend/app/agents/events.py's own caption builder already uses.
+function routeToAgentKey(route: string | null): AgentKey | null {
+  if (route === "IT") return "it_support";
+  if (route === "HR") return "hr_policy";
+  return null;
+}
 
 // A mix of IT and HR starter questions — the same Assistant page serves every role, so this
 // covers both departments rather than branching by the logged-in user's role.
@@ -41,33 +61,59 @@ type ChatMessage = {
   resolved?: boolean;
   runId?: string;
   pending?: boolean;
+  route?: string | null;
 };
 
 type PulseState = { from: string; to: string; trigger: number };
 type ApprovalState = { approvalId: string; approverName: string; system: string };
+type PendingGateState = { gate: "resolution_confirm" | "ticket_offer" };
 
 export default function Assistant() {
   const reduceMotion = useUIStore((s) => s.reduceMotion);
 
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [input, setInput] = useState(() => searchParams.get("q") ?? "");
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeAgent, setActiveAgent] = useState<string | null>(null);
   const [pulse, setPulse] = useState<PulseState | null>(null);
   const [captions, setCaptions] = useState<CaptionLogEntry[]>([]);
+  const [agentStates, setAgentStates] = useState<Partial<Record<AgentKey, AgentDeskState>>>(emptyAgentStates());
   const [approval, setApproval] = useState<ApprovalState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justResolved, setJustResolved] = useState(false);
+  const [pendingGate, setPendingGate] = useState<PendingGateState | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const mascotState = justResolved
+    ? "success"
+    : pendingGate
+      ? "thinking"
+      : isStreaming
+        ? (activeAgent ? "working" : "thinking")
+        : "idle";
+  const mascotAgent = isKnownMascotAgent(activeAgent) ? activeAgent : "it_support";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
   }, [messages, reduceMotion]);
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    if (searchParams.get("q")) setSearchParams({}, { replace: true });
+    // Only strip the prefill param once, right after reading it into `input` above — not on
+    // every searchParams change, or this would fight the browser's own URL updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
   }, []);
 
   async function ensureConversation(): Promise<string> {
@@ -86,6 +132,10 @@ export default function Assistant() {
     setPulse(null);
     setApproval(null);
     setActiveAgent(null);
+    setJustResolved(false);
+    setPendingGate(null);
+    setAgentStates(emptyAgentStates());
+    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
 
     const assistantMsgId = crypto.randomUUID();
     setMessages((m) => [
@@ -107,20 +157,27 @@ export default function Assistant() {
         { message: query, conversation_id: convId },
         (event) => {
           switch (event.type) {
-            case "agent_event":
+            case "agent_event": {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: event.agent, caption: event.caption }]);
+              const agentKey = event.agent as AgentKey;
               if (["started", "working", "retrieving", "tool_call"].includes(event.status)) {
                 setActiveAgent(event.agent);
+                setAgentStates((s) => ({ ...s, [agentKey]: { working: true, done: false, bubble: event.caption } }));
               } else if (event.status === "completed") {
                 setActiveAgent((cur) => (cur === event.agent ? null : cur));
+                setAgentStates((s) => ({ ...s, [agentKey]: { working: false, done: true, bubble: event.caption } }));
               }
               break;
+            }
 
-            case "handoff":
+            case "handoff": {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: event.from, caption: event.caption }]);
               setPulse((p) => ({ from: event.from, to: event.to, trigger: (p?.trigger ?? 0) + 1 }));
               setActiveAgent(event.to);
+              const toKey = event.to as AgentKey;
+              setAgentStates((s) => ({ ...s, [toKey]: { working: true, done: false, bubble: event.caption } }));
               break;
+            }
 
             case "token":
               streamedAnswer += event.text;
@@ -132,9 +189,30 @@ export default function Assistant() {
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: "action", caption: event.caption }]);
               break;
 
+            case "confirmation_required":
+              setPendingGate({ gate: event.gate });
+              setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: "feedback", caption: event.caption }]);
+              setMessages((m) =>
+                m.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? { ...msg, content: event.prompt, sources: event.sources, pending: false }
+                    : msg,
+                ),
+              );
+              break;
+
             case "final":
               setApproval(null);
+              setPendingGate(null);
               setActiveAgent(null);
+              const finalRouteKey = routeToAgentKey(event.route);
+              if (finalRouteKey) {
+                setAgentStates((s) => ({ ...s, [finalRouteKey]: { working: false, done: true, bubble: s[finalRouteKey]?.bubble ?? null } }));
+              }
+              if (event.resolved) {
+                setJustResolved(true);
+                successTimeoutRef.current = setTimeout(() => setJustResolved(false), 1200);
+              }
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantMsgId
@@ -145,6 +223,7 @@ export default function Assistant() {
                         ticketNumber: event.ticket_number,
                         resolved: event.resolved,
                         runId: event.run_id,
+                        route: event.route,
                         pending: false,
                       }
                     : msg,
@@ -178,47 +257,63 @@ export default function Assistant() {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "var(--space-5)", height: "calc(100vh - 110px)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "var(--space-5)", height: "calc(100vh - 110px)" }}>
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>AI Assistant</h1>
         <p style={{ marginBottom: "var(--space-4)" }}>Ask an IT or HR question, or ask it to do something for you.</p>
+        <InfoBanner id="assistant">
+          Ask anything IT or HR related. The AI will try to answer and ask if it solved your problem — if not, it'll offer to raise a ticket for a human to help.
+        </InfoBanner>
 
         <Panel style={{ flex: 1, display: "flex", flexDirection: "column", padding: "var(--space-4)", overflow: "hidden" }}>
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingRight: "var(--space-2)" }}>
-            {messages.length === 0 && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "var(--space-6) var(--space-4)" }}>
-                <div style={{ width: 140, height: 140 }}>
-                  <Scene cameraPosition={[0, 0, 5]} fov={45}>
-                    <RoboCompanion position={[0, -0.2, 0]} scale={1.1} color="#94a3b8" accentColor="#5da9c9" />
-                  </Scene>
-                </div>
-                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
-                  Ask me anything IT or HR — or try one of these:
-                </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
-                  {SUGGESTED_QUESTIONS.map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => handleSend(q)}
-                      disabled={isStreaming}
-                      style={{
-                        fontSize: 12, fontFamily: "var(--font-body)", padding: "8px 14px",
-                        borderRadius: "var(--radius-full)", border: "1px solid var(--border-strong)",
-                        background: "var(--bg-elevated)", color: "var(--text-secondary)",
-                        cursor: isStreaming ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
+            {/* Rendered (not conditionally mounted) regardless of message count, visibility
+               toggled via CSS only — conditionally mounting/unmounting this block used to tear
+               down and recreate the Scene's WebGL context on every first send. */}
+            <div
+              style={{
+                display: messages.length === 0 ? "flex" : "none",
+                flexDirection: "column", alignItems: "center", textAlign: "center", padding: "var(--space-6) var(--space-4)",
+              }}
+            >
+              <AgentMascot agent={mascotAgent} state={mascotState} size={140} />
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
+                Ask me anything IT or HR — or try one of these:
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
+                {SUGGESTED_QUESTIONS.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => handleSend(q)}
+                    disabled={isStreaming}
+                    style={{
+                      fontSize: 12, fontFamily: "var(--font-body)", padding: "8px 14px",
+                      borderRadius: "var(--radius-full)", border: "1px solid var(--border-strong)",
+                      background: "var(--bg-elevated)", color: "var(--text-secondary)",
+                      cursor: isStreaming ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {pendingGate && !isStreaming && (
+            <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+              <Button variant="primary" onClick={() => handleSend("Yes")}>
+                Yes
+              </Button>
+              <Button variant="ghost" onClick={() => handleSend("No")}>
+                No
+              </Button>
+            </div>
+          )}
 
           {approval && (
             <div
@@ -270,13 +365,15 @@ export default function Assistant() {
         </Panel>
       </div>
 
-      <AgentActivityPanel activeAgent={activeAgent} pulse={pulse} captions={captions} />
+      <AgentActivityPanel activeAgent={activeAgent} pulse={pulse} captions={captions} agentStates={agentStates} />
     </div>
   );
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+  const routeKey = !isUser ? routeToAgentKey(message.route ?? null) : null;
+  const identity = routeKey ? AGENTS[routeKey] : null;
   return (
     <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start" }}>
       <div
@@ -288,6 +385,19 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5,
         }}
       >
+        {identity && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "var(--space-2)" }}>
+            <span
+              style={{
+                width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff", background: identity.color,
+              }}
+            >
+              {identity.name[0]}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: identity.color }}>{identity.name}</span>
+          </div>
+        )}
         {message.content || (message.pending ? "..." : "")}
 
         {!isUser && message.ticketNumber && (

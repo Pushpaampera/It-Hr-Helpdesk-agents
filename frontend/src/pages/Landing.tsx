@@ -3,29 +3,32 @@ import { ArrowRight, CheckCircle2, ChevronDown, MessageCircle, TrendingUp, Workf
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import amperaLogo from "../assets/ampera-logo.png";
 import Reveal from "../components/Reveal";
 import ReduceMotionToggle from "../components/ReduceMotionToggle";
 import Button from "../components/ui/Button";
+import Logo from "../components/ui/Logo";
 import Panel from "../components/ui/Panel";
+import { AGENT_ORDER, AGENTS } from "../design/agents";
 import { fadeUp, staggerContainer } from "../design/motion";
 import { useUIStore } from "../store/uiStore";
-import AgentOrb, { AGENT_COLORS } from "../three/AgentOrb";
+import AgentDesk from "../three/AgentDesk";
+import AgentMascot from "../three/AgentMascot";
 import DataPulse from "../three/DataPulse";
 import ParticleField from "../three/ParticleField";
-import RoboCompanion from "../three/RoboCompanion";
 import Scene from "../three/Scene";
 
+// The 6 non-router agents sit around Sage in a hexagon; Sage is the glowing core.
+const DESK_AGENTS = AGENT_ORDER.filter((key) => key !== "supervisor");
 // Mirrors backend/app/agents/events.py's FRIENDLY_NAMES/AGENT_JOBS — the 7 agents the audience
 // actually meets in a demo (the shared retrieval module isn't one of them).
 const TEAM = [
-  { slug: "guard", name: "Gus", job: "the Privacy Guardian" },
-  { slug: "supervisor", name: "Sage", job: "the Request Router" },
-  { slug: "it_support", name: "Iris", job: "the IT Specialist" },
-  { slug: "hr_policy", name: "Hana", job: "the HR Policy Expert" },
-  { slug: "action", name: "Atlas", job: "the Task Doer" },
-  { slug: "ticketing", name: "Tess", job: "the Case Handler" },
-  { slug: "feedback", name: "Finn", job: "the Quality Keeper" },
+  { slug: "guard", job: "the Privacy Guardian" },
+  { slug: "supervisor", job: "the Request Router" },
+  { slug: "it_support", job: "the IT Specialist" },
+  { slug: "hr_policy", job: "the HR Policy Expert" },
+  { slug: "action", job: "the Task Doer" },
+  { slug: "ticketing", job: "the Case Handler" },
+  { slug: "feedback", job: "the Quality Keeper" },
 ] as const;
 
 const STEPS = [
@@ -55,28 +58,31 @@ export default function Landing() {
   const navigate = useNavigate();
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const [pulseTrigger, setPulseTrigger] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     if (reduceMotion) return;
-    const interval = setInterval(() => setPulseTrigger((n) => n + 1), 2600);
+    const interval = setInterval(() => {
+      setPulseTrigger((n) => n + 1);
+      setActiveIndex((n) => (n + 1) % DESK_AGENTS.length);
+    }, 2400);
     return () => clearInterval(interval);
   }, [reduceMotion]);
+
+  const activeAgentKey = DESK_AGENTS[activeIndex];
+  const deskRadius = 11;
 
   return (
     <div>
       <header
+        className="glass-panel"
         style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 10,
+          position: "fixed", top: "var(--space-4)", left: "var(--space-6)", right: "var(--space-6)", zIndex: 10,
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "var(--space-4) var(--space-6)",
+          padding: "var(--space-3) var(--space-5)", borderRadius: "var(--radius-full)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <img src={amperaLogo} alt="Ampera" style={{ height: 34, width: "auto" }} />
-          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 22, color: "var(--accent-primary)" }}>
-            Helpdesk
-          </span>
-        </div>
+        <Logo to={null} size={28} />
         <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
           <ReduceMotionToggle />
           <Button variant="ghost" onClick={() => navigate("/login")}>
@@ -87,74 +93,84 @@ export default function Landing() {
 
       <section style={{ position: "relative", height: "100vh", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0 }}>
-          <Scene cameraPosition={[0, 0, 11]} bloom>
+          <Scene cameraPosition={[0, 1.5, 21]} fov={44} bloom>
             <ParticleField />
-            <AgentOrb agent="supervisor" position={[0, -0.3, -9]} active radius={0.4} />
-            <AgentOrb agent="it_support" position={[-10, 2.6, -9]} radius={0.5} />
-            <AgentOrb agent="hr_policy" position={[10, 2.6, -9]} radius={0.5} />
-            <AgentOrb agent="action" position={[-10.5, -3, -10]} radius={0.42} />
-            <AgentOrb agent="ticketing" position={[10.5, -3, -10]} radius={0.42} />
-            <AgentOrb agent="feedback" position={[-8, -3.8, -8]} radius={0.32} />
-            <AgentOrb agent="guard" position={[8, 4, -8]} radius={0.32} />
-            <DataPulse from={[0, -0.3, -9]} to={[-10, 2.6, -9]} trigger={pulseTrigger} color={AGENT_COLORS.it_support} />
-            <DataPulse from={[0, -0.3, -9]} to={[10, 2.6, -9]} trigger={pulseTrigger} color={AGENT_COLORS.hr_policy} />
-            <RoboCompanion position={[-4.2, -1.4, -3]} scale={1.4} color="#94a3b8" accentColor="#5da9c9" />
+            <AgentDesk agentKey="supervisor" position={[0, 4.2, -10]} isCore state="working" bubble="Routing requests to the right specialist…" />
+            {DESK_AGENTS.map((key, i) => {
+              const angle = (i / DESK_AGENTS.length) * Math.PI * 2 + Math.PI / 6;
+              const pos: [number, number, number] = [
+                Math.sin(angle) * deskRadius,
+                1.4 + Math.cos(angle) * 3.6,
+                -11 - Math.abs(Math.cos(angle)) * 2.5,
+              ];
+              const isActive = key === activeAgentKey;
+              return (
+                <group key={key}>
+                  <AgentDesk
+                    agentKey={key}
+                    position={pos}
+                    scale={1.05}
+                    state={isActive ? "working" : "idle"}
+                    bubble={isActive ? AGENTS[key].sampleLine : null}
+                  />
+                  <DataPulse from={[0, 3.8, -10]} to={pos} trigger={isActive ? pulseTrigger : -1} color={AGENTS[key].color} />
+                </group>
+              );
+            })}
           </Scene>
         </div>
-
-        {/* A dark radial scrim between the 3D scene and the text so the headline stays legible
-            regardless of where an orb drifts, without needing the orbs to dodge the text column. */}
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: "radial-gradient(ellipse 70% 62% at 50% 46%, rgba(5,6,15,0.92) 0%, rgba(5,6,15,0.55) 55%, rgba(5,6,15,0) 100%)",
-          }}
-        />
 
         <div
           style={{
             position: "relative", zIndex: 1, height: "100%",
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            textAlign: "center", padding: "0 var(--space-6)", gap: "var(--space-5)",
+            textAlign: "center", padding: "0 var(--space-6)",
           }}
         >
-          {reduceMotion ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
-              <h1 style={{ fontSize: "clamp(32px, 6vw, 64px)", maxWidth: 900, lineHeight: 1.05 }}>
-                Your helpdesk, staffed by a team of AI agents.
-              </h1>
-              <p style={{ fontSize: 18, maxWidth: 640 }}>
-                Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
-                escalated by seven cooperating agents you can watch work in real time.
-              </p>
-              <Button variant="primary" onClick={() => navigate("/login")} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                Try the demo <ArrowRight size={16} />
-              </Button>
-            </div>
-          ) : (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={staggerContainer(0.12)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}
-            >
-              <motion.h1
-                variants={fadeUp}
-                style={{ fontSize: "clamp(32px, 6vw, 64px)", maxWidth: 900, lineHeight: 1.05 }}
+          <Panel style={{ padding: "var(--space-6) var(--space-5)", maxWidth: 560 }}>
+            {reduceMotion ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
+                <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", lineHeight: 1.08 }}>
+                  Your HR and IT helpdesk, run by AI agents.
+                </h1>
+                <p style={{ fontSize: 17 }}>
+                  Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
+                  escalated by seven cooperating agents you can watch work in real time.
+                </p>
+                <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", justifyContent: "center" }}>
+                  <Button variant="primary" onClick={() => navigate("/login")} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    Enter Ampera HelpDesk <ArrowRight size={16} />
+                  </Button>
+                  <Button variant="ghost" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
+                    Watch agents work
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer(0.12)}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}
               >
-                Your helpdesk, staffed by a team of AI agents.
-              </motion.h1>
-              <motion.p variants={fadeUp} style={{ fontSize: 18, maxWidth: 640 }}>
-                Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
-                escalated by seven cooperating agents you can watch work in real time.
-              </motion.p>
-              <motion.div variants={fadeUp}>
-                <Button variant="primary" onClick={() => navigate("/login")} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                  Try the demo <ArrowRight size={16} />
-                </Button>
+                <motion.h1 variants={fadeUp} style={{ fontSize: "clamp(28px, 5vw, 48px)", lineHeight: 1.08 }}>
+                  Your HR and IT helpdesk, run by AI agents.
+                </motion.h1>
+                <motion.p variants={fadeUp} style={{ fontSize: 17 }}>
+                  Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
+                  escalated by seven cooperating agents you can watch work in real time.
+                </motion.p>
+                <motion.div variants={fadeUp} style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", justifyContent: "center" }}>
+                  <Button variant="primary" onClick={() => navigate("/login")} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    Enter Ampera HelpDesk <ArrowRight size={16} />
+                  </Button>
+                  <Button variant="ghost" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>
+                    Watch agents work
+                  </Button>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
+            )}
+          </Panel>
         </div>
 
         {!reduceMotion && (
@@ -177,25 +193,22 @@ export default function Landing() {
         </Reveal>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--space-4)" }}>
-          {TEAM.map((agent) => (
-            <Reveal key={agent.slug}>
-              <Panel style={{ padding: "var(--space-5)", height: "100%" }}>
-                <div
-                  style={{
-                    width: 48, height: 48, borderRadius: "50%", marginBottom: "var(--space-3)",
-                    background: AGENT_COLORS[agent.slug],
-                    boxShadow: `0 0 24px ${AGENT_COLORS[agent.slug]}66`,
-                  }}
-                />
-                <h3 style={{ fontSize: 18, marginBottom: 2 }}>{agent.name}</h3>
-                <p style={{ fontSize: 14 }}>{agent.job}</p>
-              </Panel>
-            </Reveal>
-          ))}
+          {TEAM.map((agent) => {
+            const identity = AGENTS[agent.slug];
+            return (
+              <Reveal key={agent.slug}>
+                <Panel style={{ padding: "var(--space-5)", height: "100%" }}>
+                  <AgentMascot agent={agent.slug} size={72} state="idle" style={{ marginBottom: "var(--space-2)", marginLeft: -8 }} />
+                  <h3 style={{ fontSize: 18, marginBottom: 2 }}>{identity.name}</h3>
+                  <p style={{ fontSize: 14 }}>{agent.job}</p>
+                </Panel>
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 
-      <section style={{ padding: "var(--space-8) var(--space-6)", maxWidth: 1100, margin: "0 auto" }}>
+      <section id="how-it-works" style={{ padding: "var(--space-8) var(--space-6)", maxWidth: 1100, margin: "0 auto" }}>
         <Reveal>
           <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: "var(--space-7)" }}>How it works</h2>
         </Reveal>

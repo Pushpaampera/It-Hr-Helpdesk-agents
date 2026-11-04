@@ -5,6 +5,7 @@ Phase 4: the approver identity comes from the JWT (must be the approval's own ap
 an admin standing in), not a body field.
 """
 import asyncio
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -62,6 +63,8 @@ async def decide_approval(
 ):
     if req.decision not in ("approved", "rejected"):
         raise HTTPException(400, "decision must be 'approved' or 'rejected'")
+    if req.decision == "rejected" and not (req.comment or "").strip():
+        raise HTTPException(400, "A reason is required to reject a request")
 
     approval = approvals_api.get(approval_id)
     if not approval:
@@ -78,3 +81,26 @@ async def decide_approval(
         asyncio.create_task(resume_after_approval(str(run_id), req.decision == "approved"))
 
     return result
+
+
+@router.post("/{approval_id}/undo")
+async def undo_approval(approval_id: str, current_user: User = Depends(get_current_user)):
+    """Reverts a just-decided approval back to pending, within a 5-second window. Does not
+    re-pause the LangGraph run that already resumed off this decision — see
+    app/mock_apis/approvals.py::undo for the scope boundary."""
+    approval = approvals_api.get(approval_id)
+    if not approval:
+        raise HTTPException(404, "Approval not found")
+    if approval["status"] not in ("approved", "rejected"):
+        raise HTTPException(409, "This approval hasn't been decided yet")
+    if str(approval["approver_id"]) != str(current_user.id) and current_user.role != "admin":
+        raise HTTPException(403, "Only the assigned approver (or an admin) can undo this")
+
+    decided_at = approval.get("decided_at")
+    if decided_at is None:
+        raise HTTPException(409, "No decision timestamp on record")
+    decided_at_aware = decided_at if decided_at.tzinfo else decided_at.replace(tzinfo=timezone.utc)
+    if (datetime.now(timezone.utc) - decided_at_aware).total_seconds() > 5:
+        raise HTTPException(409, "The undo window has expired")
+
+    return approvals_api.undo(approval_id)

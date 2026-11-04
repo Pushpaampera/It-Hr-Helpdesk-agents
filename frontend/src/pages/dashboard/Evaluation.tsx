@@ -3,12 +3,18 @@
  * runs (GET /api/eval/runs), and drills into one run's full per-question breakdown
  * (GET /api/eval/runs/{id}). */
 import { useEffect, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { apiGet, apiPost } from "../../api/client";
 import type { EvalRun, EvalRunDetail } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import InfoBanner from "../../components/ui/InfoBanner";
+import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import PageTransition from "../../design/pageTransition";
+import hover from "../../design/hoverEffects.module.css";
 
 export default function Evaluation() {
   const [runs, setRuns] = useState<EvalRun[] | null>(null);
@@ -41,16 +47,57 @@ export default function Evaluation() {
   if (error) return <Panel style={{ padding: "var(--space-5)", color: "var(--danger)" }}>{error}</Panel>;
 
   return (
+    <PageTransition routeKey="evaluation">
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-5)" }}>
-        <div>
-          <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Evaluation</h1>
-          <p>The 70-question golden set, run through the real agent graph.</p>
-        </div>
-        <Button variant="primary" onClick={trigger} disabled={running}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-4)" }}>
+        <DashboardHeader title="Evaluation" subtitle="A fixed set of 70 test questions with known-correct answers, used to check how accurate the AI is." />
+        <Button variant="primary" onClick={trigger} disabled={running} style={{ flexShrink: 0, marginTop: 2 }}>
           {running ? "Running (all 70 questions)..." : "Run evaluation"}
         </Button>
       </div>
+      <InfoBanner id="evaluation">
+        This page tests the AI against 70 questions with known-correct answers, so you can see how accurate it is and track whether it's getting better or worse over time.
+      </InfoBanner>
+
+      {runs && runs.length >= 2 && (
+        <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
+          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            Pass rate across recent runs
+            <InfoTooltip text="What share of the 70 test questions the AI answered correctly, for each time this test was run." />
+          </h2>
+          <div style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={runs
+                  .slice()
+                  .reverse()
+                  .map((r) => ({
+                    run: new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+                    pass_rate_pct: Math.round(r.summary.pass_rate * 100),
+                  }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,112,175,0.1)" vertical={false} />
+                <XAxis dataKey="run" tick={{ fill: "#8c87a3", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fill: "#8c87a3", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={40}
+                  label={{ value: "Pass rate %", angle: -90, position: "insideLeft", fill: "#8c87a3", fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: "#5c5775" }}
+                  formatter={(v: number) => [`${v}%`, "Pass rate"]}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: "#5c5775" }} />
+                <Bar dataKey="pass_rate_pct" name="Pass rate" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: selectedId ? "1fr 1fr" : "1fr", gap: "var(--space-5)" }}>
         <Panel style={{ padding: 0, overflow: "hidden", alignSelf: "start" }}>
@@ -64,7 +111,12 @@ export default function Evaluation() {
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-subtle)" }}>
                   <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Run</th>
                   <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Pass rate</th>
-                  <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Correctness</th>
+                  <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}>
+                      Answer quality
+                      <InfoTooltip text="A 0-1 score of how close each answer was to the known-correct answer, averaged across all 70 questions." />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -72,6 +124,7 @@ export default function Evaluation() {
                   <tr
                     key={r.id}
                     onClick={() => setSelectedId(r.id)}
+                    className={hover.glowOnHover}
                     style={{ cursor: "pointer", borderBottom: "1px solid var(--border-subtle)", background: selectedId === r.id ? "var(--bg-elevated)" : "transparent" }}
                   >
                     <td style={{ padding: "var(--space-3) var(--space-4)" }}>{new Date(r.created_at).toLocaleString()}</td>
@@ -89,6 +142,7 @@ export default function Evaluation() {
         {selectedId && <EvalRunDetailPanel runId={selectedId} onClose={() => setSelectedId(null)} />}
       </div>
     </div>
+    </PageTransition>
   );
 }
 

@@ -21,19 +21,20 @@ type SceneProps = {
 
 export default function Scene({ children, cameraPosition = [0, 0, 8], fov = 45, style, bloom = false }: SceneProps) {
   const tabVisible = useUIStore((s) => s.tabVisible);
+  const reduceMotion = useUIStore((s) => s.reduceMotion);
 
   return (
     <Canvas
       dpr={[1, 2]}
-      frameloop={tabVisible ? "always" : "demand"}
+      frameloop={tabVisible && !reduceMotion ? "always" : "demand"}
       camera={{ position: cameraPosition, fov }}
       gl={{ antialias: true, alpha: true }}
       style={{ width: "100%", height: "100%", ...style }}
     >
       <Suspense fallback={null}>
-        <ambientLight intensity={0.4} />
-        <pointLight position={[5, 5, 5]} intensity={1.2} />
-        <pointLight position={[-5, -3, -4]} intensity={0.4} color="#7c70af" />
+        <ambientLight intensity={0.65} />
+        <pointLight position={[5, 5, 5]} intensity={1.3} />
+        <pointLight position={[-5, -3, -4]} intensity={0.5} color="#8b5cf6" />
         {children}
         {bloom && (
           <EffectComposer>

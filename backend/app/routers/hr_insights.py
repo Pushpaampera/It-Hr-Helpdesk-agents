@@ -2,7 +2,7 @@
 — the HR Insights page's backing data: company-wide headcount/leave posture plus the real
 pending leave requests HR actually has to act on (seeded at ~15% pending, see
 app/seed/generators/ops.py). HR/admin only."""
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -97,6 +97,7 @@ def list_leave_requests(status: str | None = None, db: Session = Depends(get_db)
 
 class DecideLeaveRequest(BaseModel):
     decision: str  # "approved" | "rejected"
+    comment: str | None = None
 
 
 @router.patch("/leave-requests/{leave_request_id}/decide")
@@ -106,6 +107,8 @@ def decide_leave_request(
 ):
     if req.decision not in ("approved", "rejected"):
         raise HTTPException(400, "decision must be 'approved' or 'rejected'")
+    if req.decision == "rejected" and not (req.comment or "").strip():
+        raise HTTPException(400, "A reason is required to reject a request")
 
     lr = db.execute(
         text("SELECT id, user_id, leave_type, days, status FROM leave_requests WHERE id = :id"),
@@ -117,7 +120,7 @@ def decide_leave_request(
         raise HTTPException(409, f"Leave request already {lr['status']}")
 
     db.execute(
-        text("UPDATE leave_requests SET status = :status WHERE id = :id"),
+        text("UPDATE leave_requests SET status = :status, decided_at = now() WHERE id = :id"),
         {"status": req.decision, "id": leave_request_id},
     )
     if req.decision == "approved":
@@ -128,5 +131,44 @@ def decide_leave_request(
             {"days": lr["days"], "uid": str(lr["user_id"]), "lt": lr["leave_type"]},
         )
     db.commit()
-    log_action(str(current_user.id), f"leave_request_{req.decision}", "leave_request", leave_request_id, {})
+    log_action(str(current_user.id), f"leave_request_{req.decision}", "leave_request", leave_request_id, {"comment": req.comment})
     return {"id": leave_request_id, "status": req.decision}
+
+
+@router.post("/leave-requests/{leave_request_id}/undo")
+def undo_leave_request(
+    leave_request_id: str,
+    current_user: User = Depends(require_roles("hr", "admin")), db: Session = Depends(get_db),
+):
+    """Reverts a just-decided leave request back to pending, within a 5-second window —
+    restoring any leave balance deducted on approval. Mirrors approvals_api.undo's scope
+    boundary: nothing downstream of the decision is unwound, only this record."""
+    lr = db.execute(
+        text("SELECT id, user_id, leave_type, days, status, decided_at FROM leave_requests WHERE id = :id"),
+        {"id": leave_request_id},
+    ).mappings().first()
+    if not lr:
+        raise HTTPException(404, "Leave request not found")
+    if lr["status"] not in ("approved", "rejected"):
+        raise HTTPException(409, "This leave request hasn't been decided yet")
+    decided_at = lr["decided_at"]
+    if decided_at is None:
+        raise HTTPException(409, "No decision timestamp on record")
+    decided_at_aware = decided_at if decided_at.tzinfo else decided_at.replace(tzinfo=timezone.utc)
+    if (datetime.now(timezone.utc) - decided_at_aware).total_seconds() > 5:
+        raise HTTPException(409, "The undo window has expired")
+
+    if lr["status"] == "approved":
+        db.execute(
+            text(
+                "UPDATE leave_balances SET used_days = used_days - :days WHERE user_id = :uid AND leave_type = :lt"
+            ),
+            {"days": lr["days"], "uid": str(lr["user_id"]), "lt": lr["leave_type"]},
+        )
+    db.execute(
+        text("UPDATE leave_requests SET status = 'pending', decided_at = NULL WHERE id = :id"),
+        {"id": leave_request_id},
+    )
+    db.commit()
+    log_action(str(current_user.id), "leave_request_undo", "leave_request", leave_request_id, {})
+    return {"id": leave_request_id, "status": "pending"}

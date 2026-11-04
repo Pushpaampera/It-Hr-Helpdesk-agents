@@ -1,0 +1,67 @@
+.statCard {
+  padding: var(--space-4);
+  background:
+    linear-gradient(135deg, rgba(124, 112, 175, 0.16), rgba(189, 207, 214, 0.05)),
+    var(--bg-panel);
+  box-shadow: var(--shadow-panel), inset 0 0 0 1px rgba(124, 112, 175, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.value {
+  font-size: 26px;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.unit {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: 3px;
+}
+
+.deltaUp {
+  font-size: 12px;
+  color: var(--success);
+  font-family: var(--font-mono);
+}
+
+.deltaDown {
+  font-size: 12px;
+  color: var(--danger);
+  font-family: var(--font-mono);
+}
+
+.sparkline {
+  height: 32px;
+  margin-top: 2px;
+}

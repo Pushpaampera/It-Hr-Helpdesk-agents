@@ -52,6 +52,22 @@ def last_event_seq(run_id: str) -> int:
     return int(row["m"]) if row else 0
 
 
+def find_awaiting_reply_run(conversation_id: str) -> dict | None:
+    """The most recent run on this conversation that's paused waiting on the user's own next
+    chat message (the confirm_resolution/offer_ticket gates) — chat.py checks this to decide
+    whether an incoming message is a fresh question or a reply to a pending gate."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """SELECT * FROM agent_runs WHERE conversation_id = :cid
+                   AND status = 'awaiting_user_confirmation' ORDER BY created_at DESC LIMIT 1"""
+            ),
+            {"cid": conversation_id},
+        ).mappings().first()
+    return dict(row) if row else None
+
+
 def save_message(conversation_id: str, role: str, content: str, run_id: str | None = None,
                   routed_to: str | None = None, confidence: float | None = None, sources: list | None = None) -> None:
     engine = get_engine()

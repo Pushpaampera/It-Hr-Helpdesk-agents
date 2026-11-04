@@ -7,7 +7,11 @@ import { apiGet, apiPatch } from "../../api/client";
 import type { AgentEventPayload, RunEventsResponse, TicketDetail, TicketSummary } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import PageTransition from "../../design/pageTransition";
+import hover from "../../design/hoverEffects.module.css";
 import { useAuthStore } from "../../store/authStore";
 
 const STAFF_ROLES = ["manager", "hr", "admin"];
@@ -50,11 +54,17 @@ export default function Tickets() {
   if (!tickets) return <Panel style={{ padding: "var(--space-5)" }}>Loading...</Panel>;
 
   return (
+    <PageTransition routeKey="tickets">
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Tickets</h1>
-      <p style={{ marginBottom: "var(--space-4)" }}>
-        {isStaff ? "Every ticket raised across the company." : "Tickets raised on your behalf."}
-      </p>
+      <DashboardHeader
+        title="Tickets"
+        subtitle={isStaff ? "Every ticket raised across the company." : "Tickets raised on your behalf."}
+      />
+      <InfoBanner id="tickets">
+        {isStaff
+          ? "Every support ticket the AI couldn't fully resolve on its own, so a human could take over."
+          : "Tickets the AI assistant raised for you when it couldn't fully answer something on its own."}
+      </InfoBanner>
 
       <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)", flexWrap: "wrap" }}>
         <FilterChip label="All" active={statusFilter === ""} onClick={() => setStatusFilter("")} />
@@ -84,6 +94,7 @@ export default function Tickets() {
                   <tr
                     key={t.id}
                     onClick={() => setSelectedId(t.id)}
+                    className={hover.glowOnHover}
                     style={{
                       cursor: "pointer",
                       borderBottom: "1px solid var(--border-subtle)",
@@ -118,6 +129,7 @@ export default function Tickets() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }
 

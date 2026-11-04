@@ -6,11 +6,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import ReduceMotionToggle from "../components/ReduceMotionToggle";
 import Button from "../components/ui/Button";
+import Logo from "../components/ui/Logo";
 import Panel from "../components/ui/Panel";
 import TextField from "../components/ui/TextField";
 import { fadeUp } from "../design/motion";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
+import AgentMascot from "../three/AgentMascot";
 import type { Role } from "../api/types";
 
 // Per docs/00_PROJECT_OVERVIEW.md's "lands on" column. The real per-role destinations are
@@ -34,8 +36,14 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mascotState, setMascotState] = useState<"waving" | "idle">("waving");
 
   const destination = (location.state as LocationState)?.from?.pathname || "/app";
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setMascotState("idle"), 1500);
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) navigate(destination, { replace: true });
@@ -65,7 +73,10 @@ export default function Login() {
 
   const content = (
     <Panel style={{ padding: "var(--space-6)", maxWidth: 420, width: "100%" }}>
-      <h1 style={{ fontSize: 24, marginBottom: "var(--space-1)" }}>Sign in</h1>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "calc(-1 * var(--space-4))" }}>
+        <AgentMascot agent="supervisor" state={mascotState} size={120} />
+      </div>
+      <h1 style={{ fontSize: 24, marginBottom: "var(--space-1)", textAlign: "center" }}>Sign in</h1>
       <p style={{ marginBottom: "var(--space-5)" }}>Use your own credentials, or jump in as a demo account.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
@@ -127,11 +138,14 @@ export default function Login() {
         justifyContent: "center", padding: "var(--space-6)", gap: "var(--space-5)",
       }}
     >
-      <div style={{ position: "fixed", top: "var(--space-4)", left: "var(--space-6)", right: "var(--space-6)", display: "flex", justifyContent: "space-between" }}>
-        <Button variant="ghost" onClick={() => navigate("/")} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <ArrowLeft size={16} /> Back
-        </Button>
-        <ReduceMotionToggle />
+      <div style={{ position: "fixed", top: "var(--space-4)", left: "var(--space-6)", right: "var(--space-6)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Logo to="/" size={26} />
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+          <Button variant="ghost" onClick={() => navigate("/")} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <ArrowLeft size={16} /> Back
+          </Button>
+          <ReduceMotionToggle />
+        </div>
       </div>
 
       {reduceMotion ? (

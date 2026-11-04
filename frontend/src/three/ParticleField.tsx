@@ -15,7 +15,7 @@ type ParticleFieldProps = {
   color?: string;
 };
 
-export default function ParticleField({ count = MAX_PARTICLES, radius = 12, color = "#6b6860" }: ParticleFieldProps) {
+export default function ParticleField({ count = MAX_PARTICLES, radius = 12, color = "#a78bfa" }: ParticleFieldProps) {
   const pointsRef = useRef<THREE.Points>(null);
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const safeCount = Math.min(count, MAX_PARTICLES);

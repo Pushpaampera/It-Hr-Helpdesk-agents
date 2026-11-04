@@ -5,7 +5,10 @@ import { useEffect, useState } from "react";
 
 import { apiGet } from "../../api/client";
 import type { AuditLogEntry } from "../../api/types";
+import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import PageTransition from "../../design/pageTransition";
 
 export default function AuditLog() {
   const [entries, setEntries] = useState<AuditLogEntry[] | null>(null);
@@ -29,9 +32,12 @@ export default function AuditLog() {
   if (error) return <Panel style={{ padding: "var(--space-5)", color: "var(--danger)" }}>{error}</Panel>;
 
   return (
+    <PageTransition routeKey="audit-log">
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Audit Log</h1>
-      <p style={{ marginBottom: "var(--space-4)" }}>Every action taken through the mock IT/HR systems, most recent first.</p>
+      <DashboardHeader title="Audit Log" subtitle="Every action taken through the mock IT/HR systems, most recent first." />
+      <InfoBanner id="audit-log">
+        A permanent record of every action the AI (and the people deciding approvals and leave requests) has taken, for compliance and troubleshooting.
+      </InfoBanner>
 
       <div style={{ marginBottom: "var(--space-4)" }}>
         <select
@@ -56,9 +62,9 @@ export default function AuditLog() {
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-subtle)" }}>
                 <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>When</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Actor</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Action</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Target</th>
+                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Who</th>
+                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>What happened</th>
+                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>What it affected</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +74,7 @@ export default function AuditLog() {
                     {new Date(e.ts).toLocaleString()}
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-4)" }}>{e.actor_name ?? "—"}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", fontFamily: "var(--font-mono)" }}>{e.action}</td>
+                  <td style={{ padding: "var(--space-3) var(--space-4)" }}>{e.action.replace(/_/g, " ")}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)", color: "var(--text-muted)" }}>{e.target_type}</td>
                 </tr>
               ))}
@@ -77,5 +83,6 @@ export default function AuditLog() {
         )}
       </Panel>
     </div>
+    </PageTransition>
   );
 }

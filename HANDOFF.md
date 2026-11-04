@@ -3,7 +3,61 @@
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
 file, then `PROGRESS.md`, then `docs/phases/PHASE_12.md`, in that order, before touching code.
 
-## Current state (2026-11-04) — feature-complete, now in active live-feedback polish
+## Current state (2026-11-04, latest) — mid a full visual redesign, not committed
+**The operator ordered a full "bright AI agent world" visual redesign**, away from the dark navy
+theme to a light/colorful one with 7 distinct procedural robots, real logo, glass panels — see
+`PROGRESS.md`'s "Bright agent-world redesign" section for the complete file-by-file breakdown.
+**All 4 phases are done and verified live** (Chrome + playwright-core, zero console errors across
+every page/role): Phase 0 (colours + logo), Phase 1 (Landing), Phase 2 (AI Assistant "Agent
+Workroom"), Phase 3 (Overview), Phase 4 (every other page — `Tickets/Approvals/Team/HrInsights/
+KnowledgeBase/Costs/Evaluation/AuditLog/ControlRoom/ReinforcementLab.tsx`). The operator's full
+redesign brief is complete end to end, in the order they asked for. **Nothing from this redesign
+is committed yet** — ask the operator before committing this much uncommitted work in one shot. If
+resuming, read `PROGRESS.md`'s "Bright agent-world redesign" section for the complete file-by-file
+breakdown; there is no further planned work on this unless the operator gives new direction.
+
+Phase 4 also caught a real leftover bug via grep (not visible in a screenshot): `tokens.css`'s
+`--accent-primary`/`--accent-secondary` — used by every button/link/focus ring — were still the
+old pre-redesign hex, one shade off from Sage's new violet used everywhere else. Fixed.
+
+**Phase 3 also fixed the operator's exact reported data bug**: Emma's Overview showed 64-66 open
+tickets with "bonus wrongly calculated" repeated dozens of times. Not a seed bug — real chat turns
+against the live backend each create a real ticket for an unanswerable question, accumulated over
+months of sessions. Cleaned up with a one-off SQL dedup (kept newest ticket per user+question),
+265→202 tickets, Emma 66→9. **`backend/tests/test_agents_graph.py` has two tests that send this
+exact question through the live graph against the real demo DB on every `pytest` run** (no test-DB
+isolation) — expect +1 duplicate each time the backend test suite runs; that's pre-existing
+behavior, not a new regression, re-run the cleanup (query is in `PROGRESS.md`'s Phase 3 section)
+rather than chasing it as a bug.
+
+**Phase 2 also fixed a real, previously-undiscovered backend bug**, not a redesign cosmetic: the
+confirm-resolution "Yes" reply crashed the SSE stream server-side (`TypeError: Object of type
+UUID is not JSON serializable` in `chat.py`'s resume path — `agent_runs.id` came back as a raw
+`uuid.UUID` from a raw-SQL row, not a `str`), which made the frontend hang on "Waiting for a
+response…" with zero console errors since the stream just died without a `final`/`error` event.
+Only reachable by actually clicking "Yes" after an answer — a fresh run was unaffected, so it
+never surfaced in any prior phase's testing. One-line fix in `backend/app/routers/chat.py`;
+`poetry run pytest -q` confirmed still 25/25 after.
+
+Also fixed this session, not cosmetic: `frontend/vite.config.ts`'s backend proxy port is now
+`process.env.BACKEND_PORT ?? 8000` instead of hardcoded — this sandbox had unrelated projects'
+processes already bound to ports 8000/5173, matching this file's own long-documented "port 8000
+occupied" quirk below. Run the backend with `APP_PORT=<free-port> poetry run dev` and the
+frontend with `BACKEND_PORT=<same-port> npm run dev` if 8000 is taken.
+
+## Current state (2026-11-04, pre-redesign) — feature-complete, now in active live-feedback polish
+**A 6-step overhaul landed today** (animation infra, robot mascot state machine, a reworked
+confirm-before-ticket chatbot flow, dashboard redesign, approvals safety, plain-English UI) — see
+`PROGRESS.md`'s "6-step overhaul" section and `docs/07_CHANGELOG.md`'s newest entry for the full
+breakdown. Most load-bearing fact for a new session: **chat no longer auto-creates tickets** —
+it now asks "did this solve your problem?" and only offers/creates a ticket after an explicit
+"no" then "yes". This changed the LangGraph shape (`graph.py` has two new nodes,
+`confirm_resolution`/`offer_ticket`) and added a new `agent_runs` status
+(`awaiting_user_confirmation`, migration `0002`) and SSE event (`confirmation_required`). Two new
+migrations need `poetry run migrate` if not already applied (`0002_confirmation_status.sql`,
+`0003_leave_request_undo.sql`). `poetry run pytest -q` → 25/25 green, `tsc`/`build` clean,
+`LLM_MOCK_MODE=true` unchanged throughout.
+
 **Every phase on the original checklist (1-12) is DONE and verified end to end**, including live
 browser-driven checks for every frontend phase (6-12) — each tested as real functional flows
 (real clicks/form submissions/decisions, not just static screenshots). Phase 10B (Demo

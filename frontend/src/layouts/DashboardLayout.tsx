@@ -2,10 +2,10 @@
  * renders inside, from Phase 8 onward. */
 import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import amperaLogo from "../assets/ampera-logo.png";
 import ReduceMotionToggle from "../components/ReduceMotionToggle";
+import Logo from "../components/ui/Logo";
 import { useAuthStore } from "../store/authStore";
 import styles from "./DashboardLayout.module.css";
 import { NAV_ITEMS } from "./navItems";
@@ -30,12 +30,7 @@ export default function DashboardLayout() {
 
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-6)" }}>
-          <Link to="/app/overview" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <img src={amperaLogo} alt="Ampera" style={{ height: 28, width: "auto" }} />
-            <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 17, color: "var(--accent-primary)" }}>
-              Helpdesk
-            </span>
-          </Link>
+          <Logo to="/app/overview" size={24} />
           <button className={styles.closeButton} onClick={() => setSidebarOpen(false)} aria-label="Close menu">
             <X size={18} />
           </button>

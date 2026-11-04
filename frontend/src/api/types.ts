@@ -135,6 +135,9 @@ export type FinalEventPayload = {
   seq: number;
   answer: string;
   sources: ChatSource[];
+  /** Which agent authored the answer — "it_support"/"hr_policy"/etc, or null for a guard block
+   * or an unanswerable-question ticket with no specialist answer. Used to show that agent's
+   * avatar/name on the chat bubble (the AI Assistant "Agent Workroom" redesign). */
   route: string | null;
   resolved: boolean;
   ticket_number: string | null;
@@ -143,11 +146,23 @@ export type FinalEventPayload = {
 
 export type ErrorEventPayload = { type: "error"; run_id: string; seq: number; message: string; ts: string };
 
+export type ConfirmationRequiredEventPayload = {
+  type: "confirmation_required";
+  run_id: string;
+  seq: number;
+  prompt: string;
+  gate: "resolution_confirm" | "ticket_offer";
+  sources: ChatSource[];
+  caption: string;
+  ts: string;
+};
+
 export type ChatEvent =
   | AgentEventPayload
   | HandoffEventPayload
   | TokenEventPayload
   | ApprovalRequiredEventPayload
+  | ConfirmationRequiredEventPayload
   | FinalEventPayload
   | ErrorEventPayload;
 
