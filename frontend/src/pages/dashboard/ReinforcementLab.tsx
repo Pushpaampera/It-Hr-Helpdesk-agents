@@ -12,9 +12,9 @@ import Badge from "../../components/ui/Badge";
 import Panel from "../../components/ui/Panel";
 
 const ARM_COLORS: Record<string, string> = {
-  hybrid_rerank: "#ff8c1a",
-  lexical_heavy: "#38bdf8",
-  semantic_heavy: "#facc15",
+  hybrid_rerank: "#7c70af",
+  lexical_heavy: "#5da9c9",
+  semantic_heavy: "#d4af37",
 };
 
 export default function ReinforcementLab() {
@@ -88,7 +88,7 @@ export default function ReinforcementLab() {
               <LineChart data={chartData}>
                 <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 1]} tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip contentStyle={{ background: "#131417", border: "1px solid rgba(255,140,26,0.12)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a8a49c" }} />
+                <Tooltip contentStyle={{ background: "#131417", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a8a49c" }} />
                 {Object.keys(ARM_COLORS).map((arm) => (
                   <Line key={arm} type="monotone" dataKey={arm} stroke={ARM_COLORS[arm]} strokeWidth={2} dot={false} connectNulls />
                 ))}

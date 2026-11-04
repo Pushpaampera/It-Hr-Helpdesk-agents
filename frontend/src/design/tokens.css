@@ -1,27 +1,29 @@
 :root {
-  /* Base surface — graphite/steel, not the violet-tinted "AI startup" dark. Robotics/industrial
-     HUD reference: matte graphite body + signal-light accents (amber/steel-blue/copper), not
-     purple-to-pink gradients. */
+  /* Base surface — graphite, with the real Ampera brand purple (#7C70AF, extracted from
+     amperadei.com's logo SVG fill and menu accent) as the primary accent instead of a generic
+     "AI" color invented from scratch. --accent-secondary (#BDCFD6) is the brand's light
+     steel-blue-gray, also pulled from the real site. */
   --bg: #0a0a0c;
   --bg-elevated: #131417;
   --bg-panel: rgba(22, 23, 27, 0.65);
-  --border-subtle: rgba(255, 140, 26, 0.10);
-  --border-strong: rgba(255, 140, 26, 0.28);
+  --border-subtle: rgba(124, 112, 175, 0.14);
+  --border-strong: rgba(124, 112, 175, 0.32);
 
   /* Text */
   --text-primary: #f2f0ec;
   --text-secondary: #a8a49c;
   --text-muted: #6b6860;
 
-  /* Brand/primary accent — robot signal-light orange, replaces the violet "AI" accent
-     everywhere a single primary color is needed (buttons, primary chart line, chat bubble). */
-  --accent-primary: #ff8c1a;
+  /* Brand accents — real Ampera colors, not invented ones */
+  --accent-primary: #7c70af;
+  --accent-secondary: #bdcfd6;
 
-  /* Agent identity colors — industrial, each distinct, none violet/pink */
-  --agent-supervisor: #ff8c1a;
-  --agent-it: #38bdf8;
+  /* Agent identity colors — anchored to the real brand purple/steel-blue, each agent still
+     visually distinct */
+  --agent-supervisor: #7c70af;
+  --agent-it: #5da9c9;
   --agent-hr: #c4915c;
-  --agent-action: #facc15;
+  --agent-action: #d4af37;
   --agent-ticketing: #94a3b8;
   --agent-feedback: #34d399;
   --agent-knowledge: #2dd4bf;
@@ -29,9 +31,9 @@
 
   /* Semantic */
   --success: #34d399;
-  --warning: #facc15;
+  --warning: #d4af37;
   --danger: #ef4444;
-  --info: #38bdf8;
+  --info: #5da9c9;
 
   /* Typography */
   --font-heading: "Space Grotesk", system-ui, sans-serif;
@@ -55,8 +57,8 @@
   --radius-full: 999px;
 
   /* Shadows / glow */
-  --glow-amber: 0 0 32px rgba(255, 140, 26, 0.35);
-  --glow-steel: 0 0 32px rgba(56, 189, 248, 0.35);
+  --glow-primary: 0 0 32px rgba(124, 112, 175, 0.35);
+  --glow-steel: 0 0 32px rgba(93, 169, 201, 0.35);
   --shadow-panel: 0 8px 40px rgba(0, 0, 0, 0.45);
 
   /* Motion */

@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import Panel from "../ui/Panel";
 import AgentOrb, { AGENT_COLORS } from "../../three/AgentOrb";
 import DataPulse from "../../three/DataPulse";
+import RoboCompanion from "../../three/RoboCompanion";
 import Scene from "../../three/Scene";
 
 const AGENT_ORDER = ["guard", "supervisor", "it_support", "hr_policy", "action", "ticketing", "feedback"] as const;
@@ -60,6 +61,16 @@ export default function AgentActivityPanel({ activeAgent, pulse, captions }: Age
 
   return (
     <Panel style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* A small idling robot companion — the one piece of this panel that's always visibly
+          moving (bob/sway/head-turn/eye-glow) even between events, so the panel reads as "alive"
+          rather than static between agent activity. Its own short scene, not crammed into the
+          orb row below, to avoid re-triggering the Phase 9 narrow-frustum clipping bug. */}
+      <div style={{ height: 130, borderBottom: "1px solid var(--border-subtle)" }}>
+        <Scene cameraPosition={[0, 0, 6]} fov={45}>
+          <RoboCompanion position={[0, -0.3, 0]} scale={0.85} color="#94a3b8" accentColor="#5da9c9" />
+        </Scene>
+      </div>
+
       <div style={{ height: 160 }}>
         <Scene cameraPosition={[0, 0, 6.5]} fov={40}>
           {AGENT_ORDER.map((agent, i) => (
@@ -70,7 +81,7 @@ export default function AgentActivityPanel({ activeAgent, pulse, captions }: Age
               from={positionFor(fromIndex)}
               to={positionFor(toIndex)}
               trigger={pulse.trigger}
-              color={isKnownAgent(pulse.to) ? AGENT_COLORS[pulse.to] : "#ff8c1a"}
+              color={isKnownAgent(pulse.to) ? AGENT_COLORS[pulse.to] : "#7c70af"}
             />
           )}
         </Scene>

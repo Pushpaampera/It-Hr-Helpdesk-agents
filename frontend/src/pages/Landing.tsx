@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, ChevronDown, MessageCircle, TrendingUp, Workf
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import amperaLogo from "../assets/ampera-logo.png";
 import Reveal from "../components/Reveal";
 import ReduceMotionToggle from "../components/ReduceMotionToggle";
 import Button from "../components/ui/Button";
@@ -12,6 +13,7 @@ import { useUIStore } from "../store/uiStore";
 import AgentOrb, { AGENT_COLORS } from "../three/AgentOrb";
 import DataPulse from "../three/DataPulse";
 import ParticleField from "../three/ParticleField";
+import RoboCompanion from "../three/RoboCompanion";
 import Scene from "../three/Scene";
 
 // Mirrors backend/app/agents/events.py's FRIENDLY_NAMES/AGENT_JOBS — the 7 agents the audience
@@ -69,9 +71,12 @@ export default function Landing() {
           padding: "var(--space-4) var(--space-6)",
         }}
       >
-        <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 18 }}>
-          Ampera Helpdesk
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <img src={amperaLogo} alt="Ampera" style={{ height: 24, width: "auto" }} />
+          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 16, color: "var(--text-secondary)" }}>
+            Helpdesk
+          </span>
+        </div>
         <div style={{ display: "flex", gap: "var(--space-3)", alignItems: "center" }}>
           <ReduceMotionToggle />
           <Button variant="ghost" onClick={() => navigate("/login")}>
@@ -93,6 +98,7 @@ export default function Landing() {
             <AgentOrb agent="guard" position={[8, 4, -8]} radius={0.32} />
             <DataPulse from={[0, -0.3, -9]} to={[-10, 2.6, -9]} trigger={pulseTrigger} color={AGENT_COLORS.it_support} />
             <DataPulse from={[0, -0.3, -9]} to={[10, 2.6, -9]} trigger={pulseTrigger} color={AGENT_COLORS.hr_policy} />
+            <RoboCompanion position={[-4.2, -1.4, -3]} scale={1.4} color="#94a3b8" accentColor="#5da9c9" />
           </Scene>
         </div>
 

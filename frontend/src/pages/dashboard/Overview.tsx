@@ -81,14 +81,14 @@ function StaffOverview() {
         ) : (
           <div style={{ height: 220 }}>
             {/* recharts needs concrete color strings, not CSS var() references, for SVG gradient
-                stops to render reliably — #ff8c1a/#6b6860 mirror tokens.css's --accent-primary/
+                stops to render reliably — #7c70af/#6b6860 mirror tokens.css's --accent-primary/
                 --text-muted, same duplication tradeoff as AgentOrb's AGENT_COLORS. */}
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series}>
                 <defs>
                   <linearGradient id="runsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ff8c1a" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#ff8c1a" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#7c70af" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
@@ -100,10 +100,10 @@ function StaffOverview() {
                 />
                 <YAxis tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: "#131417", border: "1px solid rgba(255,140,26,0.12)", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: "#131417", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: "#a8a49c" }}
                 />
-                <Area type="monotone" dataKey="total_runs" stroke="#ff8c1a" fill="url(#runsGradient)" strokeWidth={2} />
+                <Area type="monotone" dataKey="total_runs" stroke="#7c70af" fill="url(#runsGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

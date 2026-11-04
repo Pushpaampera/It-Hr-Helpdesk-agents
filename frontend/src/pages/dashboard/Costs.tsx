@@ -43,14 +43,14 @@ export default function Costs() {
               <AreaChart data={data.by_day}>
                 <defs>
                   <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#facc15" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#facc15" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#d4af37" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#d4af37" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#6b6860", fontSize: 11 }} axisLine={false} tickLine={false} width={48} />
-                <Tooltip contentStyle={{ background: "#131417", border: "1px solid rgba(255,140,26,0.12)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a8a49c" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
-                <Area type="monotone" dataKey="cost_usd" stroke="#facc15" fill="url(#costGradient)" strokeWidth={2} />
+                <Tooltip contentStyle={{ background: "#131417", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#a8a49c" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
+                <Area type="monotone" dataKey="cost_usd" stroke="#d4af37" fill="url(#costGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

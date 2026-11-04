@@ -33,7 +33,7 @@ export default function Scene({ children, cameraPosition = [0, 0, 8], fov = 45, 
       <Suspense fallback={null}>
         <ambientLight intensity={0.4} />
         <pointLight position={[5, 5, 5]} intensity={1.2} />
-        <pointLight position={[-5, -3, -4]} intensity={0.4} color="#ff8c1a" />
+        <pointLight position={[-5, -3, -4]} intensity={0.4} color="#7c70af" />
         {children}
         {bloom && (
           <EffectComposer>
