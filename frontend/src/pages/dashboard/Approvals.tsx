@@ -3,7 +3,9 @@
  * resume flow a real UI instead of the direct-API calls Phase 9 verified it with. Deciding
  * resumes the paused agent run server-side (app/agents/graph.py::resume_after_approval). */
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { apiGet, apiPost } from "../../api/client";
 import type { Approval } from "../../api/types";
@@ -26,6 +28,7 @@ function statusTone(status: string): "success" | "warning" | "danger" {
 }
 
 export default function Approvals() {
+  const navigate = useNavigate();
   const [approvals, setApprovals] = useState<Approval[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +97,18 @@ export default function Approvals() {
     <PageTransition routeKey="approvals">
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+        <button
+          onClick={() => navigate("/app/overview")}
+          aria-label="Back to Overview"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            width: 36, height: 36, borderRadius: "var(--radius-full)",
+            border: "1px solid var(--border-subtle)", background: "var(--bg-panel)",
+            color: "var(--text-secondary)", cursor: "pointer",
+          }}
+        >
+          <ArrowLeft size={16} />
+        </button>
         <AgentMascot agent="action" state={mascotState} size={64} />
         <div>
           <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Approvals</h1>
