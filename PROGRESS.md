@@ -50,6 +50,17 @@
     1 below); still true, not revisited this pass.
 - If resuming: don't re-trust old "done" labels at face value for chat/KB-answer behavior —
   re-verify live, the same way this pass did, before building on top of them.
+- **Also found and fixed, same pass**: Landing's headline card was still covering the robots in
+  the real running app — the operator's exact original complaint ("the headline card covers the
+  robots… the agent world must be the first thing visitors see, large and unblocked"), despite
+  Phase 1 below claiming this was handled. Root cause: `Landing.tsx`'s hero content wrapper used
+  `bottom: "var(--space-10)"` to pin the card near the bottom, but `tokens.css` only defines
+  spacing tokens up to `--space-8` (64px) — `--space-10` resolves to nothing, so the browser
+  dropped the `bottom` offset entirely and the "compact glass strip" fell back to its static
+  position near the top of the section, overlapping Sage's core robot exactly like the original
+  centered-card bug. Fixed by using the real `--space-8` token; the strip is now genuinely a
+  compact, non-covering bar at the bottom, robots fully visible above it in both normal and
+  Reduce-motion states — re-screenshotted to confirm.
 
 ## RESUME HERE (pre-redesign state, still accurate for everything below)
 - **All 12 planned phases are DONE** (Phase 10B explicitly skipped by operator instruction,

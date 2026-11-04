@@ -120,20 +120,22 @@ export default function Landing() {
           </Scene>
         </div>
 
+        {/* A compact glass strip pinned near the bottom, not a centered card — the agent world
+            (robots, desks, holograms) must be the first fully-unblocked thing a visitor sees,
+            per the operator's brief. */}
         <div
           style={{
-            position: "relative", zIndex: 1, height: "100%",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            textAlign: "center", padding: "0 var(--space-6)",
+            position: "absolute", left: 0, right: 0, bottom: "var(--space-8)", zIndex: 1,
+            display: "flex", justifyContent: "center", padding: "0 var(--space-6)", pointerEvents: "none",
           }}
         >
-          <Panel style={{ padding: "var(--space-6) var(--space-5)", maxWidth: 560 }}>
+          <Panel style={{ padding: "var(--space-4) var(--space-6)", maxWidth: 640, pointerEvents: "auto" }}>
             {reduceMotion ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}>
-                <h1 style={{ fontSize: "clamp(28px, 5vw, 48px)", lineHeight: 1.08 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", textAlign: "center" }}>
+                <h1 style={{ fontSize: "clamp(22px, 3.4vw, 32px)", lineHeight: 1.12 }}>
                   Your HR and IT helpdesk, run by AI agents.
                 </h1>
-                <p style={{ fontSize: 17 }}>
+                <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
                   Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
                   escalated by seven cooperating agents you can watch work in real time.
                 </p>
@@ -151,12 +153,12 @@ export default function Landing() {
                 initial="hidden"
                 animate="visible"
                 variants={staggerContainer(0.12)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-4)" }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", textAlign: "center" }}
               >
-                <motion.h1 variants={fadeUp} style={{ fontSize: "clamp(28px, 5vw, 48px)", lineHeight: 1.08 }}>
+                <motion.h1 variants={fadeUp} style={{ fontSize: "clamp(22px, 3.4vw, 32px)", lineHeight: 1.12 }}>
                   Your HR and IT helpdesk, run by AI agents.
                 </motion.h1>
-                <motion.p variants={fadeUp} style={{ fontSize: 17 }}>
+                <motion.p variants={fadeUp} style={{ fontSize: 14, color: "var(--text-secondary)" }}>
                   Real IT and HR answers, grounded in your own knowledge base — routed, resolved, and
                   escalated by seven cooperating agents you can watch work in real time.
                 </motion.p>
@@ -177,7 +179,7 @@ export default function Landing() {
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            style={{ position: "absolute", bottom: "var(--space-6)", left: "50%", transform: "translateX(-50%)", color: "var(--text-muted)" }}
+            style={{ position: "absolute", bottom: "var(--space-2)", left: "50%", transform: "translateX(-50%)", color: "var(--text-muted)" }}
           >
             <ChevronDown size={24} />
           </motion.div>
