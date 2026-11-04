@@ -113,7 +113,7 @@ export default function Landing() {
                     state={isActive ? "working" : "idle"}
                     bubble={isActive ? AGENTS[key].sampleLine : null}
                   />
-                  <DataPulse from={[0, 3.8, -10]} to={pos} trigger={isActive ? pulseTrigger : -1} color={AGENTS[key].color} />
+                  <DataPulse from={[0, 3.8, -10]} to={pos} trigger={isActive ? pulseTrigger : -1} color={AGENTS[key].color} ambient />
                 </group>
               );
             })}

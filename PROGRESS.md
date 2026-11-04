@@ -61,6 +61,20 @@
   centered-card bug. Fixed by using the real `--space-8` token; the strip is now genuinely a
   compact, non-covering bar at the bottom, robots fully visible above it in both normal and
   Reduce-motion states — re-screenshotted to confirm.
+- **Also fixed, same pass, operator-reported**: the agent-to-agent connection lines on the
+  Landing hero were nearly invisible against the light background — `DataPulse.tsx`'s beam was a
+  raw WebGL `<line>` (1px regardless of any `linewidth` setting, a well-known three.js
+  limitation) at 0.25 opacity, which reads as a near-white hairline against the new light theme.
+  Rewrote it using drei's `<Line>` (real pixel width) as two passes — a soft wide glow underneath
+  a brighter core — in each agent's own vivid color, clearly visible now. Also added an `ambient`
+  prop: every desk's beam now loops a continuously-traveling small cube independent of the
+  `trigger`-driven handoff pulse (phase-offset per desk so they don't all move in lockstep),
+  wired on for Landing's desk connections so the whole scene has constant motion, not just
+  whichever desk is the current "active" one — addresses the operator's "add some moving
+  objects... realistic AI world" ask without changing `DataPulse`'s props for its other callers
+  (`AgentActivityPanel.tsx`'s workroom beam keeps its old single-pulse-per-handoff behavior,
+  `ambient` defaults to off). Verified live: zero console errors on Landing, Overview, and the AI
+  Assistant workroom (all three use the shared component).
 
 ## RESUME HERE (pre-redesign state, still accurate for everything below)
 - **All 12 planned phases are DONE** (Phase 10B explicitly skipped by operator instruction,
