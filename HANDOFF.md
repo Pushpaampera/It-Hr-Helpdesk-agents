@@ -3,15 +3,21 @@
 If you are a new Claude Code session or account picking this up, read `CLAUDE.md`, then this
 file, then `PROGRESS.md`, then `docs/phases/PHASE_12.md`, in that order, before touching code.
 
-## Current state (2026-11-04) — the project is feature-complete
+## Current state (2026-11-04) — feature-complete, now in active live-feedback polish
 **Every phase on the original checklist (1-12) is DONE and verified end to end**, including live
 browser-driven checks for every frontend phase (6-12) — each tested as real functional flows
 (real clicks/form submissions/decisions, not just static screenshots). Phase 10B (Demo
 experience layer / HR showcase) was **skipped by explicit operator instruction (2026-11-03)** —
 not needed for this project. **Every nav item in `src/layouts/navItems.ts` is `implemented:
-true`.** There is no standing next phase — a new session should verify current state (see
-"Resuming this project" below) and then take direction from whatever the operator asks for next,
-not assume there's a queued feature to build.
+true`.**
+
+**Since then, the operator has been giving live, direct UX/rebrand feedback on the running app**
+(not structured as phases) — see "Post-Phase-12 work" in `PROGRESS.md` and
+`docs/07_CHANGELOG.md`'s 2026-11-04 entries for the full list (rebrand to real Ampera branding, a
+3D robot companion, a real "agents discard retrieved content" bug fix, approval confirmation
+modals, suggested-question chips, a ticket conversation viewer). **This is now ongoing reactive
+work, not a finished/frozen build** — a new session should expect more of the same kind of
+feedback rather than treating Phase 12 as the true end state.
 
 What exists and is verified working:
 - **Foundation** (Phase 1): Poetry project, `/api/health`, all 22 tables migrated, Vite+React+TS
@@ -48,30 +54,39 @@ What exists and is verified working:
   existing POST-only `streamSSE`, for `GET /api/agents/live`'s always-on feed. **Every nav item
   is now `implemented: true`.**
 - **Documentation and final verification** (Phase 12): no application code — a full accuracy
-  pass over every `docs/*.md` file (fixed stale Phase-10B/Phase-10-vs-11 forward references),
-  `docs/08_TESTING_AND_EVAL.md` rewritten with real current results (fresh `poetry run eval`:
-  57/70, all 13 failures individually diagnosed), `docs/09_DEMO_SCRIPT.md` written (a full live
-  walkthrough built around the real shipped pages, since Phase 10B doesn't exist), and a final
-  live sweep across all 4 roles and every nav item.
+  pass over every `docs/*.md` file, `docs/08_TESTING_AND_EVAL.md` rewritten with real results,
+  `docs/09_DEMO_SCRIPT.md` written, a final live sweep across all 4 roles and every nav item.
+- **Post-Phase-12 rebrand/UX fixes** (2026-11-04, operator live feedback, 3 commits): real
+  Ampera branding (logo + colors pulled from amperadei.com, not invented), a new `RoboCompanion`
+  3D component, a real bug fix in `knowledge_agent.py` (was discarding retrieved content on
+  low-confidence answers), `ConfirmModal` for Approvals/HR leave decisions, AI Assistant
+  suggested-question chips, a ticket conversation viewer. Full detail: `docs/07_CHANGELOG.md`'s
+  2026-11-04 entries, `docs/06_DECISIONS.md`. These 3 commits initially landed **without**
+  updating `PROGRESS.md`/`HANDOFF.md` in the same step — a real process gap, caught when the
+  operator asked "are you updating everything?" and fixed in the commit right after this one.
 - `backend/tests/test_agents_graph.py` (12) + `backend/tests/test_auth_api.py` (12) —
-  `poetry run pytest -q` → **24/24 passed** on Phase 12's final run (the one pre-existing,
-  unrelated intermittent failure — see "Known issues" below — did not trigger this run, but is
-  still unfixed).
+  `poetry run pytest -q` → **24/24 passed**, confirmed again after the post-Phase-12 fixes (the
+  one pre-existing, unrelated intermittent failure — see "Known issues" below — still unfixed,
+  didn't trigger in these runs).
 - `.env` confirmed working end to end; `LLM_MOCK_MODE=true`; GROQ/GEMINI keys still empty.
-- Git repo on branch `main`; Phases 1-11 committed, Phase 12 pending this handoff's commit.
+- Git repo on branch `main`, all work through this handoff committed.
 - **Environment quirk**: port 8000 has been occupied by unrelated system services in earlier
-  sessions in this sandbox but was free during Phases 5-12's verification — check before binding.
+  sessions in this sandbox but was free during Phases 5-12's and the post-Phase-12 verification —
+  check before binding.
 
 ## Resuming this project
-There is no queued feature work. Before doing anything else in a new session:
+This is feature-complete but **actively being iterated on via direct live feedback, not a
+queued plan** — don't assume there's nothing left to do. Before doing anything else in a new
+session:
 1. Run `cd backend && poetry run pytest -q` and `cd frontend && npx tsc -b --noEmit && npm run
    build` — confirm they still pass before trusting anything else in this file.
 2. Log in as each of the four demo accounts (below) and spot-check a page or two per role still
    loads — code can drift from docs between sessions even when docs say otherwise.
-3. Only then take direction from the operator's actual request. If they want something new
-   built, treat it as its own scoped piece of work (write a `docs/phases/PHASE_13.md`-style doc
-   if it's substantial, following the same pattern every prior phase used) rather than assuming
-   it fits some predetermined plan.
+3. Take direction from the operator's actual request. For substantial new work, write a
+   `docs/phases/PHASE_13.md`-style doc as prior phases did; for smaller live-feedback fixes (the
+   norm right now), a `docs/07_CHANGELOG.md` entry + `docs/06_DECISIONS.md` entry (if a real
+   decision was made) is enough — but **always update `PROGRESS.md`/`HANDOFF.md`'s "Current
+   state" in the same step**, not as an afterthought. That's the exact gap this session hit.
 
 ## Important lesson from Phase 11 (read before keying a React list by a backend-echoed field)
 Don't assume a value the backend returns is actually unique — check what it's grouped by.
@@ -142,10 +157,13 @@ None blocking. Ten things worth knowing about, not fixing:
   mid-approval.
 - `app/eval/run_eval.py` doesn't resume paused (`request_access`) golden questions end to end.
 - `GET /api/agents/live` polls `agent_events` every second (no real pub/sub) — fine locally.
-- `src/three/AgentOrb.tsx`'s `AGENT_COLORS`, `Overview.tsx`'s chart colors,
-  `AgentActivityPanel.tsx`'s `AGENT_ORDER`/`FRIENDLY_NAMES`, and `ReinforcementLab.tsx`'s
-  `ARM_COLORS` all duplicate backend/token values by hand (SVG/WebGL need concrete values;
-  frontend has no import path to Python constants).
+- `src/three/{AgentOrb,RoboCompanion}.tsx`'s color constants, `Overview.tsx`/`Costs.tsx`/
+  `ReinforcementLab.tsx`'s chart colors, and `AgentActivityPanel.tsx`'s `AGENT_ORDER`/
+  `FRIENDLY_NAMES` all duplicate `tokens.css`'s `--accent-primary`/`--agent-*` values by hand
+  (SVG/WebGL/recharts need concrete hex, not CSS `var()`). Updating the brand palette means
+  grep-ing for the old hex values across all of these, not just editing `tokens.css` — done once
+  already for the 2026-11-04 rebrand (orange → real Ampera purple/steel-blue), worth remembering
+  if the palette ever changes again.
 - The production JS bundle is past Vite's 500kB chunk-size warning (~1.7MB raw / ~460kB
   gzipped after Phase 11). Still not worth code-splitting yet.
 - The Assistant page starts a fresh conversation every page visit — no history loading yet; the

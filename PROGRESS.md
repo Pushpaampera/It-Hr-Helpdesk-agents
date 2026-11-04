@@ -1,28 +1,42 @@
 # PROGRESS.md
 
 ## RESUME HERE
-- **Current phase: Phase 12 — Documentation and final verification: DONE.** Phase 10B (Demo
-  experience layer / HR showcase) was skipped by explicit operator instruction (2026-11-03) —
-  not needed for this project. **Every phase on the original checklist is now complete.** There
-  is no next feature phase — a future session should treat this as a finished project and take
-  direction from whatever the operator asks for next, not from an assumed phase number.
+- **All 12 planned phases are DONE** (Phase 10B explicitly skipped by operator instruction,
+  2026-11-03). Since Phase 12 closed out the original checklist, the operator has been giving
+  **live, direct UX/rebrand feedback on the running app**, worked on in real time rather than as
+  numbered phases — see "Post-Phase-12 work" below. Treat this as an ongoing, feature-complete
+  product being iterated on, not a finished/frozen build.
 - Last updated: 2026-11-04
-- Next step: none standing. If resuming, verify current state first (`poetry run pytest -q`,
-  `npx tsc -b --noEmit`, a quick live login as each demo role) before assuming anything in this
-  file is still accurate, per `CLAUDE.md`'s resume protocol — then ask the operator what they
-  want built or changed next.
+- Next step: none standing as a plan — this is now reactive, operator-directed work. If
+  resuming, verify current state first (`poetry run pytest -q`, `npx tsc -b --noEmit`, a quick
+  live login as each demo role) before assuming anything in this file is current, then check with
+  the operator for what's next. **Update this file and `docs/07_CHANGELOG.md` in the same step
+  as any further change** — a run of 3 commits after Phase 12 landed without doing this, caught
+  when the operator asked "are you updating everything?"; don't repeat that gap.
 - Blocker/dependency: none. `.env` is filled in and verified working end to end.
-  `LLM_MOCK_MODE=true` so everything works without GROQ/GEMINI keys. Phase 12 did a full
-  documentation accuracy pass (fixed stale Phase 10B/10-vs-11 forward references in
-  `docs/01_ARCHITECTURE.md` and `docs/02_DATABASE.md`, rewrote the Phase-1-stub
-  `docs/08_TESTING_AND_EVAL.md` with real current results, wrote `docs/09_DEMO_SCRIPT.md`, and
-  extended `docs/05_RUNBOOK.md`) plus a final full live verification sweep across all 4 demo
-  roles and every implemented nav item — zero console errors except the pre-existing favicon 404.
-  No application code changed this phase.
+  `LLM_MOCK_MODE=true` so everything works without GROQ/GEMINI keys.
 - Known pre-existing issue (unfixed, not blocking): `test_agents_graph.py::test_e_unanswerable_
   question_creates_ticket` fails intermittently — confirmed present on the clean Phase 9 tree,
-  not yet root-caused; did not trigger during Phase 12's final full-suite run. See
-  `docs/phases/PHASE_10.md`.
+  not yet root-caused. See `docs/phases/PHASE_10.md`.
+
+## Post-Phase-12 work (2026-11-04, operator-directed live feedback, not a numbered phase)
+Full detail in `docs/07_CHANGELOG.md`'s 2026-11-04 entries and `docs/06_DECISIONS.md`. Summary:
+- **Rebrand**: "Helpdesk AI Agents" → "Ampera Helpdesk" everywhere. Real Ampera brand colors
+  (purple `#7C70AF`, steel-blue `#BDCFD6`) and the real logo PNG, both pulled directly from the
+  operator's actual company site (amperadei.com — `amperatech.ai` redirects there), replacing an
+  initially-invented "robotics orange" palette the operator rejected.
+- **New `RoboCompanion` 3D component**: a real animated robot (not an image) on the Landing hero
+  and twice on the AI Assistant page.
+- **Real bug fixed**: `knowledge_agent.py` was discarding real retrieved article content on
+  low-confidence answers, showing only a generic "not confident" message — reported live as
+  "agents never solve anything." Also fixed: a plain "hello" got the same confusing non-answer
+  as any other vague message; `supervisor.py` was missing "computer" as an IT keyword.
+- **New `ConfirmModal`**: Approvals/HR leave decisions now require an explicit confirm step
+  (reported live as "we can mistakenly approve with one click").
+- **AI Assistant**: suggested-question chips on the empty-chat state.
+- **Tickets**: detail panel can expand to show the real conversation that created the ticket.
+- All verified: `poetry run pytest -q` 24/24, `poetry run eval` 57/70 (no regression), `tsc`/
+  `build` clean, live browser screenshots after each change.
 
 ## Phase checklist
 

@@ -1,7 +1,7 @@
 # 03 — Backend
 
-Updated through Phase 11 (endpoint table only — module list below is Phase 1-4, plus the Phase
-10/11 routers noted inline).
+Updated through the 2026-11-04 post-Phase-12 fixes (endpoint table is Phase 11; module list is
+Phase 1-4 plus the Phase 10/11 routers and two agent fixes noted inline).
 
 ## Modules (Phase 1 state)
 - `app/config.py` — `Settings` (pydantic-settings), loads `.env` from the repo root. Every
@@ -47,11 +47,17 @@ Updated through Phase 11 (endpoint table only — module list below is Phase 1-4
   (`load_events_for_run`), live-queue registry for pause/resume streaming.
 - `app/agents/guard.py`, `supervisor.py`, `knowledge_agent.py`, `it_support.py`, `hr_policy.py`,
   `action.py`, `ticketing.py`, `feedback.py` — the 7 agents (Gus, Sage, Iris, Hana, Atlas, Tess,
-  Finn). See `docs/phases/PHASE_03.md` for what each one does.
+  Finn). See `docs/phases/PHASE_03.md` for what each one does. Two fixes since: `supervisor.py`'s
+  `IT_KEYWORDS` grew `computer`/`desktop`/`hardware` (2026-11-04); `knowledge_agent.py`'s
+  unresolved-answer branch now shows the actual closest-matching retrieved content (honestly
+  flagged uncertain) instead of discarding it for a generic "not confident" message — see
+  `docs/06_DECISIONS.md`/`docs/07_CHANGELOG.md`'s 2026-11-04 entries.
 - `app/agents/graph.py` — LangGraph wiring (`guard -> supervisor -> (it_support|hr_policy|
   other_reply) -> action? -> ticketing? -> feedback`), the `request_access` pause/resume
   (`NodeInterrupt` + a module-level `MemorySaver` checkpointer), `start_chat()`,
-  `resume_after_approval()`.
+  `resume_after_approval()`. `node_other_reply` has a `GREETING_RE` special case (2026-11-04): a
+  plain "hello"/"hi"/etc. gets a real friendly reply instead of the generic OTHER-route
+  clarifying template.
 - `app/agents/runs_store.py` — `agent_runs` row lifecycle + `messages` persistence.
 - `app/mock_apis/` — `directory.py`, `hr_system.py`, `it_system.py`, `approvals.py`. Every call
   writes to the real tables and logs to `audit_log` via `mock_apis/__init__.py::log_action`.

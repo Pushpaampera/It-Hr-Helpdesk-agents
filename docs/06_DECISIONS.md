@@ -1,5 +1,25 @@
 # 06 — Decision Log
 
+### 2026-11-04 — Rebrand colors/logo pulled from the real amperadei.com site, not invented
+**Decision**: `src/design/tokens.css`'s primary accent and agent colors were changed twice in
+one session. First pass: an original "robotics-industrial" palette invented from scratch
+(graphite + signal-orange). Second pass, after explicit operator correction ("remove that
+color... extract colors from my company"): replaced with the real Ampera brand colors — purple
+`#7C70AF` and steel-blue `#BDCFD6` — found by `curl`-ing `amperadei.com`'s raw HTML/CSS and
+counting hex occurrences (`#7C70AF` appears 53 times, including as the literal `fill` color
+inside the logo's own inline SVG paths, confirming it's the real brand mark color, not a
+coincidental page color). The real logo PNG was downloaded from the site's own asset URL
+(`wp-content/uploads/2024/03/Ampera-logo-2.png`) and used directly rather than recreated.
+**Reason**: `amperatech.ai` (the first URL given) redirects to `amperadei.com`, a different
+domain — confirmed genuine via `AskUserQuestion` before fetching, since a 301 to an unrelated
+domain name warranted checking rather than assuming. `WebFetch`'s HTML→markdown conversion
+strips CSS entirely, returning no usable colors — raw `curl` + grep on the actual HTML/CSS was
+needed to get real hex values; a tool that summarizes page content isn't the right one for
+pulling exact brand colors.
+**Alternatives rejected**: continuing with an invented palette — explicitly rejected by the
+operator ("that is not at all by watching, it's not at all good... clumsiness") in favor of the
+company's actual brand identity, which is objectively unambiguous once the real CSS is in hand.
+
 ### 2026-11-04 — `other_reply` greets a plain "hello" instead of reusing the clarifying template
 **Decision**: `app/agents/graph.py::node_other_reply` now checks the message against a
 `GREETING_RE` pattern (hi/hello/hey/howdy/good morning etc., optionally with trailing

@@ -1,5 +1,50 @@
 # 07 — Changelog
 
+### 2026-11-04 — Rebrand to Ampera Helpdesk: real logo/colors, a 3D robot, and real-use UX fixes
+Three commits from the same live-feedback session, after Phase 12 had already closed out the
+original build plan — operator-driven polish/rebrand work, not a numbered phase.
+
+- **Rebrand** (`7d0dfe2`, `7e4b636`): renamed "Helpdesk AI Agents" → "Ampera Helpdesk" everywhere
+  (page title, landing header, dashboard sidebar, API title). Replaced an initially-invented
+  orange "robotics" palette with the *real* Ampera brand colors — purple `#7C70AF` and steel-blue
+  `#BDCFD6` — extracted directly from amperadei.com's CSS (not guessed), propagated through
+  `tokens.css` and every hardcoded hex duplicate (3D orbs, data pulses, particle field, dashboard
+  charts). Pulled the real Ampera logo PNG from the live site into `src/assets/`, used in the
+  landing header and dashboard sidebar next to a "Helpdesk" wordmark styled in the same brand
+  purple and weight (an initial mismatched-color attempt was corrected after operator feedback).
+- **New `src/three/RoboCompanion.tsx`** (`7e4b636`): a procedural low-poly robot (boxy head,
+  glowing eyes, antenna, torso, arms) built from Three.js primitives, with a real idle animation
+  loop (bob, sway, head-turn, eye-glow pulse) respecting `reduceMotion`. Placed in the Landing
+  hero and the AI Assistant activity panel; a second instance added to the Assistant's empty-chat
+  state (`a302dbc`). Found and fixed a real visibility bug: high `metalness` with no environment
+  map rendered the body nearly invisible against the dark background (only the emissive eyes
+  showed) — fixed by lowering metalness and adding a faint emissive tint.
+- **Real bug fix** (`7d0dfe2`): `knowledge_agent.py`'s unresolved-answer branch was discarding
+  real retrieved article content and showing only a generic "not confident" message even when
+  relevant articles were found — reported live as "agents never solve anything, just raise
+  tickets." Now shows the closest related material honestly flagged as uncertain, while still
+  creating a ticket as a safety net.
+- **New `src/components/ui/ConfirmModal.tsx`** (`a302dbc`): Approvals and HR Insights' leave
+  decisions now require an explicit second confirmation click with a plain-English explanation
+  of what the decision does, instead of firing immediately — reported live as "we can mistakenly
+  approve/reject with one click."
+- **AI Assistant suggested-question chips** (`a302dbc`): a row of clickable starter questions
+  (VPN, Wi-Fi, password reset, leave balance, policy, access request) replaces the old plain-text
+  placeholder when the chat is empty.
+- **Tickets conversation view** (`a302dbc`): the detail panel can expand "View the conversation
+  that created this ticket," showing the real agent event transcript (reusing the existing
+  `GET /api/runs/{id}/events`) instead of only the single "Tess created this ticket" timeline
+  entry — reported live as "while opening we need to show that conversation properly."
+- Verified throughout: `poetry run pytest -q` (24/24), `poetry run eval` (57/70, no regression),
+  `npx tsc -b --noEmit`/`npm run build`, and live browser screenshots after every change (an
+  initial robot placement overlapped the hero text and was clipped in the narrow Assistant panel;
+  both were caught and fixed via live screenshots before committing).
+- Why no `docs/phases/PHASE_13.md`: this was reactive UX/branding feedback on the already-shipped
+  app, not a new planned feature phase — tracked here and in `docs/06_DECISIONS.md` instead.
+  **Known gap**: these three commits landed without updating `PROGRESS.md`/`HANDOFF.md` in the
+  same step, breaking the project's own resume-protocol discipline — caught when the operator
+  asked "are you updating everything?" and fixed in the next commit.
+
 ### 2026-11-04 — Fix: greeting handling and a missing IT keyword in the OTHER-route fallback
 - Changed: `backend/app/agents/graph.py::node_other_reply` now replies with a short, friendly
   greeting (addressed by first name) for a plain "hello"/"hi"/"hey"/etc. instead of reusing the

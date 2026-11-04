@@ -118,10 +118,27 @@ Updated through Phase 11.
   a real duplicate-key bug caught via live browser testing (`docs/phases/PHASE_11.md`).
 - `src/pages/dashboard/AuditLog.tsx` (Phase 11) — the real `audit_log` table, filterable by
   action.
+- `src/three/RoboCompanion.tsx` (2026-11-04, post-Phase-12 rebrand) — a procedural low-poly
+  robot built from Three.js primitives (no model file), with a real idle animation loop (bob,
+  sway, head-turn, pulsing eye glow), respecting `reduceMotion`. Used in the Landing hero and
+  twice on the AI Assistant page (the activity panel and the empty-chat state). Materials use
+  low `metalness` with a faint emissive tint deliberately — high metalness with no environment
+  map renders a body nearly invisible in a dim scene, found live.
+- `src/components/ui/ConfirmModal.tsx` (2026-11-04) — a full-screen confirmation overlay for
+  consequential, hard-to-undo actions. Used by Approvals and HR Insights' leave decisions so a
+  stray click on Approve/Reject can't fire the real decision without a second, explained
+  confirmation step.
+- `src/assets/ampera-logo.png` (2026-11-04) — the real Ampera logo, pulled from amperadei.com's
+  own asset URL, used in the Landing header and dashboard sidebar next to a "Helpdesk" wordmark
+  styled in the same brand purple/weight (see `docs/06_DECISIONS.md` for how the real brand
+  colors were extracted, as a correction to an initially-invented palette).
 
 ## Design tokens already decided (ahead of Phase 5, so later phases don't redo this)
-Dark background `#05060F`, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px
-subtle border + panel shadow), agent colors as above.
+Dark graphite background, glassmorphism panels (`.glass-panel`: translucent + blurred + 1px
+subtle border + panel shadow), agent colors anchored to the real Ampera brand purple/steel-blue
+(`--accent-primary: #7C70AF`, `--accent-secondary: #BDCFD6` — see `docs/06_DECISIONS.md`'s
+2026-11-04 rebrand entry; this replaced an earlier violet/pink/cyan palette and a brief
+orange-"robotics" palette, neither of which is current).
 
 ## Frontend ↔ event mapping (live as of Phase 9 — see docs/01_ARCHITECTURE.md and
 docs/phases/PHASE_09.md)
