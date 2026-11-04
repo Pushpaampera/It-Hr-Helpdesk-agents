@@ -1,5 +1,20 @@
 # 07 — Changelog
 
+### 2026-11-04 — Fix: greeting handling and a missing IT keyword in the OTHER-route fallback
+- Changed: `backend/app/agents/graph.py::node_other_reply` now replies with a short, friendly
+  greeting (addressed by first name) for a plain "hello"/"hi"/"hey"/etc. instead of reusing the
+  generic "I'm not totally sure how to help with..." clarifying template. `backend/app/agents/
+  supervisor.py`'s `IT_KEYWORDS` grew `"computer"`/`"desktop"`/`"hardware"`.
+- Why: live operator testing found "hello" got the same confusing non-answer as any other vague
+  message, and "i have a problem with my computer" looped back into the identical clarifying
+  question a second time (no keyword matched "computer") instead of routing to IT — both read as
+  the assistant not actually listening. See `docs/06_DECISIONS.md` for the full reasoning and
+  rejected alternatives.
+- Verified: `poetry run pytest -q` 24/24 still passing, `poetry run eval` still 57/70 (no
+  regression), and both fixes confirmed live in a real browser — "hello" now gets a real greeting,
+  the computer complaint now routes to Iris (IT) and creates a real ticket when retrieval isn't
+  confident, rather than repeating the clarifying question.
+
 ### 2026-11-03 — Phase 11: Evaluation and polish
 - Added: `frontend/src/pages/dashboard/{ControlRoom,ReinforcementLab,Evaluation,Costs,
   AuditLog}.tsx` — the last five admin-only nav items, completing every item in

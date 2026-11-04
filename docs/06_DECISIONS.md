@@ -1,5 +1,28 @@
 # 06 — Decision Log
 
+### 2026-11-04 — `other_reply` greets a plain "hello" instead of reusing the clarifying template
+**Decision**: `app/agents/graph.py::node_other_reply` now checks the message against a
+`GREETING_RE` pattern (hi/hello/hey/howdy/good morning etc., optionally with trailing
+punctuation) and replies with a short, friendly greeting addressed by first name instead of the
+"I'm not totally sure how to help with..." clarifying template every other `OTHER`-routed
+message gets. Also added `"computer"`/`"desktop"`/`"hardware"` to `app/agents/supervisor.py`'s
+`IT_KEYWORDS` (deliberately *not* `"pc"` — too short, collides with common substrings like
+"upcoming").
+**Reason**: live operator testing found two real UX problems: (1) saying "hello" produced the
+identical confusing clarifying-question template as any other low-confidence message, which
+reads as broken for something this simple; (2) "i have a problem with my computer" scored zero
+IT/HR keyword hits (the keyword list had "laptop" but not "computer") and triggered the *same*
+clarifying question a second time even though the user had just answered it, which reads as the
+bot not listening. Confirmed live after the fix: "hello" gets a real greeting, and the computer
+complaint now correctly routes to Iris (IT), honestly admits low retrieval confidence, and
+creates a real ticket — taking real action instead of repeating itself.
+**Alternatives rejected**: making the clarifying-question wording "smarter" by tracking
+conversation turn count to vary its phrasing — more complex for unclear benefit; the two
+concrete, reported problems were a missing greeting case and a missing keyword, not a need for
+generally varied phrasing. Also considered widening `IT_KEYWORDS` further (e.g. `"pc"`,
+`"screen"`, `"device"`) but rejected those specific tokens as too prone to false-positive
+substring matches in the existing naive `kw in query` matching.
+
 ### 2026-11-03 — Phase 10B (Demo experience layer / HR showcase) skipped entirely
 **Decision**: Phase 10B — a guided, bespoke on-screen showcase layer (confirmation modals,
 progress animations, a hard-coded script around the 7 scenarios referenced in

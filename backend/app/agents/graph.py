@@ -7,6 +7,7 @@ the two separate HTTP requests (the demo's own process never restarts between th
 docs/06_DECISIONS.md for why this is an acceptable simplification for a local demo).
 """
 import asyncio
+import re
 from typing import NotRequired, TypedDict
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -25,6 +26,15 @@ from app.mock_apis import approvals as approvals_api
 from app import observability
 
 _CHECKPOINTER = MemorySaver()
+
+# A greeting-only message ("hi", "hello there") routes to OTHER the same as any other
+# low-confidence message, but shouldn't get the same "I'm not totally sure how to help"
+# clarifying template — that reads as broken/unresponsive for something as simple as "hello".
+GREETING_RE = re.compile(
+    r"^\s*(hi|hi there|hiya|hey|hey there|hello|hello there|howdy|yo|good morning|good afternoon|"
+    r"good evening|greetings)[\s!.,]*$",
+    re.IGNORECASE,
+)
 
 
 class AgentState(TypedDict):
@@ -85,11 +95,18 @@ def build_graph(ctx: RunContext):
         }
 
     async def node_other_reply(state: AgentState) -> dict:
-        answer = (
-            f"I'm not totally sure how to help with \"{state['query']}\". Could you tell me a "
-            "bit more — is this an IT issue (laptop, VPN, password, email) or an HR question "
-            "(leave, payroll, benefits)?"
-        )
+        if GREETING_RE.match(state["query"]):
+            answer = (
+                f"Hey {ctx.user['name'].split()[0]}! I'm your IT/HR assistant — ask me about "
+                "things like a VPN error, your leave balance, or resetting a password, and "
+                "I'll route it to the right specialist."
+            )
+        else:
+            answer = (
+                f"I'm not totally sure how to help with \"{state['query']}\". Could you tell me a "
+                "bit more — is this an IT issue (laptop, VPN, password, email) or an HR question "
+                "(leave, payroll, benefits)?"
+            )
         return {"answer": answer, "unresolved": False}
 
     async def node_it_support(state: AgentState) -> dict:

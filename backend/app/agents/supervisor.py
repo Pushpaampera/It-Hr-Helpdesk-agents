@@ -29,7 +29,7 @@ IT_KEYWORDS = {
     "vpn", "laptop", "wifi", "wi-fi", "email", "outlook", "mfa", "printer", "password",
     "software", "sso", "login", "log in", "rdp", "remote desktop", "backup", "onedrive",
     "phishing", "virus", "error", "blue screen", "monitor", "docking", "keyboard", "account locked",
-    "access", "unlock", "system",
+    "access", "unlock", "system", "computer", "desktop", "hardware",
 }
 HR_KEYWORDS = {
     "leave", "payroll", "payslip", "pay slip", "salary", "tax", "benefits", "insurance",
