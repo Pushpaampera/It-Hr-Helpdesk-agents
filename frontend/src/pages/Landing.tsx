@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, ChevronDown, MessageCircle, TrendingUp, Workflow } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, ChevronDown, KeyRound, MessageCircle, ShieldCheck, Ticket, TrendingUp, Workflow } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -53,6 +53,32 @@ const STEPS = [
     body: "Finn tracks how every answer landed and feeds it back into a live learning system, so the right retrieval strategy wins more often.",
   },
 ];
+
+const WIDE: React.CSSProperties = { width: "100%", maxWidth: 1600, margin: "0 auto", padding: "var(--space-8) clamp(16px, 4vw, 72px)" };
+
+const STATS = [
+  { value: "7", label: "cooperating agents" },
+  { value: "2", label: "domains: IT & HR" },
+  { value: "100%", label: "answers cite a source" },
+  { value: "Live", label: "agent activity trace" },
+];
+
+const CAPABILITIES = [
+  { icon: BookOpen, title: "Grounded knowledge answers", body: "Every IT and HR answer is retrieved from your own knowledge base and shown with its cited source." },
+  { icon: KeyRound, title: "Real actions, not just chat", body: "Reset a password, apply for leave or request access — executed directly, with manager approval where it matters." },
+  { icon: ShieldCheck, title: "Privacy guard built in", body: "Guard screens every message for sensitive data before any specialist ever sees it." },
+  { icon: Ticket, title: "Smart ticketing & escalation", body: "When an agent can't resolve something, a ticket is opened and routed with full context attached." },
+  { icon: Workflow, title: "Watch the agents work", body: "A live activity panel shows routing, retrieval and hand-offs as they happen — no black box." },
+  { icon: TrendingUp, title: "Learns from feedback", body: "Thumbs up or down on each answer tunes which retrieval strategy wins next time." },
+];
+
+const SAMPLE_CHAT = [
+  { from: "user", text: "My VPN keeps disconnecting every few minutes." },
+  { from: "Sage", color: "supervisor", text: "Routing to IT — this looks like a connectivity issue." },
+  { from: "Iris", color: "it_support", text: "Try switching the VPN protocol to IKEv2 and updating the client. Source: VPN Troubleshooting Guide §3." },
+  { from: "user", text: "How many leave days do I have left?" },
+  { from: "Hana", color: "hr_policy", text: "You have 14 days of annual leave remaining. Source: Leave Policy 2026." },
+] as const;
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -129,7 +155,7 @@ export default function Landing() {
             display: "flex", justifyContent: "center", padding: "0 var(--space-6)", pointerEvents: "none",
           }}
         >
-          <Panel style={{ padding: "var(--space-4) var(--space-6)", maxWidth: 640, pointerEvents: "auto" }}>
+          <Panel style={{ padding: "var(--space-4) var(--space-6)", maxWidth: 960, width: "100%", pointerEvents: "auto" }}>
             {reduceMotion ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)", textAlign: "center" }}>
                 <h1 style={{ fontSize: "clamp(22px, 3.4vw, 32px)", lineHeight: 1.12 }}>
@@ -172,6 +198,14 @@ export default function Landing() {
                 </motion.div>
               </motion.div>
             )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "var(--space-4)", marginTop: "var(--space-4)", paddingTop: "var(--space-3)", borderTop: "1px solid var(--border-subtle, rgba(128,128,128,.25))", textAlign: "center" }}>
+              {STATS.map((st) => (
+                <div key={st.label}>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-mono)" }}>{st.value}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{st.label}</div>
+                </div>
+              ))}
+            </div>
           </Panel>
         </div>
 
@@ -186,7 +220,7 @@ export default function Landing() {
         )}
       </section>
 
-      <section style={{ padding: "var(--space-8) var(--space-6)", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={WIDE}>
         <Reveal>
           <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: "var(--space-2)" }}>Meet the team</h2>
           <p style={{ textAlign: "center", maxWidth: 560, margin: "0 auto var(--space-7)" }}>
@@ -194,7 +228,7 @@ export default function Landing() {
           </p>
         </Reveal>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--space-4)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--space-4)" }}>
           {TEAM.map((agent) => {
             const identity = AGENTS[agent.slug];
             return (
@@ -210,12 +244,12 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="how-it-works" style={{ padding: "var(--space-8) var(--space-6)", maxWidth: 1100, margin: "0 auto" }}>
+      <section id="how-it-works" style={WIDE}>
         <Reveal>
           <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: "var(--space-7)" }}>How it works</h2>
         </Reveal>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--space-4)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--space-4)" }}>
           {STEPS.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -242,6 +276,47 @@ export default function Landing() {
             );
           })}
         </div>
+      </section>
+
+      <section style={WIDE}>
+        <Reveal>
+          <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: "var(--space-2)" }}>Everything a helpdesk needs</h2>
+          <p style={{ textAlign: "center", maxWidth: 620, margin: "0 auto var(--space-7)" }}>
+            One chat window replaces the portal, the ticket queue and the policy PDF hunt.
+          </p>
+        </Reveal>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "var(--space-4)" }}>
+          {CAPABILITIES.map((c) => {
+            const Icon = c.icon;
+            return (
+              <Reveal key={c.title}>
+                <Panel style={{ padding: "var(--space-5)", height: "100%" }}>
+                  <Icon size={22} style={{ color: "var(--agent-supervisor)", marginBottom: "var(--space-3)" }} />
+                  <h3 style={{ fontSize: 17, marginBottom: "var(--space-2)" }}>{c.title}</h3>
+                  <p style={{ fontSize: 14 }}>{c.body}</p>
+                </Panel>
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      <section style={WIDE}>
+        <Reveal>
+          <h2 style={{ fontSize: 32, textAlign: "center", marginBottom: "var(--space-7)" }}>A conversation, in practice</h2>
+          <Panel style={{ padding: "var(--space-6)", maxWidth: 820, margin: "0 auto", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {SAMPLE_CHAT.map((m, i) => (
+              <div key={i} style={{ alignSelf: m.from === "user" ? "flex-end" : "flex-start", maxWidth: "80%" }}>
+                {m.from !== "user" && (
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2, color: `var(--agent-${m.color})` }}>{m.from}</div>
+                )}
+                <div style={{ padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)", background: m.from === "user" ? "var(--bg-elevated)" : "transparent", border: "1px solid var(--border-subtle, rgba(128,128,128,.25))", fontSize: 14 }}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+          </Panel>
+        </Reveal>
       </section>
 
       <section style={{ padding: "var(--space-8) var(--space-6)", textAlign: "center" }}>
