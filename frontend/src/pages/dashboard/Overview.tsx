@@ -7,11 +7,11 @@ import { Area, AreaChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } f
 import { apiGet } from "../../api/client";
 import type { ConversationSummary, Kpis, TicketSummary, TimeseriesPoint } from "../../api/types";
 import Badge from "../../components/ui/Badge";
+import ChartTable from "../../components/ui/ChartTable";
 import InfoBanner from "../../components/ui/InfoBanner";
 import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
 import StatCard from "../../components/ui/StatCard";
-import AgentWorldHero from "../../components/dashboard/AgentWorldHero";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import { fadeUp, staggerContainer } from "../../design/motion";
 import PageTransition from "../../design/pageTransition";
@@ -21,7 +21,7 @@ import { useAuthStore } from "../../store/authStore";
 const STAFF_ROLES = ["manager", "hr", "admin"];
 
 const QUICK_ACTIONS = [
-  { label: "Ask AI", icon: MessageCircle, query: "" },
+  { label: "Ask a question", icon: MessageCircle, query: "" },
   { label: "Apply for leave", icon: PlaneTakeoff, query: "I'd like to apply for leave" },
   { label: "Reset password", icon: KeyRound, query: "I need to reset my password" },
   { label: "Request access", icon: LifeBuoy, query: "I need access to a system" },
@@ -65,14 +65,13 @@ export default function Overview() {
           title={isStaff ? "Overview" : `Welcome back, ${user.name.split(" ")[0]}`}
           subtitle={
             isStaff
-              ? "Company-wide activity across every agent, run, and ticket."
+              ? "Company-wide activity: questions asked, how many were solved, and open tickets."
               : "A quick look at your own recent activity."
           }
         />
-        <AgentWorldHero subtitle={isStaff ? "here's the floor." : "ready when you are."} />
         <InfoBanner id="overview">
           {isStaff
-            ? "This page is a company-wide snapshot: how many conversations the AI handled, how often it solved things on its own, and what's still open."
+            ? "This page is a company-wide snapshot: how many questions people asked, how often the Assistant solved them on its own, and what is still open."
             : "This page shows your own recent tickets and conversations with the AI assistant."}
         </InfoBanner>
 
@@ -106,7 +105,7 @@ export default function Overview() {
                 >
                   <Icon size={18} />
                 </span>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)" }}>{action.label}</span>
+                <span style={{ fontSize: "0.8438rem", fontWeight: 600, color: "var(--text-primary)" }}>{action.label}</span>
               </motion.button>
             );
           })}
@@ -150,25 +149,25 @@ function StaffOverview() {
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--space-4)" }}
       >
         <StatCard
-          label="Total runs"
+          label="Questions asked"
           value={kpis.total_runs}
           sparklineData={series.length >= 2 ? series.map((p) => p.total_runs) : undefined}
           infoText="How many times someone asked the AI assistant something, in the last 30 days."
         />
         <StatCard
-          label="Resolved rate"
+          label="Solved by the Assistant"
           value={Math.round(kpis.resolved_rate * 100)}
           unit="%"
           infoText="The share of conversations the AI fully answered, without needing a ticket or a human."
         />
         <StatCard
-          label="Escalation rate"
+          label="Needed a ticket"
           value={Math.round(kpis.escalation_rate * 100)}
           unit="%"
           infoText="The share of conversations that needed a support ticket because the AI couldn't fully resolve them."
         />
         <StatCard
-          label="Avg rating"
+          label="Average rating"
           value={kpis.avg_rating}
           unit="/5"
           infoText="The average 1-5 star rating people gave the AI's answers."
@@ -186,46 +185,47 @@ function StaffOverview() {
       </motion.div>
 
       <Panel style={{ padding: "var(--space-5)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: "var(--space-4)", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          Runs over the last 30 days
+        <h2 style={{ fontSize: "0.9375rem", marginBottom: "var(--space-4)", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          Questions asked over the last 30 days
           <InfoTooltip text="Each day's total number of AI conversations, company-wide." />
         </h2>
         {series.length === 0 ? (
-          <p style={{ fontSize: 13 }}>No run activity yet.</p>
+          <p style={{ fontSize: "0.8125rem" }}>No run activity yet.</p>
         ) : (
           <div style={{ height: 220 }}>
             {/* recharts needs concrete color strings, not CSS var() references, for SVG gradient
-                stops to render reliably — #8b5cf6/#5c5775 mirror tokens.css's --accent-primary/
+                stops to render reliably — #5e5490/#4a4560 mirror tokens.css's --accent-primary/
                 --text-secondary, same duplication tradeoff as AgentOrb's AGENT_COLORS. */}
+            <ChartTable caption="Questions asked per day, last 30 days" columns={["Day", "Questions asked"]} rows={series.map((p) => [p.day, p.total_runs])} />
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series}>
+              <AreaChart data={series} accessibilityLayer>
                 <defs>
                   <linearGradient id="runsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#7c70af" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="day"
                   tickFormatter={(d: string) => d.slice(5)}
-                  tick={{ fill: "#5c5775", fontSize: 11 }}
+                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "#5c5775", fontSize: 11 }}
+                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={32}
                   allowDecimals={false}
-                  label={{ value: "Runs", angle: -90, position: "insideLeft", fill: "#5c5775", fontSize: 11 }}
+                  label={{ value: "Questions", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.25)", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "#5c5775" }}
+                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.25)", borderRadius: 8, fontSize: "0.8125rem" }}
+                  labelStyle={{ color: "#4a4560" }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#5c5775" }} />
-                <Area type="monotone" dataKey="total_runs" name="Total runs" stroke="#8b5cf6" fill="url(#runsGradient)" strokeWidth={2} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
+                <Area type="monotone" dataKey="total_runs" name="Questions asked" stroke="#5e5490" fill="url(#runsGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -286,9 +286,9 @@ function EmployeeOverview() {
       </motion.div>
 
       <Panel style={{ padding: "var(--space-5)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: "var(--space-4)", color: "var(--text-secondary)" }}>Your open tickets</h2>
+        <h2 style={{ fontSize: "0.9375rem", marginBottom: "var(--space-4)", color: "var(--text-secondary)" }}>Your open tickets</h2>
         {openTickets.length === 0 ? (
-          <p style={{ fontSize: 13 }}>Nothing open right now — ask the AI Assistant if something comes up.</p>
+          <p style={{ fontSize: "0.8125rem" }}>Nothing open right now — ask the Assistant if something comes up.</p>
         ) : (
           <motion.div
             initial="hidden"
@@ -308,10 +308,10 @@ function EmployeeOverview() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-2)" }}>
-                  <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.number}</span>
+                  <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.number}</span>
                   <Badge label={t.status} tone={statusTone(t.status)} />
                 </div>
-                <span style={{ fontSize: 13.5, lineHeight: 1.4 }}>{ticketTitle(t.summary)}</span>
+                <span style={{ fontSize: "0.8438rem", lineHeight: 1.4 }}>{ticketTitle(t.summary)}</span>
               </motion.div>
             ))}
           </motion.div>
@@ -319,9 +319,9 @@ function EmployeeOverview() {
       </Panel>
 
       <Panel style={{ padding: "var(--space-5)" }}>
-        <h2 style={{ fontSize: 15, marginBottom: "var(--space-4)", color: "var(--text-secondary)" }}>Recent activity</h2>
+        <h2 style={{ fontSize: "0.9375rem", marginBottom: "var(--space-4)", color: "var(--text-secondary)" }}>Recent activity</h2>
         {timeline.length === 0 ? (
-          <p style={{ fontSize: 13 }}>Nothing yet — ask the AI Assistant something to get started.</p>
+          <p style={{ fontSize: "0.8125rem" }}>Nothing yet — ask the Assistant something to get started.</p>
         ) : (
           <motion.div initial="hidden" animate="visible" variants={staggerContainer()} style={{ display: "grid", gap: "var(--space-3)" }}>
             {timeline.map((item) => (
@@ -336,8 +336,8 @@ function EmployeeOverview() {
                 >
                   {item.kind === "ticket" ? <LifeBuoy size={13} /> : <MessageCircle size={13} />}
                 </span>
-                <span style={{ fontSize: 13, flex: 1 }}>{item.text}</span>
-                <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>{timeAgo(item.at)}</span>
+                <span style={{ fontSize: "0.8125rem", flex: 1 }}>{item.text}</span>
+                <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)", flexShrink: 0 }}>{timeAgo(item.at)}</span>
               </motion.div>
             ))}
           </motion.div>

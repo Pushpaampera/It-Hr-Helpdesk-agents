@@ -19,24 +19,28 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
         onMouseLeave={() => setVisible(false)}
         onFocus={() => setVisible(true)}
         onBlur={() => setVisible(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setVisible(false);
+        }}
+        aria-label="More information"
         style={{
-          width: 15,
-          height: 15,
+          width: 24,
+          height: 24,
           borderRadius: "50%",
-          border: "1px solid var(--border-strong)",
+          border: "1.5px solid var(--border-strong)",
           background: "var(--bg-elevated)",
-          color: "var(--text-secondary)",
-          fontSize: 10,
+          color: "var(--text-primary)",
+          fontSize: "0.8125rem",
           fontWeight: 700,
           lineHeight: 1,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          cursor: "default",
+          cursor: "help",
           padding: 0,
         }}
       >
-        i
+        <span aria-hidden="true">i</span>
       </button>
       <div
         id={tooltipId}
@@ -46,15 +50,15 @@ export default function InfoTooltip({ text }: InfoTooltipProps) {
           bottom: "calc(100% + 6px)",
           left: "50%",
           transform: "translateX(-50%)",
-          minWidth: 160,
-          maxWidth: 220,
+          minWidth: 180,
+          maxWidth: 260,
           padding: "var(--space-2) var(--space-3)",
           borderRadius: "var(--radius-sm)",
           background: "var(--bg-elevated)",
           border: "1px solid var(--border-subtle)",
           boxShadow: "var(--shadow-panel)",
-          color: "var(--text-secondary)",
-          fontSize: 11,
+          color: "var(--text-primary)",
+          fontSize: "0.8125rem",
           lineHeight: 1.4,
           fontFamily: "var(--font-body)",
           fontWeight: 400,

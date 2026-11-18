@@ -36,18 +36,26 @@ export default function StatCard({ label, value, unit, delta, sparklineData, ico
     <Panel className={[styles.statCard, hover.liftOnHover].join(" ")}>
       <div className={styles.header}>
         {icon && <span className={styles.icon}>{icon}</span>}
-        <span className={styles.label}>{label}</span>
+        <div className={styles.label}>{label}</div>
         {infoText && <InfoTooltip text={infoText} />}
       </div>
 
       <div className={styles.valueRow}>
-        <span className={styles.value}>
+        {/* The animated number is hidden from screen readers (it would be read mid-count);
+            the final value is provided once in the hidden text below. */}
+        <span className={styles.value} aria-hidden="true">
           {isCurrency ? "$" : ""}
           {display}
           {!isCurrency && unit ? <span className={styles.unit}>{unit}</span> : null}
         </span>
+        <span className="sr-only">
+          {isCurrency ? "$" : ""}
+          {formatValue(value, isCurrency)}
+          {!isCurrency && unit ? ` ${unit}` : ""}
+        </span>
         {typeof delta === "number" && (
           <span className={delta >= 0 ? styles.deltaUp : styles.deltaDown}>
+            <span className="sr-only">{delta >= 0 ? "Up " : "Down "}</span>
             {delta >= 0 ? "+" : ""}
             {delta.toFixed(1)}%
           </span>
@@ -55,19 +63,19 @@ export default function StatCard({ label, value, unit, delta, sparklineData, ico
       </div>
 
       {sparklineData && sparklineData.length >= 2 && (
-        <div className={styles.sparkline}>
+        <div className={styles.sparkline} aria-hidden="true">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sparklineData.map((v, i) => ({ i, v }))}>
               <defs>
                 <linearGradient id={`spark-${label.replace(/\s+/g, "-")}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#7c70af" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
                 dataKey="v"
-                stroke="#8b5cf6"
+                stroke="#5e5490"
                 strokeWidth={1.5}
                 fill={`url(#spark-${label.replace(/\s+/g, "-")})`}
                 isAnimationActive={false}

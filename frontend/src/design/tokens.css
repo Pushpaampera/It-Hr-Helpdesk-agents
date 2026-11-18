@@ -1,51 +1,60 @@
-:root {
-  /* Base surface — bright "AI agent world" look: soft white-to-lavender gradient, frosted-glass
-     white panels on top. No black/navy/dark-green anywhere. Agent colors below live in
-     src/design/agents.ts as the single source of truth for anything that needs a real hex value
-     (Three.js materials, recharts, SVG) — these custom properties mirror that file by hand, so
-     if the palette changes again, update agents.ts first and grep its hex values in here. */
-  --bg-grad-start: #f7f6fd;
-  --bg-grad-mid: #eef1fd;
-  --bg-grad-end: #e3e9fb;
-  --bg: #eef1fd;
-  --bg-elevated: #ffffff;
-  --bg-panel: rgba(255, 255, 255, 0.68);
-  --bg-panel-strong: rgba(255, 255, 255, 0.86);
-  --border-subtle: rgba(124, 112, 175, 0.16);
-  --border-strong: rgba(124, 112, 175, 0.34);
+/* Design tokens — Ampera brand.
+   Colours and font come straight from amperadei.com: Montserrat for everything, the signature
+   purple #7C70AF with its deeper shades (#5E5490, #493F7B used on the site's buttons) and the
+   soft lavender tint #E4E1EE, on white with #303030 text.
 
-  /* Text — dark violet-slate, not pure black, to stay warm against the lavender background */
-  --text-primary: #241f38;
-  --text-secondary: #5c5775;
-  --text-muted: #8c87a3;
+   Accessibility notes (checked against WCAG 2.2 AA):
+   - #7C70AF itself is only 4.4:1 on white, so it is used for borders, tints and chart fills.
+     Anything that carries text or must be a clear button uses #5E5490 (6.7:1) or darker.
+   - Every text colour below is >= 4.5:1 on both white and --bg.
+   - Agent colours in src/design/agents.ts mirror the --agent-* values here; update both together. */
+:root {
+  /* Brand palette */
+  --brand: #7c70af;
+  --brand-deep: #5e5490;
+  --brand-darkest: #493f7b;
+  --brand-tint: #e4e1ee;
+  --brand-soft: #f3f1f9;
+
+  /* Surfaces */
+  --bg: #f6f5fa;
+  --bg-elevated: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-panel-strong: #ffffff;
+  --border-subtle: #ddd9ea;
+  --border-strong: #8d84b6;
+
+  /* Text */
+  --text-primary: #303030;
+  --text-secondary: #4a4560;
+  --text-muted: #5f5a75;
   --text-on-accent: #ffffff;
 
-  /* Brand accents — Sage's violet doubles as the primary accent everywhere (buttons, links,
-     focus rings), so it has to be the exact same hex as --agent-supervisor below and
-     src/design/agents.ts's supervisor.color, not just a close brand-adjacent shade. */
-  --accent-primary: #8b5cf6;
-  --accent-secondary: #38bdf8;
+  /* Primary accent — buttons, links, active nav, focus ring */
+  --accent-primary: #5e5490;
+  --accent-secondary: #7c70af;
+  --focus-ring: #493f7b;
 
-  /* Agent identity colors — vivid, distinct per agent. Mirrors src/design/agents.ts. */
-  --agent-supervisor: #8b5cf6; /* Sage — violet */
-  --agent-it_support: #38bdf8; /* Iris — sky blue */
-  --agent-hr_policy: #f472b6; /* Hana — pink */
-  --agent-action: #fb923c; /* Atlas — orange */
-  --agent-ticketing: #2dd4bf; /* Tess — teal */
-  --agent-feedback: #fbbf24; /* Finn — yellow */
-  --agent-guard: #fb7185; /* Gus — coral */
-  --agent-knowledge: #38bdf8;
+  /* Agent identity colours — muted, all >= 4.5:1 on white so names can be written in them */
+  --agent-supervisor: #5e5490; /* Sage */
+  --agent-it_support: #1d6fa5; /* Iris */
+  --agent-hr_policy: #b0306f; /* Hana */
+  --agent-action: #b45309; /* Atlas */
+  --agent-ticketing: #0f766e; /* Tess */
+  --agent-feedback: #946200; /* Finn */
+  --agent-guard: #be3a4a; /* Gus */
+  --agent-knowledge: #1d6fa5;
 
-  /* Semantic */
-  --success: #22c55e;
-  --warning: #fbbf24;
-  --danger: #fb7185;
-  --info: #38bdf8;
+  /* Semantic — also readable as text on white */
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #1d6fa5;
 
-  /* Typography */
-  --font-heading: "Plus Jakarta Sans", "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+  /* Typography — Montserrat, as on amperadei.com */
+  --font-heading: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -58,28 +67,89 @@
   --space-8: 64px;
 
   /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-full: 999px;
 
-  /* Shadows / glow — soft colored glows instead of black vignettes */
-  --glow-primary: 0 0 32px rgba(139, 92, 246, 0.28);
-  --glow-steel: 0 0 32px rgba(56, 189, 248, 0.28);
-  --shadow-panel: 0 8px 32px rgba(124, 112, 175, 0.16);
-  --shadow-panel-lift: 0 16px 48px rgba(124, 112, 175, 0.24);
+  /* Shadows — flat and quiet */
+  --shadow-panel: 0 1px 3px rgba(73, 63, 123, 0.1);
+  --shadow-panel-lift: 0 6px 18px rgba(73, 63, 123, 0.16);
+  --glow-primary: 0 6px 18px rgba(73, 63, 123, 0.16);
+  --glow-steel: 0 6px 18px rgba(73, 63, 123, 0.16);
 
   /* Motion */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-sharp: cubic-bezier(0.4, 0, 0.2, 1);
   --duration-fast: 150ms;
-  --duration-medium: 320ms;
-  --duration-slow: 600ms;
+  --duration-medium: 250ms;
+  --duration-slow: 400ms;
+
+  /* Extra reading comfort, switched on from the Accessibility panel */
+  --line-height-body: 1.6;
+  --letter-spacing-body: 0;
+  --word-spacing-body: 0;
 
   color-scheme: light;
 }
 
-[data-reduce-motion="true"] * {
+/* ---- Accessibility panel modes (set on <html> by src/store/uiStore.ts) ---- */
+
+/* Text size: every font size in the app is in rem, so this scales the whole interface. */
+html[data-text-size="large"] {
+  font-size: 118.75%; /* 19px */
+}
+
+html[data-text-size="xlarge"] {
+  font-size: 137.5%; /* 22px */
+}
+
+/* High contrast: black on white, solid dark borders, deepest brand purple for actions. */
+html[data-contrast="high"] {
+  --bg: #ffffff;
+  --brand-tint: #ffffff;
+  --brand-soft: #ffffff;
+  --border-subtle: #303030;
+  --border-strong: #000000;
+  --text-primary: #000000;
+  --text-secondary: #000000;
+  --text-muted: #1f1f1f;
+  --accent-primary: #3a3163;
+  --accent-secondary: #3a3163;
+  --focus-ring: #000000;
+  --agent-supervisor: #3a3163;
+  --agent-it_support: #0b4f7c;
+  --agent-hr_policy: #8a1f55;
+  --agent-action: #8a3b00;
+  --agent-ticketing: #0a5a54;
+  --agent-feedback: #6b4700;
+  --agent-guard: #8f1d2c;
+  --success: #0b5c27;
+  --warning: #8a3b00;
+  --danger: #8f1111;
+  --info: #0b4f7c;
+  --shadow-panel: none;
+  --shadow-panel-lift: none;
+}
+
+/* Easy-to-read font (OpenDyslexic, the dyslexia-friendly face Ampera's own site offers). */
+html[data-readable-font="true"] {
+  --font-heading: "OpenDyslexic", "Montserrat", Arial, sans-serif;
+  --font-body: "OpenDyslexic", "Montserrat", Arial, sans-serif;
+}
+
+/* Extra spacing between lines, letters and words. */
+html[data-spacing="true"] {
+  --line-height-body: 1.9;
+  --letter-spacing-body: 0.04em;
+  --word-spacing-body: 0.12em;
+}
+
+/* Stop animations: also honours the operating-system "reduce motion" setting (the store seeds
+   itself from it). */
+[data-reduce-motion="true"] *,
+[data-reduce-motion="true"] *::before,
+[data-reduce-motion="true"] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;

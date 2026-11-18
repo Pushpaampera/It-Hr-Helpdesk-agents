@@ -84,12 +84,12 @@ export default function ControlRoom() {
           {statuses.map((s) => (
             <motion.div key={s.agent} variants={fadeUp}>
             <Panel className={hover.liftOnHover} style={{ padding: "var(--space-4)" }}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{s.job}</div>
-              <div style={{ fontSize: 20, fontFamily: "var(--font-heading)" }}>{s.events_24h}</div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>actions in the last 24h</div>
+              <div style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
+              <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{s.job}</div>
+              <div style={{ fontSize: "1.25rem", fontFamily: "var(--font-heading)" }}>{s.events_24h}</div>
+              <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>actions in the last 24h</div>
               <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{s.avg_latency_ms}ms avg response time</span>
+                <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{s.avg_latency_ms}ms avg response time</span>
                 {s.errors_24h > 0 && <Badge label={`${s.errors_24h} errors`} tone="danger" />}
               </div>
             </Panel>
@@ -100,16 +100,16 @@ export default function ControlRoom() {
 
       <div style={{ display: "grid", gridTemplateColumns: selectedRunId ? "1fr 1fr 380px" : "1fr 1fr", gap: "var(--space-5)" }}>
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            Live feed <span style={{ fontSize: 11, color: "var(--success)" }}>●</span>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            Live feed <span style={{ fontSize: "0.8125rem", color: "var(--success)" }}>●</span>
             <InfoTooltip text="What every AI specialist is doing right now, across all employees, as it happens." />
           </h2>
-          <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto" }}>
+          <div tabIndex={0} style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto"  }}>
             {liveFeed.length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Waiting for activity...</p>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Waiting for activity...</p>
             ) : (
               liveFeed.map((e, i) => (
-                <div key={`${e.run_id}-${e.seq}-${i}`} style={{ fontSize: 12, borderBottom: "1px solid var(--border-subtle)", paddingBottom: 6 }}>
+                <div key={`${e.run_id}-${e.seq}-${i}`} style={{ fontSize: "0.8125rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: 6 }}>
                   <span style={{ color: "var(--text-muted)" }}>{new Date(e.ts).toLocaleTimeString()}</span>{" "}
                   {e.user_name && <strong>{e.user_name}</strong>}{" "}
                   <span style={{ color: "var(--text-secondary)" }}>{e.caption}</span>
@@ -120,21 +120,21 @@ export default function ControlRoom() {
         </Panel>
 
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             Recent conversations
             <InfoTooltip text="Click any conversation to replay it step by step and see exactly what each specialist did." />
           </h2>
           {!runs ? (
-            <p style={{ fontSize: 13 }}>Loading...</p>
+            <p style={{ fontSize: "0.8125rem" }}>Loading...</p>
           ) : (
-            <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto" }}>
+            <div tabIndex={0} style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto"  }}>
               {runs.map((r) => (
                 <div
                   key={r.id}
                   onClick={() => setSelectedRunId(r.id)}
                   className={hover.glowOnHover}
                   style={{
-                    cursor: "pointer", fontSize: 12, padding: "var(--space-2)", borderRadius: "var(--radius-sm)",
+                    cursor: "pointer", fontSize: "0.8125rem", padding: "var(--space-2)", borderRadius: "var(--radius-sm)",
                     background: selectedRunId === r.id ? "var(--bg-elevated)" : "transparent",
                   }}
                 >
@@ -144,7 +144,7 @@ export default function ControlRoom() {
                     </span>
                     <Badge label={r.status} tone={statusTone(r.status)} />
                   </div>
-                  <div style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                  <div style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>
                     {r.route ?? "—"} · {new Date(r.created_at).toLocaleTimeString()}
                   </div>
                 </div>
@@ -174,18 +174,18 @@ function RunReplay({ runId, onClose }: { runId: string; onClose: () => void }) {
   return (
     <Panel style={{ padding: "var(--space-5)", alignSelf: "start" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-3)" }}>
-        <h2 style={{ fontSize: 14 }}>Replay</h2>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}>
+        <h2 style={{ fontSize: "0.875rem" }}>Replay</h2>
+        <button onClick={onClose} style={{ background: "none", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, minHeight: 44, padding: "0 var(--space-4)" }}>
           Close
         </button>
       </div>
-      {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
       {!detail ? (
-        <p style={{ fontSize: 13 }}>Loading...</p>
+        <p style={{ fontSize: "0.8125rem" }}>Loading...</p>
       ) : (
-        <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto" }}>
+        <div tabIndex={0} style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto"  }}>
           {(detail.events as AgentEventPayload[]).map((e, i) => (
-            <div key={i} style={{ fontSize: 12, borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
+            <div key={i} style={{ fontSize: "0.8125rem", borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
               <div style={{ color: "var(--text-secondary)" }}>
                 <strong>{e.agent}</strong> — {e.status}
               </div>

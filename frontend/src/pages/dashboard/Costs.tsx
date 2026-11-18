@@ -8,6 +8,7 @@ import { Area, AreaChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } f
 import { apiGet } from "../../api/client";
 import type { CostsResponse } from "../../api/types";
 import InfoBanner from "../../components/ui/InfoBanner";
+import ChartTable from "../../components/ui/ChartTable";
 import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
 import StatCard from "../../components/ui/StatCard";
@@ -67,43 +68,44 @@ export default function Costs() {
       </motion.div>
 
       <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
-        <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           Cost per day
           <InfoTooltip text="How much the AI assistant cost to run each day, in US dollars." />
         </h2>
         {data.by_day.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--text-muted)" }}>No run activity yet.</p>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No run activity yet.</p>
         ) : (
           <div style={{ height: 220 }}>
+            <ChartTable caption="Cost per day in US dollars" columns={["Day", "Cost (USD)"]} rows={data.by_day.map((d) => [d.day, `$${d.cost_usd.toFixed(4)}`])} />
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.by_day}>
+              <AreaChart data={data.by_day} accessibilityLayer>
                 <defs>
                   <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fb923c" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#fb923c" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#7c70af" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#8c87a3", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fill: "#8c87a3", fontSize: 11 }}
+                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={56}
                   tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-                  label={{ value: "USD", angle: -90, position: "insideLeft", fill: "#8c87a3", fontSize: 11 }}
+                  label={{ value: "USD", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
                 />
-                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "#5c5775" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#5c5775" }} />
-                <Area type="monotone" dataKey="cost_usd" name="Cost (USD)" stroke="#fb923c" fill="url(#costGradient)" strokeWidth={2} />
+                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "#4a4560" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
+                <Area type="monotone" dataKey="cost_usd" name="Cost (USD)" stroke="#5e5490" fill="url(#costGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         )}
       </Panel>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))", gap: "var(--space-5)" }}>
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             By specialist
             <InfoTooltip text="How much was spent on conversations handled by each specialist (IT, HR, or other)." />
           </h2>
@@ -112,7 +114,7 @@ export default function Costs() {
               // Index, not `r.route`, as the key: the backend groups by the raw `route` column
               // (NULL vs the literal string 'OTHER'), so two distinct rows can both display as
               // "OTHER" and collide on a value-based key.
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                 <span>{r.route} ({r.runs} runs)</span>
                 <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>${r.cost_usd.toFixed(4)}</span>
               </div>
@@ -121,16 +123,16 @@ export default function Costs() {
         </Panel>
 
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             By AI model
             <InfoTooltip text="How much was spent on each underlying AI model used to generate answers." />
           </h2>
           {data.by_model.length === 0 ? (
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>No model usage recorded (mock mode).</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No model usage recorded (mock mode).</p>
           ) : (
             <div style={{ display: "grid", gap: "var(--space-2)" }}>
               {data.by_model.map((m) => (
-                <div key={m.model} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <div key={m.model} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                   <span style={{ fontFamily: "var(--font-mono)" }}>{m.model}</span>
                   <span style={{ color: "var(--text-muted)" }}>{m.tokens.toLocaleString()} tokens · {m.calls} calls</span>
                 </div>

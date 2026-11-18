@@ -1,14 +1,14 @@
 /* Shared hover utilities for interactive cards/panels. The global
-   [data-reduce-motion="true"] * rule in tokens.css already zeroes transition-duration, so these
-   need no extra reduce-motion guard of their own. */
+   [data-reduce-motion="true"] rule in tokens.css zeroes transitions when "Stop animations" is on,
+   so these need no guard of their own. */
 
 .liftOnHover {
   transition: transform var(--duration-medium) var(--ease-standard), box-shadow var(--duration-medium) var(--ease-standard);
 }
 
 .liftOnHover:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--glow-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-panel-lift);
 }
 
 .glowOnHover {
@@ -16,5 +16,5 @@
 }
 
 .glowOnHover:hover {
-  box-shadow: var(--glow-steel);
+  box-shadow: var(--shadow-panel-lift);
 }

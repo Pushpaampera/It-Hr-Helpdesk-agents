@@ -1,5 +1,28 @@
 # 07 — Changelog
 
+### 2026-11-17 — Stage 1: Ampera brand, plain UI, accessibility (no functionality changed)
+- Changed: fonts and colours now match amperadei.com — Montserrat everywhere; purple #7C70AF with
+  its deeper shades #5E5490 / #493F7B (used for text and buttons, since #7C70AF alone is only 4.4:1
+  on white) and tint #E4E1EE, on white with #303030 text. `design/tokens.css`, `global.css`.
+- Removed: all 3D (Three.js scenes, robot mascots, particle hero) — replaced with a normal
+  website layout and flat `AgentAvatar` circles. The Assistant's "workroom" is now a plain list of
+  the 7 helpers with Working/Done/Waiting text plus the same step-by-step log, still driven by the
+  real SSE events. Landing page rebuilt as a standard page (header, hero, how it works, features).
+- Added: Accessibility panel on every page (landing, sign-in, dashboard): text size (3 levels),
+  high contrast, easy-to-read font (OpenDyslexic), extra spacing, stop animations; saved per
+  browser (`store/uiStore.ts`). Replaces the old "Reduce motion" toggle.
+- Added: skip link, labelled landmarks, per-page tab titles, focus moved to the page on navigation,
+  visible focus ring, 44px controls, labelled form fields, dialog focus trap + Esc, status text
+  next to every colour, screen-reader announcements for assistant answers, hidden data tables
+  behind every chart, keyboard-reachable ticket rows.
+- Changed: plain-language labels — "HR Dashboard", "Company Policies", "Ask the Assistant",
+  "Questions asked", "Solved by the Assistant". Routes and backend unchanged.
+- Verified: axe-core (WCAG 2.0/2.1/2.2 A+AA + best-practice) = 0 violations on every page for
+  all four roles, in default, high-contrast, extra-large-text and easy-to-read-font modes; no
+  sideways scroll at 390px wide; HR approve dialog, Assistant chat and sign-out tested end to end.
+- Note: `three`, `@react-three/*`, `gsap` and the old font packages are no longer imported and can
+  be removed from `frontend/package.json` (`npm uninstall`).
+
 ### 2026-11-04 — 6-step overhaul: animation, mascot states, confirm-before-ticket chat, dashboard
 ### redesign, approvals safety, plain-English UI
 

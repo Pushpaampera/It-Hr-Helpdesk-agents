@@ -37,7 +37,7 @@ export default function Team() {
 
       {members.length === 0 ? (
         <Panel style={{ padding: "var(--space-5)" }}>
-          <p style={{ fontSize: 13 }}>No one currently reports to you.</p>
+          <p style={{ fontSize: "0.8125rem" }}>No one currently reports to you.</p>
         </Panel>
       ) : (
         <motion.div
@@ -50,8 +50,8 @@ export default function Team() {
             <motion.div key={m.id} variants={fadeUp}>
             <Panel className={hover.liftOnHover} style={{ padding: "var(--space-5)" }}>
               <div style={{ marginBottom: "var(--space-3)" }}>
-                <strong style={{ fontSize: 15 }}>{m.name}</strong>
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.title} · {m.department}</div>
+                <strong style={{ fontSize: "0.9375rem" }}>{m.name}</strong>
+                <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{m.title} · {m.department}</div>
               </div>
 
               <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-3)" }}>
@@ -64,7 +64,7 @@ export default function Team() {
                 )}
               </div>
 
-              <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                 {m.total_tickets} ticket{m.total_tickets === 1 ? "" : "s"} total
                 {m.last_activity_at && ` · Last active ${new Date(m.last_activity_at).toLocaleDateString()}`}
               </p>

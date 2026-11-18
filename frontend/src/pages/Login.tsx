@@ -4,7 +4,8 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import ReduceMotionToggle from "../components/ReduceMotionToggle";
+import AccessibilityPanel from "../components/AccessibilityPanel";
+import SkipLink from "../components/SkipLink";
 import Button from "../components/ui/Button";
 import Logo from "../components/ui/Logo";
 import Panel from "../components/ui/Panel";
@@ -12,7 +13,6 @@ import TextField from "../components/ui/TextField";
 import { fadeUp } from "../design/motion";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
-import AgentMascot from "../three/AgentMascot";
 import type { Role } from "../api/types";
 
 // Per docs/00_PROJECT_OVERVIEW.md's "lands on" column. The real per-role destinations are
@@ -36,14 +36,8 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mascotState, setMascotState] = useState<"waving" | "idle">("waving");
 
   const destination = (location.state as LocationState)?.from?.pathname || "/app";
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setMascotState("idle"), 1500);
-    return () => clearTimeout(timeout);
-  }, []);
 
   useEffect(() => {
     if (isAuthenticated) navigate(destination, { replace: true });
@@ -73,11 +67,8 @@ export default function Login() {
 
   const content = (
     <Panel style={{ padding: "var(--space-6)", maxWidth: 420, width: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "calc(-1 * var(--space-4))" }}>
-        <AgentMascot agent="supervisor" state={mascotState} size={120} />
-      </div>
-      <h1 style={{ fontSize: 24, marginBottom: "var(--space-1)", textAlign: "center" }}>Sign in</h1>
-      <p style={{ marginBottom: "var(--space-5)" }}>Use your own credentials, or jump in as a demo account.</p>
+      <h1 style={{ fontSize: "1.5rem", marginBottom: "var(--space-1)", textAlign: "center" }}>Sign in</h1>
+      <p style={{ marginBottom: "var(--space-5)", textAlign: "center" }}>Use your own credentials, or jump in as a demo account.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         <TextField
@@ -97,7 +88,7 @@ export default function Login() {
           required
         />
         {error && (
-          <p style={{ color: "var(--danger)", fontSize: 13 }} role="alert">
+          <p style={{ color: "var(--danger)", fontSize: "0.875rem", fontWeight: 600 }} role="alert">
             {error}
           </p>
         )}
@@ -107,14 +98,15 @@ export default function Login() {
           disabled={isLoading}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
         >
-          <LogIn size={16} /> {isLoading ? "Signing in..." : "Sign in"}
+          <LogIn size={16} aria-hidden="true" /> {isLoading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
       <div style={{ margin: "var(--space-5) 0", borderTop: "1px solid var(--border-subtle)" }} />
 
-      <p style={{ fontSize: 13, marginBottom: "var(--space-3)" }}>Quick sign-in (demo accounts, password Demo@1234):</p>
-      <div style={{ display: "grid", gap: "var(--space-2)" }}>
+      <h2 id="demo-heading" style={{ fontSize: "0.9375rem", marginBottom: "var(--space-1)" }}>Quick sign-in</h2>
+      <p style={{ fontSize: "0.8125rem", marginBottom: "var(--space-3)" }}>Demo accounts — password Demo@1234.</p>
+      <div role="group" aria-labelledby="demo-heading" style={{ display: "grid", gap: "var(--space-2)" }}>
         {DEMO_ACCOUNTS.map((account) => (
           <Button
             key={account.email}
@@ -122,7 +114,7 @@ export default function Login() {
             variant="ghost"
             disabled={isLoading}
             onClick={() => handleQuickSignIn(account.email)}
-            style={{ justifyContent: "flex-start", fontSize: 13, padding: "var(--space-2) var(--space-4)" }}
+            style={{ justifyContent: "flex-start", fontSize: "0.875rem" }}
           >
             {account.label}
           </Button>
@@ -132,29 +124,36 @@ export default function Login() {
   );
 
   return (
-    <div
-      style={{
-        minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", padding: "var(--space-6)", gap: "var(--space-5)",
-      }}
-    >
-      <div style={{ position: "fixed", top: "var(--space-4)", left: "var(--space-6)", right: "var(--space-6)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+      <SkipLink />
+      <header
+        style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-3)",
+          padding: "var(--space-3) var(--space-5)", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)",
+        }}
+      >
         <Logo to="/" size={26} />
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+        <nav aria-label="Main" style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
           <Button variant="ghost" onClick={() => navigate("/")} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={16} aria-hidden="true" /> Back
           </Button>
-          <ReduceMotionToggle />
-        </div>
-      </div>
+          <AccessibilityPanel />
+        </nav>
+      </header>
 
-      {reduceMotion ? (
-        content
-      ) : (
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-          {content}
-        </motion.div>
-      )}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--space-6) var(--space-4)" }}
+      >
+        {reduceMotion ? (
+          content
+        ) : (
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            {content}
+          </motion.div>
+        )}
+      </main>
     </div>
   );
 }

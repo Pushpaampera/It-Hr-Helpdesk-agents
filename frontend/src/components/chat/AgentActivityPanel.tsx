@@ -1,17 +1,15 @@
-/** The "Agent Workroom": a mini 3D office where all 7 robots sit at their own desks and are
- * always visible, driven entirely by real agent_event/handoff SSE events (see
- * docs/01_ARCHITECTURE.md's frontend <-> event mapping), never a fake timer. When a question
- * comes in, a data stream travels from whichever agent just finished to the one taking over,
- * that robot's desk shows "working" + a plain-English speech bubble, and a green check appears
- * once its step completes. Below the scene, a timeline lists every step with the agent's avatar,
- * name, and one-line action. */
+/** "Assistant activity": shows which of the seven helpers is working on the current question and
+ * a step-by-step log of what each one did. It is driven entirely by real agent_event/handoff SSE
+ * events (see docs/01_ARCHITECTURE.md's frontend <-> event mapping), never a fake timer.
+ *
+ * Each helper row shows its state in words ("Working", "Done", "Waiting"), not just colour, and
+ * the log is a labelled, keyboard-scrollable region (the Assistant page announces the outcome
+ * once, so the step log itself stays quiet and does not chatter). */
+import { Check, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { AGENT_ORDER, AGENTS, type AgentKey } from "../../design/agents";
-import AgentDesk from "../../three/AgentDesk";
-import DataPulse from "../../three/DataPulse";
-import Scene from "../../three/Scene";
-import type { RoboState } from "../../three/RoboCompanion";
+import AgentAvatar from "../ui/AgentAvatar";
 import Panel from "../ui/Panel";
 
 function isAgentKey(agent: string): agent is AgentKey {
@@ -27,84 +25,95 @@ export type CaptionLogEntry = { id: string; agent: string | null; caption: strin
 
 export type AgentDeskState = { working: boolean; done: boolean; bubble: string | null };
 
-const DESK_POSITIONS: Record<AgentKey, [number, number, number]> = {
-  supervisor: [0, 1.7, 1.8],
-  it_support: [-2.3, 0.35, -2.1],
-  hr_policy: [0, 0.35, -2.5],
-  action: [2.3, 0.35, -2.1],
-  ticketing: [-2.3, -0.95, -5.2],
-  feedback: [0, -0.95, -5.6],
-  guard: [2.3, -0.95, -5.2],
-};
-
 type AgentActivityPanelProps = {
   activeAgent: string | null;
-  pulse: { from: string; to: string; trigger: number } | null;
+  /** Kept for the caller's convenience; the flat layout has no travelling "data stream". */
+  pulse?: { from: string; to: string; trigger: number } | null;
   captions: CaptionLogEntry[];
   agentStates: Partial<Record<AgentKey, AgentDeskState>>;
 };
 
-export default function AgentActivityPanel({ activeAgent, pulse, captions, agentStates }: AgentActivityPanelProps) {
+export default function AgentActivityPanel({ activeAgent, captions, agentStates }: AgentActivityPanelProps) {
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [captions.length]);
 
-  const pulseFrom = pulse && isAgentKey(pulse.from) ? DESK_POSITIONS[pulse.from] : null;
-  const pulseTo = pulse && isAgentKey(pulse.to) ? DESK_POSITIONS[pulse.to] : null;
-  const pulseColor = pulse && isAgentKey(pulse.to) ? AGENTS[pulse.to].color : "#8b5cf6";
-
   return (
     <Panel style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <h2 style={{ fontSize: 14, fontWeight: 700 }}>Agent Workroom</h2>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-          {activeAgent && isAgentKey(activeAgent) ? `${AGENTS[activeAgent].name} is working…` : "Idle — all agents at their desks"}
-        </div>
+      <div style={{ padding: "var(--space-4)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <h2 style={{ fontSize: "1rem" }}>What the assistant is doing</h2>
+        <p style={{ fontSize: "0.8125rem", marginTop: 2 }}>
+          {activeAgent && isAgentKey(activeAgent) ? `${AGENTS[activeAgent].name} is working…` : "Idle — ask a question to get started"}
+        </p>
       </div>
 
-      <div style={{ height: 290 }}>
-        <Scene cameraPosition={[0, 0.1, 10.5]} fov={38}>
-          {AGENT_ORDER.map((key) => {
-            const desk = agentStates[key];
-            const state: RoboState = desk?.done ? "success" : desk?.working ? "working" : "idle";
-            return (
-              <AgentDesk
-                key={key}
-                agentKey={key}
-                position={DESK_POSITIONS[key]}
-                scale={key === "supervisor" ? 0.62 : 0.56}
-                state={state}
-                done={desk?.done ?? false}
-                bubble={desk?.working ? desk.bubble : null}
-                isCore={key === "supervisor"}
-              />
-            );
-          })}
-          {pulse && pulseFrom && pulseTo && <DataPulse from={pulseFrom} to={pulseTo} trigger={pulse.trigger} color={pulseColor} duration={0.6} />}
-        </Scene>
-      </div>
+      <ul
+        aria-label="The assistant's helpers"
+        style={{ listStyle: "none", margin: 0, padding: "var(--space-3) var(--space-4)", display: "grid", gap: "var(--space-2)" }}
+      >
+        {AGENT_ORDER.map((key) => {
+          const identity = AGENTS[key];
+          const desk = agentStates[key];
+          const status = desk?.done ? "Done" : desk?.working ? "Working" : "Waiting";
+          return (
+            <li
+              key={key}
+              style={{
+                display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-2) var(--space-3)",
+                borderRadius: "var(--radius-md)",
+                background: desk?.working ? "var(--brand-soft)" : "transparent",
+                border: `1px solid ${desk?.working ? "var(--border-strong)" : "transparent"}`,
+              }}
+            >
+              <AgentAvatar agent={key} size={32} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                  {identity.name} <span style={{ fontWeight: 400, color: "var(--text-secondary)" }}>· {identity.role}</span>
+                </span>
+                {desk?.working && desk.bubble && (
+                  <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{desk.bubble}</span>
+                )}
+              </span>
+              <span
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.8125rem", fontWeight: 600, flexShrink: 0,
+                  color: desk?.done ? "var(--success)" : desk?.working ? "var(--accent-primary)" : "var(--text-muted)",
+                }}
+              >
+                {desk?.done && <Check size={14} aria-hidden="true" />}
+                {desk?.working && !desk.done && <Loader2 size={14} aria-hidden="true" className="spin" />}
+                {status}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
 
-      <div ref={logRef} style={{ flex: 1, overflowY: "auto", padding: "var(--space-3) var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)", borderTop: "1px solid var(--border-subtle)" }}>
+      <div
+        ref={logRef}
+        role="region"
+        tabIndex={0}
+        aria-label="Step-by-step activity"
+        style={{
+          flex: 1, minHeight: 120, overflowY: "auto", padding: "var(--space-3) var(--space-4)",
+          display: "flex", flexDirection: "column", gap: "var(--space-3)", borderTop: "1px solid var(--border-subtle)",
+        }}
+      >
         {captions.length === 0 && (
-          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Agent activity will appear here once you send a message.</p>
+          <p style={{ fontSize: "0.8125rem" }}>Each step will be listed here once you send a message.</p>
         )}
         {captions.map((entry) => {
           const identity = entry.agent && isAgentKey(entry.agent) ? AGENTS[entry.agent] : null;
           return (
             <div key={entry.id} style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start" }}>
-              <span
-                style={{
-                  width: 22, height: 22, borderRadius: "50%", flexShrink: 0, marginTop: 1,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#fff",
-                  background: identity?.color ?? "var(--text-muted)",
-                }}
-              >
-                {identity ? identity.name[0] : "?"}
-              </span>
-              <span style={{ fontSize: 12.5, lineHeight: 1.4 }}>
+              {entry.agent && isAgentKey(entry.agent) ? (
+                <AgentAvatar agent={entry.agent} size={24} style={{ marginTop: 1 }} />
+              ) : (
+                <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, background: "var(--text-muted)" }} />
+              )}
+              <span style={{ fontSize: "0.8125rem", lineHeight: 1.45 }}>
                 {identity && <strong style={{ color: identity.color }}>{identity.name}: </strong>}
                 <span style={{ color: "var(--text-secondary)" }}>{entry.caption}</span>
               </span>

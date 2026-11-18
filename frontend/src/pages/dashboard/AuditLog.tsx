@@ -41,9 +41,10 @@ export default function AuditLog() {
 
       <div style={{ marginBottom: "var(--space-4)" }}>
         <select
+          aria-label="Filter by action"
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          style={{ fontSize: 13, padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}
+          style={{ fontSize: "0.8125rem", padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}
         >
           <option value="">All actions</option>
           {actions.map((a) => (
@@ -54,17 +55,17 @@ export default function AuditLog() {
 
       <Panel style={{ padding: 0, overflow: "hidden" }}>
         {!entries ? (
-          <p style={{ fontSize: 13, padding: "var(--space-5)" }}>Loading...</p>
+          <p style={{ fontSize: "0.8125rem", padding: "var(--space-5)" }}>Loading...</p>
         ) : entries.length === 0 ? (
-          <p style={{ fontSize: 13, padding: "var(--space-5)" }}>No entries match this filter.</p>
+          <p style={{ fontSize: "0.8125rem", padding: "var(--space-5)" }}>No entries match this filter.</p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-subtle)" }}>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>When</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Who</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>What happened</th>
-                <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>What it affected</th>
+                <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>When</th>
+                <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>Who</th>
+                <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>What happened</th>
+                <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>What it affected</th>
               </tr>
             </thead>
             <tbody>

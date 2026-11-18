@@ -8,6 +8,7 @@ import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } fro
 import { apiGet, apiPatch, apiPost } from "../../api/client";
 import type { HrOverview, LeaveRequest } from "../../api/types";
 import Badge from "../../components/ui/Badge";
+import ChartTable from "../../components/ui/ChartTable";
 import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import InfoBanner from "../../components/ui/InfoBanner";
@@ -90,9 +91,9 @@ export default function HrInsights() {
   return (
     <PageTransition routeKey="hr-insights">
     <div>
-      <DashboardHeader title="HR Insights" subtitle="Company-wide headcount, leave posture, and pending leave requests." />
+      <DashboardHeader title="HR Dashboard" subtitle="Headcount, leave, and the leave requests waiting for your decision." />
       <InfoBanner id="hr-insights">
-        This page shows headcount and leave trends across the whole company, plus any leave requests that still need your decision.
+        Your daily view: how many people work here, how much leave has been used, and the leave requests that need you to approve or reject them.
       </InfoBanner>
 
       <motion.div
@@ -123,15 +124,15 @@ export default function HrInsights() {
         />
       </motion.div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)", marginBottom: "var(--space-5)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))", gap: "var(--space-5)", marginBottom: "var(--space-5)" }}>
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             Headcount by department
             <InfoTooltip text="How many active employees are in each department." />
           </h2>
           <div style={{ display: "grid", gap: "var(--space-2)" }}>
             {overview.headcount_by_department.map((d) => (
-              <div key={d.department} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <div key={d.department} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                 <span>{d.department}</span>
                 <span style={{ color: "var(--text-muted)" }}>{d.count}</span>
               </div>
@@ -140,16 +141,22 @@ export default function HrInsights() {
         </Panel>
 
         <Panel style={{ padding: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             How much leave has been used
             <InfoTooltip text="What share of each leave type's total allowance has already been used, company-wide." />
           </h2>
           {overview.leave_balances_by_type.length === 0 ? (
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>No leave balance data yet.</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No leave balance data yet.</p>
           ) : (
             <div style={{ height: 220 }}>
+              <ChartTable
+                caption="Share of each leave type's allowance already used"
+                columns={["Leave type", "% used"]}
+                rows={overview.leave_balances_by_type.map((b) => [b.leave_type, `${Math.round(b.utilization * 100)}%`])}
+              />
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
+                  accessibilityLayer
                   data={overview.leave_balances_by_type.map((b) => ({
                     leave_type: b.leave_type.charAt(0).toUpperCase() + b.leave_type.slice(1),
                     utilization_pct: Math.round(b.utilization * 100),
@@ -160,19 +167,19 @@ export default function HrInsights() {
                   <XAxis
                     type="number"
                     domain={[0, 100]}
-                    tick={{ fill: "#8c87a3", fontSize: 11 }}
+                    tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
                     axisLine={false}
                     tickLine={false}
-                    label={{ value: "% of balance used", position: "insideBottom", offset: -4, fill: "#8c87a3", fontSize: 11 }}
+                    label={{ value: "% of balance used", position: "insideBottom", offset: -4, fill: "#4a4560", fontSize: "0.8125rem" }}
                   />
-                  <YAxis type="category" dataKey="leave_type" tick={{ fill: "#5c5775", fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
+                  <YAxis type="category" dataKey="leave_type" tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} width={90} />
                   <Tooltip
-                    contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }}
-                    labelStyle={{ color: "#5c5775" }}
+                    contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }}
+                    labelStyle={{ color: "#4a4560" }}
                     formatter={(v: number) => [`${v}%`, "Utilization"]}
                   />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#5c5775" }} />
-                  <Bar dataKey="utilization_pct" name="Utilization" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                  <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
+                  <Bar dataKey="utilization_pct" name="Utilization" fill="#5e5490" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -181,16 +188,16 @@ export default function HrInsights() {
       </div>
 
       <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
-        <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           Upcoming approved leave
           <InfoTooltip text="People who are approved to be out soon, so you can plan around it." />
         </h2>
         {overview.upcoming_approved_leave.length === 0 ? (
-          <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Nothing scheduled.</p>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Nothing scheduled.</p>
         ) : (
           <div style={{ display: "grid", gap: "var(--space-2)" }}>
             {overview.upcoming_approved_leave.map((l) => (
-              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
                 <span>{l.user_name} — {l.leave_type} ({l.days}d)</span>
                 <span style={{ color: "var(--text-muted)" }}>{l.start_date} → {l.end_date}</span>
               </div>
@@ -199,10 +206,10 @@ export default function HrInsights() {
         )}
       </Panel>
 
-      <h2 style={{ fontSize: 16, marginBottom: "var(--space-4)" }}>Pending leave requests</h2>
+      <h2 style={{ fontSize: "1rem", marginBottom: "var(--space-4)" }}>Pending leave requests</h2>
       {pending.length === 0 ? (
         <Panel style={{ padding: "var(--space-5)" }}>
-          <p style={{ fontSize: 13 }}>No pending leave requests.</p>
+          <p style={{ fontSize: "0.8125rem" }}>No pending leave requests.</p>
         </Panel>
       ) : (
         <motion.div initial="hidden" animate="visible" variants={staggerContainer()} style={{ display: "grid", gap: "var(--space-3)" }}>
@@ -211,10 +218,10 @@ export default function HrInsights() {
             <Panel className={hover.liftOnHover} style={{ padding: "var(--space-4) var(--space-5)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-4)" }}>
                 <div>
-                  <div style={{ fontSize: 13, marginBottom: 4 }}>
+                  <div style={{ fontSize: "0.8125rem", marginBottom: 4 }}>
                     <strong>{r.user_name}</strong> ({r.department}) — <Badge label={r.leave_type} tone="info" />
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                     {r.start_date} → {r.end_date} ({r.days}d){r.reason ? ` · ${r.reason}` : ""}
                   </div>
                 </div>
@@ -256,19 +263,21 @@ export default function HrInsights() {
           extraContent={
             pendingDecision.decision === "rejected" ? (
               <div>
-                <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: "var(--space-2)" }}>
+                <label htmlFor="reject-reason" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", display: "block", marginBottom: "var(--space-2)" }}>
                   Reason for rejecting (required)
                 </label>
                 <textarea
+                  id="reject-reason"
+                  required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="e.g. Conflicts with team coverage during this period"
                   rows={3}
                   style={{
-                    width: "100%", resize: "vertical", fontFamily: "var(--font-body)", fontSize: 13,
+                    width: "100%", resize: "vertical", fontFamily: "var(--font-body)", fontSize: "0.8125rem",
                     padding: "var(--space-3)", borderRadius: "var(--radius-md)",
                     background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)",
-                    color: "var(--text-primary)", outline: "none",
+                    color: "var(--text-primary)",
                   }}
                 />
               </div>

@@ -64,8 +64,8 @@ export default function KnowledgeBase() {
     <PageTransition routeKey="kb">
     <div>
       <DashboardHeader
-        title="Policy Knowledge Base"
-        subtitle="Search the same knowledge base the AI Assistant retrieves from — see exactly what it cites."
+        title="Company Policies"
+        subtitle="Search the same policies and guides the Assistant uses, and see exactly what it quotes."
       />
       <InfoBanner id="knowledge-base">
         Search the same articles the AI assistant uses to answer questions, so you can check what it's citing or find a policy yourself.
@@ -82,7 +82,7 @@ export default function KnowledgeBase() {
               placeholder="e.g. VPN error 619, parental leave policy"
             />
           </div>
-          <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <label style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
             Department
             <select
               value={dept}
@@ -94,7 +94,7 @@ export default function KnowledgeBase() {
               <option value="HR">HR</option>
             </select>
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-secondary)", paddingBottom: 10 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8125rem", color: "var(--text-secondary)", paddingBottom: 10 }}>
             <input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} />
             Compare search strategies
             <InfoTooltip text="See how 3 different search approaches rank the same query, side by side." />
@@ -116,7 +116,7 @@ export default function KnowledgeBase() {
       )}
 
       {!selectedArticleId && compareResults && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-4)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: "var(--space-4)" }}>
           {STRATEGIES.map((s) => (
             <div key={s}>
               <ResultsList title={formatStrategyName(s)} results={compareResults[s] ?? []} onSelect={setSelectedArticleId} compact />
@@ -136,9 +136,9 @@ function ResultsList({
 }) {
   return (
     <div>
-      <h2 style={{ fontSize: 13, textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{title}</h2>
+      <h2 style={{ fontSize: "0.8125rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{title}</h2>
       {results.length === 0 ? (
-        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>No results.</p>
+        <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No results.</p>
       ) : (
         <div style={{ display: "grid", gap: "var(--space-3)" }}>
           {results.map((r) => (
@@ -152,10 +152,10 @@ function ResultsList({
                 <strong style={{ fontSize: compact ? 13 : 14 }}>{r.title}</strong>
                 <Badge label={r.dept} tone={r.dept === "IT" ? "info" : "success"} />
               </div>
-              <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                 {r.text}
               </p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>match strength {r.score.toFixed(3)}</p>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>match strength {r.score.toFixed(3)}</p>
             </Panel>
           ))}
         </div>
@@ -178,12 +178,12 @@ function ArticleReader({ articleId, onClose }: { articleId: string; onClose: () 
   return (
     <Panel style={{ padding: "var(--space-5)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-4)" }}>
-        <h2 style={{ fontSize: 18 }}>{detail?.article.title ?? "Loading..."}</h2>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}>
+        <h2 style={{ fontSize: "1.125rem" }}>{detail?.article.title ?? "Loading..."}</h2>
+        <button onClick={onClose} style={{ background: "none", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, minHeight: 44, padding: "0 var(--space-4)" }}>
           ← Back to results
         </button>
       </div>
-      {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
       {detail && (
         <>
           <div style={{ display: "flex", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
@@ -193,8 +193,8 @@ function ArticleReader({ articleId, onClose }: { articleId: string; onClose: () 
               <Badge label={detail.article.error_codes.join(", ")} tone="warning" />
             )}
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{detail.article.body}</div>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: "var(--space-4)" }}>
+          <div style={{ fontSize: "0.875rem", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{detail.article.body}</div>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "var(--space-4)" }}>
             Source: {detail.article.source_name} · v{detail.article.version} · updated{" "}
             {new Date(detail.article.updated_at).toLocaleDateString()}
           </p>

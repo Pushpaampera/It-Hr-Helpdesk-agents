@@ -33,16 +33,16 @@ export default function FeedbackWidget({ runId, resolved }: FeedbackWidgetProps)
 
   if (submitted) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--success)" }}>
-        <CheckCircle2 size={14} /> Thanks — Finn is learning from that.
+      <div role="status" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.875rem", fontWeight: 600, color: "var(--success)" }}>
+        <CheckCircle2 size={16} aria-hidden="true" /> Thanks — Finn is learning from that.
       </div>
     );
   }
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>How was this?</span>
-      <div style={{ display: "flex", gap: 2 }}>
+      <span id="feedback-label" style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>How was this?</span>
+      <div role="group" aria-labelledby="feedback-label" style={{ display: "flex", gap: 2 }}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -50,19 +50,22 @@ export default function FeedbackWidget({ runId, resolved }: FeedbackWidgetProps)
             onClick={() => setRating(n)}
             onMouseEnter={() => setHovered(n)}
             onMouseLeave={() => setHovered(0)}
+            onFocus={() => setHovered(n)}
+            onBlur={() => setHovered(0)}
             aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
-            style={{ background: "transparent", border: "none", padding: 2, cursor: "pointer", color: "var(--warning)" }}
+            aria-pressed={rating === n}
+            style={{ background: "transparent", border: "none", width: 44, height: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--warning)" }}
           >
-            <Star size={16} fill={(hovered || rating) >= n ? "currentColor" : "none"} />
+            <Star size={22} aria-hidden="true" fill={(hovered || rating) >= n ? "currentColor" : "none"} />
           </button>
         ))}
       </div>
       {rating > 0 && (
-        <Button variant="ghost" onClick={handleSubmit} disabled={submitting} style={{ padding: "var(--space-1) var(--space-3)", fontSize: 12 }}>
+        <Button variant="ghost" onClick={handleSubmit} disabled={submitting} >
           {submitting ? "Sending..." : "Submit"}
         </Button>
       )}
-      {error && <span style={{ fontSize: 12, color: "var(--danger)" }}>{error}</span>}
+      {error && <span role="alert" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--danger)" }}>{error}</span>}
     </div>
   );
 }

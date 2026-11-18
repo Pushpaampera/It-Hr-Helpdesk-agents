@@ -1,9 +1,11 @@
-/** A 5-second-window toast shown right after a consequential decision (approve/reject) is
+/** A short-lived message shown right after a consequential decision (approve/reject) is
  * confirmed, giving a brief chance to undo before it's final server-side. The shrinking bar is a
- * plain CSS animation — tokens.css's `[data-reduce-motion="true"] *` rule already forces
- * animation-duration to ~0 globally, so under reduce-motion the bar just jumps instantly rather
- * than needing a separate code path here. */
-import { useEffect, useRef } from "react";
+ * plain CSS animation — the global "Stop animations" rule in tokens.css makes it jump instead.
+ *
+ * Accessibility: it is announced to screen readers when it appears (role="status"), and the
+ * countdown pauses while the pointer is over it or keyboard focus is inside it, so nobody is
+ * rushed off the Undo button. */
+import { useEffect, useRef, useState } from "react";
 
 import Button from "./Button";
 import Panel from "./Panel";
@@ -14,16 +16,20 @@ type UndoToastProps = {
   onExpire: () => void;
 };
 
+const DURATION_MS = 5000;
+
 export default function UndoToast({ message, onUndo, onExpire }: UndoToastProps) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    timeoutRef.current = setTimeout(onExpire, 5000);
+    if (paused) return;
+    timeoutRef.current = setTimeout(onExpire, DURATION_MS);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paused]);
 
   function handleUndo() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -32,26 +38,36 @@ export default function UndoToast({ message, onUndo, onExpire }: UndoToastProps)
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
       style={{
         position: "fixed", bottom: "var(--space-6)", left: "50%", transform: "translateX(-50%)",
-        zIndex: 200,
+        zIndex: 200, width: "max-content", maxWidth: "calc(100vw - 32px)",
       }}
     >
       <Panel
         style={{
           padding: "var(--space-3) var(--space-4)", display: "flex", alignItems: "center",
-          gap: "var(--space-4)", overflow: "hidden", position: "relative",
+          gap: "var(--space-4)", overflow: "hidden", position: "relative", border: "1px solid var(--border-strong)",
+          boxShadow: "var(--shadow-panel-lift)",
         }}
       >
-        <div
-          style={{
-            position: "absolute", left: 0, bottom: 0, height: 3, width: "100%",
-            background: "var(--agent-supervisor)", transformOrigin: "left",
-            animation: "undoToastShrink 5s linear forwards",
-          }}
-        />
-        <span style={{ fontSize: 13 }}>{message}</span>
-        <Button variant="ghost" onClick={handleUndo} style={{ padding: "var(--space-1) var(--space-3)", fontSize: 13 }}>
+        {!paused && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute", left: 0, bottom: 0, height: 4, width: "100%",
+              background: "var(--accent-primary)", transformOrigin: "left",
+              animation: `undoToastShrink ${DURATION_MS}ms linear forwards`,
+            }}
+          />
+        )}
+        <span style={{ fontSize: "0.9375rem", fontWeight: 600 }}>{message}</span>
+        <Button variant="ghost" onClick={handleUndo}>
           Undo
         </Button>
       </Panel>

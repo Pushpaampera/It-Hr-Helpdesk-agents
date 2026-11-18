@@ -46,9 +46,10 @@ export default function InfoBanner({ id, children }: InfoBannerProps) {
         marginBottom: "var(--space-4)",
         borderRadius: "var(--radius-md)",
         background: "var(--bg-panel)",
-        borderLeft: "3px solid var(--accent-primary)",
-        fontSize: 13,
-        color: "var(--text-secondary)",
+        border: "1px solid var(--border-subtle)",
+        borderLeft: "4px solid var(--accent-primary)",
+        fontSize: "0.875rem",
+        color: "var(--text-primary)",
         lineHeight: 1.5,
       }}
     >
@@ -61,7 +62,7 @@ export default function InfoBanner({ id, children }: InfoBannerProps) {
           borderRadius: "50%",
           border: "1px solid var(--accent-primary)",
           color: "var(--accent-primary)",
-          fontSize: 11,
+          fontSize: "0.8125rem",
           fontWeight: 700,
           display: "inline-flex",
           alignItems: "center",
@@ -78,15 +79,18 @@ export default function InfoBanner({ id, children }: InfoBannerProps) {
         style={{
           flexShrink: 0,
           background: "none",
-          border: "none",
-          color: "var(--text-muted)",
-          fontSize: 14,
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-md)",
+          color: "var(--text-primary)",
+          fontSize: "1.25rem",
           lineHeight: 1,
           cursor: "pointer",
-          padding: 2,
+          width: 44,
+          height: 44,
+          margin: "-8px -8px -8px 0",
         }}
       >
-        ×
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   );

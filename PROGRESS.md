@@ -1,5 +1,9 @@
 # PROGRESS.md
 
+## LATEST (2026-11-17): Stage 1 done — Ampera brand + plain UI + accessibility
+UI only; no backend or feature changes. See `docs/07_CHANGELOG.md` (2026-11-17). Next stage (not
+started): new HR features, to be planned with the operator first.
+
 ## RESUME HERE (2026-11-04, bright agent-world redesign is committed; now closing real brief gaps)
 - **Correction to this file's own stale claim**: the text below used to say the redesign
   (Phases 0-4) was "not yet committed" — that was wrong by the time this entry was written. It

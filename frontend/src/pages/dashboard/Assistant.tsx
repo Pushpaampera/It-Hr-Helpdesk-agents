@@ -1,10 +1,12 @@
-/** The AI Assistant page — the project's centerpiece. A real chat UI against the live
- * LangGraph agent graph (POST /api/chat/stream, SSE), with the Phase 5 3D building blocks
- * wired to the actual event stream per docs/01_ARCHITECTURE.md's event→animation mapping:
- * handoffs drive DataPulse beams between AgentOrbs, in-flight agents pulse, approval_required
- * shows a live "waiting on a human" banner (the SSE connection stays open — see
- * docs/01_ARCHITECTURE.md — so the eventual decision elsewhere resolves this same turn), and a
- * final answer surfaces its cited sources plus a feedback widget that feeds the live bandit.
+/** The AI Assistant page. A real chat UI against the live LangGraph agent graph
+ * (POST /api/chat/stream, SSE): the side panel shows which helper is working, driven by the real
+ * event stream (docs/01_ARCHITECTURE.md); approval_required shows a live "waiting on a human"
+ * banner (the SSE connection stays open, so the eventual decision elsewhere resolves this same
+ * turn); and a final answer surfaces its cited sources plus a feedback widget that feeds the
+ * live bandit.
+ *
+ * Accessibility: a hidden live region announces "working on it" and then the finished answer
+ * once (not token by token), the message box has a label, and errors are announced.
  */
 import { AlertTriangle, BookOpen, Clock, Send, ShieldAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -22,12 +24,11 @@ import Button from "../../components/ui/Button";
 import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
 import { AGENT_ORDER, AGENTS, type AgentKey } from "../../design/agents";
-import AgentMascot, { type MascotAgent } from "../../three/AgentMascot";
+import AgentAvatar from "../../components/ui/AgentAvatar";
 import { useUIStore } from "../../store/uiStore";
 
-const KNOWN_MASCOT_AGENTS: readonly MascotAgent[] = AGENT_ORDER;
-function isKnownMascotAgent(agent: string | null): agent is MascotAgent {
-  return !!agent && (KNOWN_MASCOT_AGENTS as readonly string[]).includes(agent);
+function isKnownAgent(agent: string | null): agent is AgentKey {
+  return !!agent && (AGENT_ORDER as readonly string[]).includes(agent);
 }
 
 function emptyAgentStates(): Partial<Record<AgentKey, AgentDeskState>> {
@@ -88,21 +89,14 @@ export default function Assistant() {
   const [agentStates, setAgentStates] = useState<Partial<Record<AgentKey, AgentDeskState>>>(emptyAgentStates());
   const [approval, setApproval] = useState<ApprovalState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [justResolved, setJustResolved] = useState(false);
   const [pendingGate, setPendingGate] = useState<PendingGateState | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const mascotState = justResolved
-    ? "success"
-    : pendingGate
-      ? "thinking"
-      : isStreaming
-        ? (activeAgent ? "working" : "thinking")
-        : "idle";
-  const mascotAgent = isKnownMascotAgent(activeAgent) ? activeAgent : "it_support";
+  // Announced to screen readers: "working…" while streaming, then the finished answer once.
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && !m.pending);
+  const announcement = isStreaming ? "The assistant is working on your question." : (lastAssistant?.content ?? "");
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
@@ -118,7 +112,6 @@ export default function Assistant() {
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     };
   }, []);
 
@@ -138,10 +131,8 @@ export default function Assistant() {
     setPulse(null);
     setApproval(null);
     setActiveAgent(null);
-    setJustResolved(false);
     setPendingGate(null);
     setAgentStates(emptyAgentStates());
-    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
 
     const assistantMsgId = crypto.randomUUID();
     setMessages((m) => [
@@ -157,7 +148,7 @@ export default function Assistant() {
     const routeChain: AgentKey[] = [];
     let lastSpecialist: "it_support" | "hr_policy" | null = null;
     function pushRoute(agent: string | null) {
-      if (!isKnownMascotAgent(agent)) return;
+      if (!isKnownAgent(agent)) return;
       if (agent === "it_support" || agent === "hr_policy") lastSpecialist = agent;
       if (routeChain[routeChain.length - 1] !== agent) routeChain.push(agent);
     }
@@ -228,10 +219,6 @@ export default function Assistant() {
               if (finalRouteKey) {
                 setAgentStates((s) => ({ ...s, [finalRouteKey]: { working: false, done: true, bubble: s[finalRouteKey]?.bubble ?? null } }));
               }
-              if (event.resolved) {
-                setJustResolved(true);
-                successTimeoutRef.current = setTimeout(() => setJustResolved(false), 1200);
-              }
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantMsgId
@@ -277,27 +264,30 @@ export default function Assistant() {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "var(--space-5)", height: "calc(100vh - 110px)" }}>
+    <div className="assistant-layout">
+      <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>AI Assistant</h1>
+        <h1 style={{ fontSize: "1.375rem", marginBottom: "var(--space-1)" }}>Ask the Assistant</h1>
         <p style={{ marginBottom: "var(--space-4)" }}>Ask an IT or HR question, or ask it to do something for you.</p>
         <InfoBanner id="assistant">
           Ask anything IT or HR related. The AI will try to answer and ask if it solved your problem — if not, it'll offer to raise a ticket for a human to help.
         </InfoBanner>
 
         <Panel style={{ flex: 1, display: "flex", flexDirection: "column", padding: "var(--space-4)", overflow: "hidden" }}>
-          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingRight: "var(--space-2)" }}>
-            {/* Rendered (not conditionally mounted) regardless of message count, visibility
-               toggled via CSS only — conditionally mounting/unmounting this block used to tear
-               down and recreate the Scene's WebGL context on every first send. */}
+          <div
+            aria-label="Conversation"
+            role="region"
+            tabIndex={0}
+            style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingRight: "var(--space-2)" }}
+          >
             <div
               style={{
                 display: messages.length === 0 ? "flex" : "none",
                 flexDirection: "column", alignItems: "center", textAlign: "center", padding: "var(--space-6) var(--space-4)",
               }}
             >
-              <AgentMascot agent={mascotAgent} state={mascotState} size={140} />
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
+              <AgentAvatar agent="supervisor" size={64} style={{ marginBottom: "var(--space-4)" }} />
+              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
                 Ask me anything IT or HR — or try one of these:
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
@@ -307,7 +297,7 @@ export default function Assistant() {
                     onClick={() => handleSend(q)}
                     disabled={isStreaming}
                     style={{
-                      fontSize: 12, fontFamily: "var(--font-body)", padding: "8px 14px",
+                      fontSize: "0.8125rem", fontFamily: "var(--font-body)", padding: "10px 16px", minHeight: 44,
                       borderRadius: "var(--radius-full)", border: "1px solid var(--border-strong)",
                       background: "var(--bg-elevated)", color: "var(--text-secondary)",
                       cursor: isStreaming ? "not-allowed" : "pointer",
@@ -337,29 +327,31 @@ export default function Assistant() {
 
           {approval && (
             <div
+              role="status"
               style={{
                 display: "flex", alignItems: "center", gap: "var(--space-3)", marginTop: "var(--space-3)",
                 padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)",
-                background: "var(--bg-elevated)", border: "1px solid var(--warning)", fontSize: 13,
+                background: "var(--bg-elevated)", border: "1px solid var(--warning)", fontSize: "0.8125rem",
               }}
             >
-              <ShieldAlert size={18} color="var(--warning)" style={{ flexShrink: 0 }} />
+              <ShieldAlert size={18} color="var(--warning)" style={{ flexShrink: 0 }} aria-hidden="true" />
               <span>
                 Waiting for <strong>{approval.approverName}</strong>'s approval to access <strong>{approval.system}</strong>.
                 This will continue automatically once decided.
               </span>
-              <Clock size={16} color="var(--text-muted)" style={{ marginLeft: "auto", flexShrink: 0 }} />
+              <Clock size={16} color="var(--text-muted)" style={{ marginLeft: "auto", flexShrink: 0 }} aria-hidden="true" />
             </div>
           )}
 
           {error && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "var(--space-3)", fontSize: 13, color: "var(--danger)" }}>
-              <AlertTriangle size={14} /> {error}
+            <div role="alert" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "var(--space-3)", fontSize: "0.8125rem", color: "var(--danger)" }}>
+              <AlertTriangle size={14} aria-hidden="true" /> {error}
             </div>
           )}
 
           <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-4)", alignItems: "flex-end" }}>
             <textarea
+              aria-label="Your message to the assistant"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -367,10 +359,10 @@ export default function Assistant() {
               disabled={isStreaming}
               rows={1}
               style={{
-                flex: 1, resize: "none", fontFamily: "var(--font-body)", fontSize: 14,
+                flex: 1, resize: "none", fontFamily: "var(--font-body)", fontSize: "0.875rem",
                 padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)",
                 background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)",
-                color: "var(--text-primary)", outline: "none", maxHeight: 120,
+                color: "var(--text-primary)", maxHeight: 120,
               }}
             />
             <Button
@@ -379,7 +371,7 @@ export default function Assistant() {
               disabled={isStreaming || !input.trim()}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}
             >
-              <Send size={16} /> Send
+              <Send size={16} aria-hidden="true" /> Send
             </Button>
           </div>
         </Panel>
@@ -403,13 +395,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           background: isUser ? "var(--agent-supervisor)" : "var(--bg-elevated)",
           color: isUser ? "#fff" : "var(--text-primary)",
           border: isUser ? "none" : "1px solid var(--border-subtle)",
-          fontSize: 14, lineHeight: 1.5,
+          fontSize: "0.875rem", lineHeight: 1.5,
         }}
       >
         {!isUser && chain.length > 1 && (
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", fontSize: 11,
+              display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", fontSize: "0.8125rem",
               color: "var(--text-muted)", marginBottom: "var(--space-2)",
             }}
           >
@@ -425,15 +417,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         )}
         {identity && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "var(--space-2)" }}>
-            <span
-              style={{
-                width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff", background: identity.color,
-              }}
-            >
-              {identity.name[0]}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: identity.color }}>
+            <AgentAvatar agent={routeKey as AgentKey} size={22} />
+            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: identity.color }}>
               {identity.name}, {identity.role}
             </span>
           </div>
@@ -458,12 +443,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               <span
                 key={title}
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11,
+                  display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.8125rem",
                   color: "var(--text-muted)", border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-full)", padding: "2px 8px",
                 }}
               >
-                <BookOpen size={10} /> {title}
+                <BookOpen size={12} aria-hidden="true" /> Source: {title}
               </span>
             ))}
           </div>

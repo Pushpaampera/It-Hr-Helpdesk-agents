@@ -21,12 +21,12 @@ const ALL_ROLES: Role[] = ["employee", "manager", "hr", "admin"];
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Overview", path: "/app/overview", icon: LayoutDashboard, roles: ALL_ROLES, implemented: true },
-  { label: "AI Assistant", path: "/app/assistant", icon: MessageCircle, roles: ALL_ROLES, implemented: true },
+  { label: "Ask the Assistant", path: "/app/assistant", icon: MessageCircle, roles: ALL_ROLES, implemented: true },
   { label: "Tickets", path: "/app/tickets", icon: Ticket, roles: ALL_ROLES, implemented: true },
   { label: "Approvals", path: "/app/approvals", icon: CheckSquare, roles: ["manager", "admin"], implemented: true },
   { label: "Team", path: "/app/team", icon: Users, roles: ["manager"], implemented: true },
-  { label: "HR Insights", path: "/app/hr-insights", icon: HeartHandshake, roles: ["hr"], implemented: true },
-  { label: "Policy Knowledge Base", path: "/app/kb", icon: BookOpen, roles: ["hr", "admin"], implemented: true },
+  { label: "HR Dashboard", path: "/app/hr-insights", icon: HeartHandshake, roles: ["hr"], implemented: true },
+  { label: "Company Policies", path: "/app/kb", icon: BookOpen, roles: ["hr", "admin"], implemented: true },
   { label: "Control Room", path: "/app/control-room", icon: Radar, roles: ["admin"], implemented: true },
   { label: "Reinforcement Lab", path: "/app/reinforcement-lab", icon: Brain, roles: ["admin"], implemented: true },
   { label: "Evaluation", path: "/app/evaluation", icon: ClipboardCheck, roles: ["admin"], implemented: true },

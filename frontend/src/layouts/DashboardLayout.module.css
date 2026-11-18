@@ -1,11 +1,10 @@
-/* Responsive behavior (the sidebar collapsing to an off-canvas drawer) needs real media
+/* Responsive behaviour (the sidebar collapsing to an off-canvas drawer) needs real media
    queries, which inline styles can't express — a CSS module is the sanctioned escape hatch
-   per CLAUDE.md ("CSS variables + CSS modules"). Everything else in the dashboard still uses
-   inline styles from the design tokens, same as every other page so far. */
+   per CLAUDE.md ("CSS variables + CSS modules"). */
 
 .shell {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 100%;
 }
 
@@ -21,23 +20,44 @@
   overflow-y: auto;
 }
 
+.sidebarTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
 .closeButton,
 .menuButton {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
 }
 
 .main {
   min-width: 0;
-  padding: var(--space-6);
+  /* Hidden tooltips are positioned off to the side; never let them create sideways scrolling. */
+  overflow-x: clip;
+  padding: var(--space-5) var(--space-6) var(--space-7);
 }
 
 .topbar {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
   margin-bottom: var(--space-5);
 }
 
@@ -46,22 +66,27 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  font-size: 14px;
+  font-size: 0.9375rem;
+  font-weight: 500;
   text-decoration: none;
   color: var(--text-secondary);
 }
 
 .navItem:hover {
-  background: var(--bg-panel);
+  background: var(--brand-soft);
   color: var(--text-primary);
 }
 
-.navItemActive {
-  background: var(--bg-panel);
+/* The current page: tinted background, bold text and a solid bar — not colour alone. */
+.navItemActive,
+.navItemActive:hover {
+  background: var(--brand-tint);
   color: var(--text-primary);
-  box-shadow: inset 2px 0 0 var(--agent-supervisor);
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 var(--accent-primary);
 }
 
 .navItemDisabled {
@@ -71,48 +96,64 @@
 
 .soonBadge {
   margin-left: auto;
-  font-size: 10px;
-  font-family: var(--font-mono);
+  font-size: 0.75rem;
   color: var(--text-muted);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  padding: 1px 6px;
+  padding: 1px 8px;
 }
 
 .userCard {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) 0 0;
   border-top: 1px solid var(--border-subtle);
   margin-top: var(--space-4);
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--agent-supervisor);
+  background: var(--accent-primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.9375rem;
   flex-shrink: 0;
 }
 
-.iconButton {
-  background: transparent;
-  border: none;
+.userName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userRole {
+  font-size: 0.8125rem;
   color: var(--text-muted);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
 .iconButton:hover {
-  color: var(--text-primary);
+  background: var(--brand-soft);
 }
 
 .backdrop {
@@ -121,20 +162,28 @@
 
 @media (max-width: 860px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main {
+    padding: var(--space-4) var(--space-4) var(--space-7);
   }
 
   .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
-    width: 260px;
+    width: 280px;
+    max-width: 85vw;
     transform: translateX(-100%);
-    transition: transform var(--duration-medium) var(--ease-standard);
+    visibility: hidden;
+    transition: transform var(--duration-medium) var(--ease-standard), visibility 0s linear var(--duration-medium);
     z-index: 30;
   }
 
   .sidebarOpen {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--duration-medium) var(--ease-standard), visibility 0s;
   }
 
   .closeButton,
@@ -146,7 +195,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(48, 48, 48, 0.5);
     z-index: 20;
   }
 }

@@ -10,6 +10,7 @@ import type { EvalRun, EvalRunDetail } from "../../api/types";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import InfoBanner from "../../components/ui/InfoBanner";
+import ChartTable from "../../components/ui/ChartTable";
 import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
@@ -61,13 +62,19 @@ export default function Evaluation() {
 
       {runs && runs.length >= 2 && (
         <Panel style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
-          <h2 style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <h2 style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
             Pass rate across recent runs
             <InfoTooltip text="What share of the 70 test questions the AI answered correctly, for each time this test was run." />
           </h2>
           <div style={{ height: 220 }}>
+            <ChartTable
+              caption="Pass rate for each recent evaluation run"
+              columns={["Run date", "Pass rate"]}
+              rows={runs.slice().reverse().map((r) => [new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }), `${Math.round(r.summary.pass_rate * 100)}%`])}
+            />
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
+                accessibilityLayer
                 data={runs
                   .slice()
                   .reverse()
@@ -77,41 +84,41 @@ export default function Evaluation() {
                   }))}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,112,175,0.1)" vertical={false} />
-                <XAxis dataKey="run" tick={{ fill: "#8c87a3", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="run" tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fill: "#8c87a3", fontSize: 11 }}
+                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={40}
-                  label={{ value: "Pass rate %", angle: -90, position: "insideLeft", fill: "#8c87a3", fontSize: 11 }}
+                  label={{ value: "Pass rate %", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "#5c5775" }}
+                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }}
+                  labelStyle={{ color: "#4a4560" }}
                   formatter={(v: number) => [`${v}%`, "Pass rate"]}
                 />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#5c5775" }} />
-                <Bar dataKey="pass_rate_pct" name="Pass rate" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
+                <Bar dataKey="pass_rate_pct" name="Pass rate" fill="#15803d" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Panel>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedId ? "1fr 1fr" : "1fr", gap: "var(--space-5)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: selectedId ? "repeat(auto-fit, minmax(min(320px, 100%), 1fr))" : "1fr", gap: "var(--space-5)" }}>
         <Panel style={{ padding: 0, overflow: "hidden", alignSelf: "start" }}>
           {!runs ? (
-            <p style={{ fontSize: 13, padding: "var(--space-5)" }}>Loading...</p>
+            <p style={{ fontSize: "0.8125rem", padding: "var(--space-5)" }}>Loading...</p>
           ) : runs.length === 0 ? (
-            <p style={{ fontSize: 13, padding: "var(--space-5)" }}>No eval runs yet — click "Run evaluation".</p>
+            <p style={{ fontSize: "0.8125rem", padding: "var(--space-5)" }}>No eval runs yet — click "Run evaluation".</p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-subtle)" }}>
-                  <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Run</th>
-                  <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>Pass rate</th>
-                  <th style={{ padding: "var(--space-3) var(--space-4)", fontSize: 11, color: "var(--text-muted)" }}>
+                  <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>Run</th>
+                  <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>Pass rate</th>
+                  <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}>
                       Answer quality
                       <InfoTooltip text="A 0-1 score of how close each answer was to the known-correct answer, averaged across all 70 questions." />
@@ -160,24 +167,24 @@ function EvalRunDetailPanel({ runId, onClose }: { runId: string; onClose: () => 
   return (
     <Panel style={{ padding: "var(--space-5)", alignSelf: "start" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-4)" }}>
-        <h2 style={{ fontSize: 14 }}>Run breakdown</h2>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}>
+        <h2 style={{ fontSize: "0.875rem" }}>Run breakdown</h2>
+        <button onClick={onClose} style={{ background: "none", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, minHeight: 44, padding: "0 var(--space-4)" }}>
           Close
         </button>
       </div>
-      {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
       {!detail ? (
-        <p style={{ fontSize: 13 }}>Loading...</p>
+        <p style={{ fontSize: "0.8125rem" }}>Loading...</p>
       ) : (
-        <div style={{ display: "grid", gap: "var(--space-3)", maxHeight: 520, overflowY: "auto" }}>
+        <div tabIndex={0} style={{ display: "grid", gap: "var(--space-3)", maxHeight: 520, overflowY: "auto"  }}>
           {Object.entries(detail.summary.by_route).map(([route, r]) => (
-            <div key={route} style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            <div key={route} style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
               {route}: {r.passed}/{r.total} passed
             </div>
           ))}
           <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "var(--space-2)", paddingTop: "var(--space-3)" }} />
           {detail.results.map((r) => (
-            <div key={r.id} style={{ fontSize: 12, borderBottom: "1px solid var(--border-subtle)", paddingBottom: "var(--space-2)" }}>
+            <div key={r.id} style={{ fontSize: "0.8125rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "var(--space-2)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-2)" }}>
                 <span>{r.question}</span>
                 <Badge label={r.passed ? "pass" : "fail"} tone={r.passed ? "success" : "danger"} />

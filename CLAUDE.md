@@ -3,8 +3,8 @@
 ## Project, in one paragraph
 Helpdesk AI Agents is a runnable demo of an enterprise IT/HR helpdesk staffed by a team of
 cooperating AI agents (LangGraph), with real RAG over a Postgres+pgvector knowledge base, a
-FastAPI backend, and a cinematic React + Three.js frontend whose animation is driven only by
-real backend SSE events (no fake timers). It is being built for a live demo to a non-technical
+FastAPI backend, and a plain, accessible React frontend in Ampera's brand (Montserrat, purple
+#7C70AF family) whose live agent activity is driven only by real backend SSE events (no fake timers). It is being built for a live demo to a non-technical
 HR audience, so the UI must be instantly understandable and must never fail on stage.
 
 ## Hard constraints (never violate)
@@ -17,10 +17,13 @@ HR audience, so the UI must be instantly understandable and must never fail on s
   migrate; if it fails on permissions, stop with a clear message — never switch databases.
 - No placeholders / no TODOs in critical paths. Every file must be complete.
 - No Tailwind, no UI kit (no MUI/Chakra). Styling is plain CSS (CSS variables + CSS modules).
-  Visuals come from React Three Fiber, Framer Motion, GSAP, canvas/SVG.
+  Look and feel follow amperadei.com: Montserrat, #7C70AF / #5E5490 / #493F7B / #E4E1EE on white.
+  Motion is light (Framer Motion fade/slide) and must honour the "Stop animations" setting.
 - `LLM_MOCK_MODE=true` must make every agent work deterministically with zero API keys.
-- 3D scenes target ~60fps: instancing, capped particle counts, `devicePixelRatio` capped at 2,
-  pause when tab hidden, global "Reduce motion" toggle.
+- Accessibility is a hard requirement (WCAG 2.2 AA): keyboard-only use, visible focus, >= 4.5:1
+  text contrast, labelled controls, and the Accessibility panel (text size, high contrast,
+  easy-to-read font, extra spacing, stop animations). Font sizes are in rem so the text-size
+  setting scales everything — never use px for text. Re-run an axe audit after UI changes.
 
 ## Repo layout
 See `docs/01_ARCHITECTURE.md` for the full map. Top level: `backend/` (FastAPI + Poetry),

@@ -73,12 +73,12 @@ export default function Tickets() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedId ? "1fr 380px" : "1fr", gap: "var(--space-5)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: selectedId ? "repeat(auto-fit, minmax(min(340px, 100%), 1fr))" : "1fr", gap: "var(--space-5)" }}>
         <Panel style={{ padding: 0, overflow: "hidden" }}>
           {tickets.length === 0 ? (
-            <p style={{ fontSize: 13, padding: "var(--space-5)" }}>No tickets match this filter.</p>
+            <p style={{ fontSize: "0.8125rem", padding: "var(--space-5)" }}>No tickets match this filter.</p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border-subtle)" }}>
                   <Th>Ticket</Th>
@@ -102,7 +102,14 @@ export default function Tickets() {
                     }}
                   >
                     <Td>
-                      <div style={{ fontFamily: "var(--font-mono)" }}>{t.number}</div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(t.id); }}
+                        aria-label={`Open ticket ${t.number}`}
+                        aria-expanded={selectedId === t.id}
+                        style={{ background: "none", border: "none", padding: 0, minHeight: 24, fontWeight: 700, color: "var(--accent-primary)", textDecoration: "underline", cursor: "pointer", fontSize: "inherit" }}
+                      >
+                        {t.number}
+                      </button>
                       <div style={{ color: "var(--text-muted)", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {t.summary}
                       </div>
@@ -137,11 +144,12 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       style={{
-        fontSize: 12, fontFamily: "var(--font-body)", padding: "6px 14px", borderRadius: "var(--radius-full)",
-        border: `1px solid ${active ? "var(--agent-supervisor)" : "var(--border-subtle)"}`,
-        background: active ? "var(--agent-supervisor)" : "transparent",
-        color: active ? "#fff" : "var(--text-secondary)", cursor: "pointer", textTransform: "capitalize",
+        fontSize: "0.875rem", fontWeight: 600, fontFamily: "var(--font-body)", padding: "0 var(--space-4)", minHeight: 44, borderRadius: "var(--radius-full)",
+        border: `2px solid ${active ? "var(--accent-primary)" : "var(--border-strong)"}`,
+        background: active ? "var(--accent-primary)" : "var(--bg-elevated)",
+        color: active ? "var(--text-on-accent)" : "var(--text-primary)", cursor: "pointer", textTransform: "capitalize",
       }}
     >
       {label.replace("_", " ")}
@@ -150,7 +158,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, color: "var(--text-muted)", fontSize: 11, textTransform: "uppercase" }}>{children}</th>;
+  return <th scope="col" style={{ padding: "var(--space-3) var(--space-4)", fontWeight: 600, color: "var(--text-muted)", fontSize: "0.8125rem", textTransform: "uppercase" }}>{children}</th>;
 }
 
 function Td({ children }: { children: React.ReactNode }) {
@@ -189,25 +197,25 @@ function TicketDetailPanel({
   return (
     <Panel style={{ padding: "var(--space-5)", alignSelf: "start" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--space-3)" }}>
-        <h2 style={{ fontSize: 16 }}>{detail?.ticket.number ?? "..."}</h2>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}>
+        <h2 style={{ fontSize: "1rem" }}>{detail?.ticket.number ?? "..."}</h2>
+        <button onClick={onClose} style={{ background: "none", border: "1px solid var(--border-strong)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, minHeight: 44, padding: "0 var(--space-4)" }}>
           Close
         </button>
       </div>
 
-      {error && <p style={{ color: "var(--danger)", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
 
       {!detail ? (
-        <p style={{ fontSize: 13 }}>Loading...</p>
+        <p style={{ fontSize: "0.8125rem" }}>Loading...</p>
       ) : (
         <>
-          <p style={{ fontSize: 13, marginBottom: "var(--space-4)" }}>{detail.ticket.summary}</p>
+          <p style={{ fontSize: "0.8125rem", marginBottom: "var(--space-4)" }}>{detail.ticket.summary}</p>
 
           {detail.ticket.run_id && <TicketConversation runId={detail.ticket.run_id} />}
 
           {isStaff ? (
             <div style={{ display: "grid", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
-              <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              <label style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                 Status
                 <select
                   value={detail.ticket.status}
@@ -218,7 +226,7 @@ function TicketDetailPanel({
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
-              <label style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              <label style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                 Priority
                 <select
                   value={detail.ticket.priority}
@@ -237,15 +245,15 @@ function TicketDetailPanel({
             </div>
           )}
 
-          <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>
+          <h3 style={{ fontSize: "0.8125rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>
             Timeline
           </h3>
           <div style={{ display: "grid", gap: "var(--space-3)" }}>
             {detail.events.length === 0 ? (
-              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>No events yet.</p>
+              <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No events yet.</p>
             ) : (
               detail.events.map((e) => (
-                <div key={e.id} style={{ fontSize: 12, borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
+                <div key={e.id} style={{ fontSize: "0.8125rem", borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
                   <div style={{ color: "var(--text-secondary)" }}>
                     <strong>{e.actor}</strong> — {e.type.replace("_", " ")}
                   </div>
@@ -284,20 +292,21 @@ function TicketConversation({ runId }: { runId: string }) {
     <div style={{ marginBottom: "var(--space-5)" }}>
       <button
         onClick={toggle}
+        aria-expanded={open}
         style={{
-          fontSize: 12, color: "var(--accent-primary)", background: "none", border: "none",
-          cursor: "pointer", padding: 0, marginBottom: open ? "var(--space-3)" : 0,
+          fontSize: "0.875rem", fontWeight: 600, color: "var(--accent-primary)", background: "none", border: "none",
+          textDecoration: "underline", cursor: "pointer", padding: "var(--space-2) 0", minHeight: 44, marginBottom: open ? "var(--space-3)" : 0,
         }}
       >
         {open ? "Hide conversation" : "View the conversation that created this ticket"}
       </button>
 
       {open && (
-        <div style={{ display: "grid", gap: "var(--space-2)", maxHeight: 280, overflowY: "auto", paddingLeft: "var(--space-2)", borderLeft: "2px solid var(--border-subtle)" }}>
-          {error && <p style={{ color: "var(--danger)", fontSize: 12 }}>{error}</p>}
-          {!run && !error && <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Loading...</p>}
+        <div tabIndex={0} style={{ display: "grid", gap: "var(--space-2)", maxHeight: 280, overflowY: "auto", paddingLeft: "var(--space-2)", borderLeft: "2px solid var(--border-subtle)"  }}>
+          {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
+          {!run && !error && <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Loading...</p>}
           {run?.events.map((e: AgentEventPayload, i: number) => (
-            <div key={i} style={{ fontSize: 12 }}>
+            <div key={i} style={{ fontSize: "0.8125rem" }}>
               <strong style={{ color: "var(--text-secondary)" }}>{e.agent}</strong>{" "}
               <span style={{ color: "var(--text-muted)" }}>{e.caption}</span>
             </div>

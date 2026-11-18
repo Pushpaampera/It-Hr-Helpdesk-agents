@@ -3,9 +3,7 @@
  * resume flow a real UI instead of the direct-API calls Phase 9 verified it with. Deciding
  * resumes the paused agent run server-side (app/agents/graph.py::resume_after_approval). */
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import { apiGet, apiPost } from "../../api/client";
 import type { Approval } from "../../api/types";
@@ -13,13 +11,12 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import InfoBanner from "../../components/ui/InfoBanner";
+import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import Panel from "../../components/ui/Panel";
 import UndoToast from "../../components/ui/UndoToast";
 import { fadeUp, staggerContainer } from "../../design/motion";
 import PageTransition from "../../design/pageTransition";
 import hover from "../../design/hoverEffects.module.css";
-import AgentMascot from "../../three/AgentMascot";
-import type { RoboState } from "../../three/RoboCompanion";
 
 function statusTone(status: string): "success" | "warning" | "danger" {
   if (status === "approved") return "success";
@@ -28,22 +25,13 @@ function statusTone(status: string): "success" | "warning" | "danger" {
 }
 
 export default function Approvals() {
-  const navigate = useNavigate();
   const [approvals, setApprovals] = useState<Approval[] | null>(null);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{ approval: Approval; decision: "approved" | "rejected" } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [mascotState, setMascotState] = useState<RoboState>("idle");
-  const mascotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [undoToast, setUndoToast] = useState<{ approvalId: string; message: string } | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
-    };
-  }, []);
 
   function load() {
     apiGet<Approval[]>(`/approvals?status=${statusFilter}`)
@@ -65,9 +53,6 @@ export default function Approvals() {
       setPendingDecision(null);
       setRejectReason("");
       load();
-      setMascotState(decision === "approved" ? "success" : "blocked");
-      if (mascotTimeoutRef.current) clearTimeout(mascotTimeoutRef.current);
-      mascotTimeoutRef.current = setTimeout(() => setMascotState("idle"), 1600);
       setUndoToast({
         approvalId: approval.id,
         message: decision === "approved" ? "Access approved. Undo?" : "Request rejected. Undo?",
@@ -96,27 +81,7 @@ export default function Approvals() {
   return (
     <PageTransition routeKey="approvals">
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-        <button
-          onClick={() => navigate("/app/overview")}
-          aria-label="Back to Overview"
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            width: 36, height: 36, borderRadius: "var(--radius-full)",
-            border: "1px solid var(--border-subtle)", background: "var(--bg-panel)",
-            color: "var(--text-secondary)", cursor: "pointer",
-          }}
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <AgentMascot agent="action" state={mascotState} size={64} />
-        <div>
-          <h1 style={{ fontSize: 22, marginBottom: "var(--space-1)" }}>Approvals</h1>
-          <p style={{ marginBottom: "var(--space-4)" }}>
-            Access requests the AI Assistant escalated for your sign-off.
-          </p>
-        </div>
-      </div>
+      <DashboardHeader title="Approvals" subtitle="Access requests the AI Assistant escalated for your sign-off." />
       <InfoBanner id="approvals">
         Access requests the AI's Assistant paused mid-conversation, waiting on your decision. Approving or rejecting resumes that employee's conversation automatically.
       </InfoBanner>
@@ -126,11 +91,12 @@ export default function Approvals() {
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
+            aria-pressed={statusFilter === s}
             style={{
-              fontSize: 12, padding: "6px 14px", borderRadius: "var(--radius-full)", textTransform: "capitalize",
-              border: `1px solid ${statusFilter === s ? "var(--agent-supervisor)" : "var(--border-subtle)"}`,
-              background: statusFilter === s ? "var(--agent-supervisor)" : "transparent",
-              color: statusFilter === s ? "#fff" : "var(--text-secondary)", cursor: "pointer",
+              fontSize: "0.875rem", fontWeight: 600, padding: "0 var(--space-4)", minHeight: 44, borderRadius: "var(--radius-full)", textTransform: "capitalize",
+              border: `2px solid ${statusFilter === s ? "var(--accent-primary)" : "var(--border-strong)"}`,
+              background: statusFilter === s ? "var(--accent-primary)" : "var(--bg-elevated)",
+              color: statusFilter === s ? "var(--text-on-accent)" : "var(--text-primary)", cursor: "pointer",
             }}
           >
             {s}
@@ -142,7 +108,7 @@ export default function Approvals() {
         <Panel style={{ padding: "var(--space-5)" }}>Loading...</Panel>
       ) : approvals.length === 0 ? (
         <Panel style={{ padding: "var(--space-5)" }}>
-          <p style={{ fontSize: 13 }}>No {statusFilter} approvals.</p>
+          <p style={{ fontSize: "0.8125rem" }}>No {statusFilter} approvals.</p>
         </Panel>
       ) : (
         <motion.div initial="hidden" animate="visible" variants={staggerContainer()} style={{ display: "grid", gap: "var(--space-4)" }}>
@@ -152,15 +118,15 @@ export default function Approvals() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-4)" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-2)" }}>
-                    <strong style={{ fontSize: 14 }}>{a.requester_name}</strong>
+                    <strong style={{ fontSize: "0.875rem" }}>{a.requester_name}</strong>
                     <Badge label={a.status} tone={statusTone(a.status)} />
                   </div>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: "var(--space-2)" }}>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "var(--space-2)" }}>
                     Requesting <strong>{String(a.payload.access_level ?? "access")}</strong> on{" "}
                     <strong>{String(a.payload.system ?? a.type)}</strong>
                     {a.payload.justification ? ` — "${String(a.payload.justification)}"` : ""}
                   </p>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                     Requested {new Date(a.created_at).toLocaleString()}
                     {a.decided_at && ` · Decided ${new Date(a.decided_at).toLocaleString()}`}
                   </p>
@@ -211,19 +177,21 @@ export default function Approvals() {
           extraContent={
             pendingDecision.decision === "rejected" ? (
               <div>
-                <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: "var(--space-2)" }}>
+                <label htmlFor="reject-reason" style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)", display: "block", marginBottom: "var(--space-2)" }}>
                   Reason for rejecting (required)
                 </label>
                 <textarea
+                  id="reject-reason"
+                  required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="e.g. Access level too broad for this role"
                   rows={3}
                   style={{
-                    width: "100%", resize: "vertical", fontFamily: "var(--font-body)", fontSize: 13,
+                    width: "100%", resize: "vertical", fontFamily: "var(--font-body)", fontSize: "0.8125rem",
                     padding: "var(--space-3)", borderRadius: "var(--radius-md)",
                     background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)",
-                    color: "var(--text-primary)", outline: "none",
+                    color: "var(--text-primary)",
                   }}
                 />
               </div>
