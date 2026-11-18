@@ -67,6 +67,13 @@
   --accent-secondary: #2d3778;
   --focus-ring: #0f1d66;
 
+  /* Roles — every role's Assistant page uses the admin purple (6.5:1 on white). Kept as
+   * separate tokens so a role could be given its own colour again in one place. */
+  --role-admin: #9c369a;
+  --role-employee: var(--role-admin);
+  --role-manager: var(--role-admin);
+  --role-hr: var(--role-admin);
+
   /* Agents — one colour for all seven (name + initial identify them) */
   --agent-supervisor: #9c369a; /* Sage */
   --agent-it_support: #9c369a; /* Iris */
@@ -180,6 +187,11 @@ html[data-theme="dark"] {
   --accent-primary: #d77bd5;
   --accent-secondary: #8e98d6;
   --focus-ring: #ffffff;
+
+  --role-admin: #d77bd5;
+  --role-employee: var(--role-admin);
+  --role-manager: var(--role-admin);
+  --role-hr: var(--role-admin);
 
   --agent-supervisor: #d77bd5;
   --agent-it_support: #d77bd5;

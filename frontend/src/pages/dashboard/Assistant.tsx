@@ -19,12 +19,16 @@ import { streamSSE } from "../../api/sse";
 import type { ChatEvent, ChatSource, Conversation } from "../../api/types";
 import AgentActivityPanel, { type AgentDeskState, type CaptionLogEntry } from "../../components/chat/AgentActivityPanel";
 import FeedbackWidget from "../../components/chat/FeedbackWidget";
+import RoleSidePanel from "../../components/chat/RoleSidePanel";
+import RoleWelcome from "../../components/chat/RoleWelcome";
+import { ROLE_ASSISTANT } from "../../components/chat/roleAssistant";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
 import { AGENT_ORDER, AGENTS, type AgentKey } from "../../design/agents";
 import AgentAvatar from "../../components/ui/AgentAvatar";
+import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
 
 function isKnownAgent(agent: string | null): agent is AgentKey {
@@ -44,16 +48,6 @@ function routeToAgentKey(route: string | null): AgentKey | null {
   return null;
 }
 
-// A mix of IT and HR starter questions — the same Assistant page serves every role, so this
-// covers both departments rather than branching by the logged-in user's role.
-const SUGGESTED_QUESTIONS = [
-  "My laptop won't connect to the VPN, error 619",
-  "I'm having Wi-Fi problems on my laptop",
-  "How do I reset my password?",
-  "How many sick days do I have left?",
-  "What's the parental leave policy?",
-  "I need access to the Finance system",
-];
 
 type ChatMessage = {
   id: string;
@@ -77,6 +71,12 @@ type PendingGateState = { gate: "resolution_confirm" | "ticket_offer" };
 
 export default function Assistant() {
   const reduceMotion = useUIStore((s) => s.reduceMotion);
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role ?? "employee";
+  const roleConfig = ROLE_ASSISTANT[role];
+  const firstName = user?.name.split(" ")[0];
+  // Bumped after every finished turn so the role side panel reloads (a new ticket/approval).
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -99,6 +99,8 @@ export default function Assistant() {
   const announcement = isStreaming ? "The assistant is working on your question." : (lastAssistant?.content ?? "");
 
   useEffect(() => {
+    // Not on the empty welcome screen — scrolling there would push the role greeting out of view.
+    if (messages.length === 0) return;
     messagesEndRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
   }, [messages, reduceMotion]);
 
@@ -253,6 +255,7 @@ export default function Assistant() {
       setMessages((m) => m.map((msg) => (msg.id === assistantMsgId ? { ...msg, pending: false } : msg)));
     } finally {
       setIsStreaming(false);
+      setRefreshKey((k) => k + 1);
     }
   }
 
@@ -268,10 +271,8 @@ export default function Assistant() {
       <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
       <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
         <h1 style={{ fontSize: "1.375rem", marginBottom: "var(--space-1)" }}>Ask the Assistant</h1>
-        <p style={{ marginBottom: "var(--space-4)" }}>Ask an IT or HR question, or ask it to do something for you.</p>
-        <InfoBanner id="assistant">
-          Ask anything IT or HR related. The AI will try to answer and ask if it solved your problem — if not, it'll offer to raise a ticket for a human to help.
-        </InfoBanner>
+        <p style={{ marginBottom: "var(--space-4)" }}>{roleConfig.subtitle}</p>
+        <InfoBanner id={`assistant-${role}`}>{roleConfig.banner}</InfoBanner>
 
         <Panel style={{ flex: 1, display: "flex", flexDirection: "column", padding: "var(--space-4)", overflow: "hidden" }}>
           <div
@@ -280,36 +281,11 @@ export default function Assistant() {
             tabIndex={0}
             style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--space-4)", paddingRight: "var(--space-2)" }}
           >
-            <div
-              style={{
-                display: messages.length === 0 ? "flex" : "none",
-                flexDirection: "column", alignItems: "center", textAlign: "center", padding: "var(--space-6) var(--space-4)",
-              }}
-            >
-              <AgentAvatar agent="supervisor" size={64} style={{ marginBottom: "var(--space-4)" }} />
-              <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
-                I'm Sage, the AI agent who routes your question to the right specialist agent. Ask anything IT or HR — or try one of these:
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
-                {SUGGESTED_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => handleSend(q)}
-                    disabled={isStreaming}
-                    style={{
-                      fontSize: "0.8125rem", fontFamily: "var(--font-body)", padding: "10px 16px", minHeight: 44,
-                      borderRadius: "var(--radius-full)", border: "1px solid var(--border-strong)",
-                      background: "var(--bg-elevated)", color: "var(--text-secondary)",
-                      cursor: isStreaming ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {messages.length === 0 && (
+              <RoleWelcome config={roleConfig} firstName={firstName} disabled={isStreaming} onAsk={(q) => handleSend(q)} />
+            )}
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble key={msg.id} message={msg} showRoutingChain={roleConfig.showRoutingChain} />
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -377,12 +353,16 @@ export default function Assistant() {
         </Panel>
       </div>
 
-      <AgentActivityPanel activeAgent={activeAgent} pulse={pulse} captions={captions} agentStates={agentStates} />
+      {role === "admin" ? (
+        <AgentActivityPanel activeAgent={activeAgent} pulse={pulse} captions={captions} agentStates={agentStates} />
+      ) : (
+        <RoleSidePanel role={role} activeAgent={activeAgent} refreshKey={refreshKey} />
+      )}
     </div>
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ message, showRoutingChain }: { message: ChatMessage; showRoutingChain: boolean }) {
   const isUser = message.role === "user";
   const routeKey = !isUser ? routeToAgentKey(message.route ?? null) : null;
   const identity = routeKey ? AGENTS[routeKey] : null;
@@ -398,7 +378,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           fontSize: "0.875rem", lineHeight: 1.5,
         }}
       >
-        {!isUser && chain.length > 1 && (
+        {!isUser && showRoutingChain && chain.length > 1 && (
           <div
             style={{
               display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", fontSize: "0.8125rem",

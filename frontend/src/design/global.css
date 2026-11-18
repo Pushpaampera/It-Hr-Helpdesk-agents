@@ -264,3 +264,143 @@ th {
     display: none;
   }
 }
+
+/* ---------- Ask the Assistant: per-role welcome (components/chat/RoleWelcome.tsx) ----------
+ * --role-colour is set inline from the role's --role-* token, so one set of rules styles all
+ * four roles. Colour is never the only cue: every card also has an icon and a written title. */
+.role-welcome {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-2);
+}
+
+.role-welcome__icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  background: var(--role-colour);
+  color: var(--text-on-accent);
+}
+
+.role-welcome__badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--role-colour);
+  border: 1px solid var(--role-colour);
+  border-radius: var(--radius-full);
+  padding: 1px 10px;
+}
+
+.role-welcome__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Masonry-style columns so a short group (e.g. "For you") and the approvals card stack
+ * together instead of leaving a gap under the shorter card. */
+.role-welcome__groups {
+  columns: 2 260px;
+  column-gap: var(--space-4);
+}
+
+.role-welcome__groups > * {
+  break-inside: avoid;
+  margin-bottom: var(--space-4);
+}
+
+.role-welcome__group {
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--role-colour);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  padding: var(--space-4);
+}
+
+.role-welcome__group--highlight {
+  background: color-mix(in srgb, var(--role-colour) 6%, var(--bg-elevated));
+}
+
+.role-welcome__group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--role-colour);
+  margin-bottom: var(--space-3);
+}
+
+.role-welcome__starter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.role-welcome__starter--tile {
+  padding: var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-height: 72px;
+}
+
+.role-welcome__starter:hover:not(:disabled) {
+  border-color: var(--role-colour);
+  background: color-mix(in srgb, var(--role-colour) 6%, var(--bg-elevated));
+}
+
+.role-welcome__starter--tile:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.role-welcome__starter:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.role-welcome__starter:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.role-welcome__starter-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--role-colour);
+  background: color-mix(in srgb, var(--role-colour) 12%, transparent);
+}
+
+.role-welcome__starter--tile .role-welcome__starter-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.role-welcome__tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--role-colour);
+}
