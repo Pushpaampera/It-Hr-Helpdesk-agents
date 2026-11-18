@@ -1,6 +1,21 @@
 # 07 — Changelog
 
-### 2026-11-18 — Campus Hire colours (navy + magenta), new flat landing page, wheelchair button
+### 2026-11-18 — Each AI agent has its own icon badge, everywhere
+- Changed: `components/ui/AgentAvatar.tsx` — agents keep their names but no longer show a letter.
+  Each is a rounded-square badge (people stay round) in a navy→magenta gradient with its own white
+  icon — Gus shield, Sage network, Iris laptop-with-cog, Hana person-with-book, Atlas lightning
+  bolt, Tess ticket, Finn thumbs-up — plus a small robot "AI" badge (28px and up). New tokens
+  `--agent-chip-*` / `--agent-badge-*` for light, dark and both high-contrast modes.
+- Added the badge wherever an agent appears: landing "Meet the AI agents" (with an "AI agent" pill),
+  Assistant (empty state, answer header "· AI agent", routing strip), the agent activity panel
+  (now "What the AI agents are doing"), Control Room (status cards, live feed, recent conversations
+  — stored route IT/HR/OTHER mapped to Iris/Hana/Sage — and replay), and the ticket's conversation
+  history (raw keys like `it_support` replaced with names). `isAgentKey()` moved to `design/agents.ts`.
+- Wording: landing says "AI agents" instead of "helpers" (nav, stat card, step 2, section title).
+- Verified live: axe WCAG 2.2 AA clean on Landing, Assistant (light + dark, with a real question),
+  Control Room (light + dark), Tickets; 0 console errors; `tsc` clean.
+
+### 2026-11-18 — Campus Hire colours (navy + magenta), new landing page with 3D orbit, wheelchair button
 - Changed: the whole app now uses the same colours as the Ampera Campus Hire portal (sampled pixel
   by pixel from its screenshot), replacing the lavender-only palette: navy #0F1D66 sidebar with a
   #2D3778 active pill and #BCBED0 quiet text; navy #000F5C banners; magenta #9C369A buttons, links,
@@ -12,10 +27,16 @@
   White focus ring on navy surfaces (`[data-on-navy]`, sidebar).
 - Changed: the Accessibility button is now a round magenta button showing only the wheelchair
   symbol (accessible name "Accessibility settings" via aria-label).
-- Changed: landing page redesigned, flat (a 3D hero was tried and removed at the operator's request;
-  `src/three/` deleted): navy hero banner with the promise + a still preview of the assistant chat
-  (with sources), four Campus Hire-style stat cards, how it works, features, helpers, navy
-  "Ready to try it?" banner. Header has section links (hidden under 760px so it stays short).
+- Changed: landing page redesigned (the earlier robot/desk 3D scene and a chat-preview card in the hero
+  were both tried and removed at the operator's request): navy hero banner with the promise on the
+  left and the 3D orbit on the right, four Campus Hire-style stat cards, how it works, features,
+  helpers, navy "Ready to try it?" banner. Header has section links (hidden under 760px so it stays short).
+- Added: a new 3D animation in the landing hero (`src/three/HeroOrbit.tsx`, one lazy-loaded canvas):
+  a slowly turning dotted globe in the banner's right-hand column, three orbit rings around it with
+  seven glowing dots (one per helper), drifting specks and a gentle mouse-follow tilt. It is centred
+  on its column wherever the layout puts it (measured with a ResizeObserver; under the text on phones), aria-hidden,
+  paused when the tab is hidden, frozen to one still frame under "Stop animations"/reduce motion
+  (verified), and hides itself if WebGL fails. Colours: lavender #BCBED0, magenta #D77BD5, white.
 - Changed: landing page is full screen width with only a small side margin (no 1200px column).
 - Verified live (Chrome, port 5174): axe clean on all 11 admin pages in light and dark, and the full
   WCAG 2.2 AA + best-practice axe set clean on Landing light, dark and phone width (390px, no

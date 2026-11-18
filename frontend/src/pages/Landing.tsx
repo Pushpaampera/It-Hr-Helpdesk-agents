@@ -3,17 +3,18 @@
  *
  * Layout, top to bottom:
  *   header (logo, section links, accessibility button, sign in)
- *   → navy hero banner: the promise on the left, a static preview of the assistant on the right
+ *   → navy hero banner: the promise on the left, the 3D orbit animation on the right
  *   → four stat cards (like the Campus Hire dashboard cards)
  *   → how it works (4 steps) → what you can do (6 features) → meet the helpers (7 agents)
  *   → navy "ready to try it" banner → footer.
  *
- * Accessibility: semantic landmarks and headings, every section labelled, the chat preview is a
- * real list (so screen readers read it as an example conversation), white focus ring on navy,
- * the only motion is a gentle fade-up on scroll which "Stop animations" switches off. */
+ * Accessibility: semantic landmarks and headings, every section labelled, white focus ring on
+ * navy; the 3D orbit is decoration (aria-hidden) and, like the fade-up on scroll, stops with
+ * "Stop animations". */
 import {
   ArrowRight, BookOpen, CheckCircle2, FileText, KeyRound, MessageCircle, ShieldCheck, Sparkles, Ticket, TrendingUp, Users, Workflow,
 } from "lucide-react";
+import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +27,10 @@ import Logo from "../components/ui/Logo";
 import Panel from "../components/ui/Panel";
 import { AGENTS } from "../design/agents";
 import type { AgentKey } from "../design/agents";
+import type { OrbitAnchor } from "../three/HeroOrbit";
+
+// The 3D orbit (Three.js) is loaded separately so the page's text appears instantly.
+const HeroOrbit = lazy(() => import("../three/HeroOrbit"));
 
 // Mirrors backend/app/agents/events.py's FRIENDLY_NAMES/AGENT_JOBS — the 7 helpers a person
 // actually meets (the shared retrieval module isn't one of them).
@@ -41,7 +46,7 @@ const TEAM: { slug: AgentKey; job: string }[] = [
 
 const STEPS = [
   { icon: MessageCircle, title: "Ask in your own words", body: "Type a question — a VPN error, your leave balance, a policy. No forms and no ticket category to pick." },
-  { icon: Workflow, title: "It goes to the right helper", body: "The assistant decides whether it is an IT or an HR question and passes it to the specialist for that." },
+  { icon: Workflow, title: "It goes to the right AI agent", body: "Sage, the routing agent, decides whether it is an IT or an HR question and passes it to the specialist agent for that." },
   { icon: CheckCircle2, title: "Get an answer or an action", body: "Answers come from Ampera's own policies and guides, with the source shown. It can also reset a password or apply for leave, with a manager's approval where needed." },
   { icon: TrendingUp, title: "Gets better over time", body: "Your thumbs up or down on each answer helps it choose better answers next time." },
 ];
@@ -56,23 +61,16 @@ const CAPABILITIES = [
 ];
 
 const STATS = [
-  { icon: Users, label: "Helpers", value: "7", note: "AI helpers working together" },
+  { icon: Users, label: "AI agents", value: "7", note: "AI agents working together" },
   { icon: Sparkles, label: "Areas covered", value: "IT + HR", note: "One place for both" },
   { icon: FileText, label: "Sourced answers", value: "100%", note: "Every answer shows its source" },
   { icon: Workflow, label: "Transparency", value: "Live", note: "Watch each step as it happens" },
 ];
 
-const PREVIEW: { from: "user" | AgentKey; text: string; source?: string }[] = [
-  { from: "user", text: "My VPN keeps disconnecting every few minutes." },
-  { from: "it_support", text: "Switch the VPN protocol to IKEv2 and update the client — that fixes most drop-outs.", source: "VPN Troubleshooting Guide §3" },
-  { from: "user", text: "How many leave days do I have left?" },
-  { from: "hr_policy", text: "You have 14 days of annual leave remaining this year.", source: "Leave Policy 2026" },
-];
-
 const NAV_LINKS = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#features", label: "Features" },
-  { href: "#helpers", label: "Helpers" },
+  { href: "#helpers", label: "AI agents" },
 ];
 
 /** Full screen width with only a small side margin. */
@@ -95,72 +93,36 @@ function SectionHeading({ id, title, intro }: { id: string; title: string; intro
   );
 }
 
-/** A still picture of the assistant (styled like the Campus Hire "HR assistant" panel): navy
- * header, the person's questions in magenta bubbles, answers in white bubbles with their source. */
-function AssistantPreview() {
-  return (
-    <figure style={{ margin: 0 }}>
-      <Panel style={{ padding: 0, overflow: "hidden", boxShadow: "var(--shadow-panel-lift)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--border-subtle)" }}>
-          <span aria-hidden="true" style={{ ...ICON_CHIP, width: 36, height: 36, borderRadius: "50%" }}>
-            <MessageCircle size={18} />
-          </span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: "0.9375rem", color: "var(--text-primary)" }}>HelpDesk assistant</div>
-            <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>IT and HR answers, with sources</div>
-          </div>
-        </div>
-        <ul style={{ listStyle: "none", margin: 0, padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          {PREVIEW.map((m, i) => {
-            const isUser = m.from === "user";
-            const identity = isUser ? null : AGENTS[m.from as AgentKey];
-            return (
-              <li key={i} style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end", justifyContent: isUser ? "flex-end" : "flex-start" }}>
-                {identity && <AgentAvatar agent={identity.key} size={28} />}
-                <div style={{ maxWidth: "82%" }}>
-                  <span className="sr-only">{identity ? `${identity.name}, ${identity.role}:` : "You:"}</span>
-                  {identity && (
-                    <div aria-hidden="true" style={{ fontSize: "0.75rem", fontWeight: 600, marginBottom: 2, color: `var(--agent-${identity.key})` }}>
-                      {identity.name} · {identity.role}
-                    </div>
-                  )}
-                  <div
-                    style={{
-                      padding: "var(--space-2) var(--space-3)", fontSize: "0.875rem", lineHeight: 1.5,
-                      borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                      background: isUser ? "var(--accent-primary)" : "var(--bg-elevated)",
-                      color: isUser ? "var(--text-on-accent)" : "var(--text-primary)",
-                      border: `1px solid ${isUser ? "var(--accent-primary)" : "var(--border-subtle)"}`,
-                    }}
-                  >
-                    {m.text}
-                    {m.source && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: "0.75rem", fontWeight: 600, color: "var(--accent-primary)" }}>
-                        <FileText size={12} aria-hidden="true" /> Source: {m.source}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <div aria-hidden="true" style={{ display: "flex", gap: "var(--space-2)", padding: "0 var(--space-4) var(--space-4)" }}>
-          <div style={{ flex: 1, minHeight: 40, borderRadius: "var(--radius-full)", border: "2px solid var(--accent-primary)", padding: "0 var(--space-4)", display: "flex", alignItems: "center", fontSize: "0.875rem", color: "var(--text-muted)" }}>
-            Ask how to do something…
-          </div>
-          <span style={{ ...ICON_CHIP, width: 40, height: 40, borderRadius: "50%", background: "var(--accent-primary)", color: "var(--text-on-accent)" }}>
-            <ArrowRight size={18} />
-          </span>
-        </div>
-      </Panel>
-      <figcaption className="sr-only">An example conversation with the HelpDesk assistant.</figcaption>
-    </figure>
-  );
-}
-
 export default function Landing() {
   const navigate = useNavigate();
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<OrbitAnchor | null>(null);
+
+  // Tell the 3D orbit where its stage (the right-hand column) sits inside the banner — it moves
+  // under the text on narrow screens — and keep it updated as the layout changes.
+  useLayoutEffect(() => {
+    const banner = bannerRef.current;
+    const card = cardRef.current;
+    if (!banner || !card) return;
+    function measure() {
+      if (!banner || !card) return;
+      const b = banner.getBoundingClientRect();
+      const c = card.getBoundingClientRect();
+      if (!b.width || !b.height) return;
+      setAnchor({
+        x: (c.left + c.width / 2 - b.left) / b.width,
+        y: (c.top + c.height / 2 - b.top) / b.height,
+        w: c.width / b.width,
+        h: c.height / b.height,
+      });
+    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(banner);
+    ro.observe(card);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div>
@@ -194,14 +156,24 @@ export default function Landing() {
         {/* Hero — the navy banner from Campus Hire, full width. */}
         <section aria-labelledby="hero-heading" style={{ padding: `var(--space-5) ${GUTTER} 0` }}>
           <div
+            ref={bannerRef}
             data-on-navy=""
             style={{
+              position: "relative", overflow: "hidden",
               background: "var(--banner-bg)", color: "var(--banner-text)", borderRadius: "var(--radius-lg)",
               padding: "clamp(28px, 5vw, 72px) clamp(20px, 4vw, 64px)",
               display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(420px, 100%), 1fr))", gap: "clamp(28px, 4vw, 64px)", alignItems: "center",
             }}
           >
-            <div>
+            {/* 3D orbit behind the content — decoration only. */}
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+              {anchor && (
+                <Suspense fallback={null}>
+                  <HeroOrbit anchor={anchor} />
+                </Suspense>
+              )}
+            </div>
+            <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ fontSize: "0.8125rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--banner-text-muted)", marginBottom: "var(--space-3)" }}>
                 Ampera HelpDesk · IT and HR support
               </div>
@@ -221,7 +193,8 @@ export default function Landing() {
                 </Button>
               </div>
             </div>
-            <AssistantPreview />
+            {/* Empty stage on the right: the 3D orbit is centred here. */}
+            <div ref={cardRef} aria-hidden="true" style={{ position: "relative", zIndex: 1, minHeight: "clamp(240px, 32vw, 460px)" }} />
           </div>
         </section>
 
@@ -292,7 +265,7 @@ export default function Landing() {
         </section>
 
         <section id="helpers" aria-labelledby="team-heading" style={{ ...SECTION, paddingTop: 0, scrollMarginTop: 72 }}>
-          <SectionHeading id="team-heading" title="Meet the helpers" intro="Every request is handled by a small crew, each with one job." />
+          <SectionHeading id="team-heading" title="Meet the AI agents" intro="Seven AI agents work behind every request — each one has a single job, and you can see which one is helping you." />
           <ul style={{ ...GRID(300), listStyle: "none", margin: 0, padding: 0 }}>
             {TEAM.map((agent) => {
               const identity = AGENTS[agent.slug];
@@ -300,9 +273,14 @@ export default function Landing() {
                 <li key={agent.slug}>
                   <Reveal>
                     <Panel style={{ padding: "var(--space-4) var(--space-5)", display: "flex", gap: "var(--space-4)", alignItems: "center", height: "100%" }}>
-                      <AgentAvatar agent={agent.slug} size={48} />
+                      <AgentAvatar agent={agent.slug} size={56} />
                       <div>
-                        <h3 style={{ fontSize: "1rem", color: `var(--agent-${identity.key})` }}>{identity.name}</h3>
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: 2 }}>
+                          <h3 style={{ fontSize: "1rem", color: `var(--agent-${identity.key})` }}>{identity.name}</h3>
+                          <span style={{ fontSize: "0.6875rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "2px 8px", borderRadius: "var(--radius-full)", background: "var(--brand-tint)", color: "var(--accent-primary)" }}>
+                            AI agent
+                          </span>
+                        </div>
                         <p style={{ fontSize: "0.875rem" }}>{agent.job}</p>
                       </div>
                     </Panel>

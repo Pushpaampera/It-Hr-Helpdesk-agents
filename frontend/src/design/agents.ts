@@ -98,3 +98,8 @@ export const AGENT_COLORS: Record<string, string> = Object.fromEntries(
 export const AGENT_NAMES: Record<string, string> = Object.fromEntries(
   Object.values(AGENTS).map((a) => [a.key, a.name]),
 );
+
+/** True when `agent` is one of the seven agent keys (backend events can carry other values). */
+export function isAgentKey(agent: string | null | undefined): agent is AgentKey {
+  return !!agent && (AGENT_ORDER as readonly string[]).includes(agent);
+}

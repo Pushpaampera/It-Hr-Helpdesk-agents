@@ -77,6 +77,14 @@
   --agent-guard: #9c369a; /* Gus */
   --agent-knowledge: #9c369a;
 
+  /* Agent badge — every AI agent is a rounded square (people are circles) in a navy→magenta
+     gradient with its own white icon and a small robot "AI" badge. White icon: >= 6:1 on both ends. */
+  --agent-chip-bg: linear-gradient(135deg, #2d3778 0%, #9c369a 100%);
+  --agent-chip-icon: #ffffff;
+  --agent-badge-bg: #ffffff;
+  --agent-badge-icon: #0f1d66;
+  --agent-badge-ring: #ffffff;
+
   /* Chart series — navy, magenta, grey (lines also differ by dash pattern) */
   --series-1: #0f1d66;
   --series-2: #9c369a;
@@ -181,6 +189,7 @@ html[data-theme="dark"] {
   --agent-feedback: #d77bd5;
   --agent-guard: #d77bd5;
   --agent-knowledge: #d77bd5;
+  --agent-badge-ring: #121212;
 
   --series-1: #ffffff;
   --series-2: #d77bd5;
@@ -228,6 +237,8 @@ html[data-contrast="high"]:not([data-theme="dark"]) {
   --agent-feedback: #6e1f6c;
   --agent-guard: #6e1f6c;
   --series-1: #000000;
+  --agent-chip-bg: linear-gradient(135deg, #000f5c 0%, #6e1f6c 100%);
+  --agent-badge-icon: #000000;
   --series-2: #6e1f6c;
   --series-3: #4a4a4a;
   --success: #000f5c;
@@ -273,6 +284,11 @@ html[data-theme="dark"][data-contrast="high"] {
   --agent-feedback: #f0c8ef;
   --agent-guard: #f0c8ef;
   --series-1: #ffffff;
+  --agent-chip-bg: #ffffff;
+  --agent-chip-icon: #000000;
+  --agent-badge-bg: #000000;
+  --agent-badge-icon: #ffffff;
+  --agent-badge-ring: #ffffff;
   --series-2: #f0c8ef;
   --series-3: #a0a0a0;
   --success: #ffffff;

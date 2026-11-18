@@ -9,11 +9,20 @@ import { useEffect, useRef, useState } from "react";
 import { apiGet } from "../../api/client";
 import { streamGetSSE } from "../../api/sse";
 import type { AgentEventPayload, AgentStatus, LiveAgentEvent, RunEventsResponse, RunSummary } from "../../api/types";
+import AgentAvatar from "../../components/ui/AgentAvatar";
 import Badge from "../../components/ui/Badge";
 import InfoBanner from "../../components/ui/InfoBanner";
 import InfoTooltip from "../../components/ui/InfoTooltip";
 import Panel from "../../components/ui/Panel";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import { AGENTS, isAgentKey, type AgentKey } from "../../design/agents";
+
+/** A run's stored route ("IT" / "HR" / "OTHER") → the agent that answered it. "OTHER" questions
+ * are answered by Sage, the router, directly. */
+const ROUTE_AGENT: Record<string, AgentKey> = { IT: "it_support", HR: "hr_policy", OTHER: "supervisor" };
+function routeAgent(route: string | null): AgentKey | null {
+  return route ? ROUTE_AGENT[route] ?? null : null;
+}
 import { fadeUp, staggerContainer } from "../../design/motion";
 import PageTransition from "../../design/pageTransition";
 import hover from "../../design/hoverEffects.module.css";
@@ -84,7 +93,8 @@ export default function ControlRoom() {
           {statuses.map((s) => (
             <motion.div key={s.agent} variants={fadeUp}>
             <Panel className={hover.liftOnHover} style={{ padding: "var(--space-4)" }}>
-              <div style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: 2 }}>{s.name}</div>
+              {isAgentKey(s.agent) && <AgentAvatar agent={s.agent} size={40} style={{ marginBottom: "var(--space-3)" }} />}
+              <div style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: 2 }}>{s.name} <span style={{ fontWeight: 500, color: "var(--text-muted)" }}>· AI agent</span></div>
               <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginBottom: "var(--space-3)" }}>{s.job}</div>
               <div style={{ fontSize: "1.25rem", fontFamily: "var(--font-heading)" }}>{s.events_24h}</div>
               <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>actions in the last 24h</div>
@@ -109,10 +119,13 @@ export default function ControlRoom() {
               <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Waiting for activity...</p>
             ) : (
               liveFeed.map((e, i) => (
-                <div key={`${e.run_id}-${e.seq}-${i}`} style={{ fontSize: "0.8125rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: 6 }}>
-                  <span style={{ color: "var(--text-muted)" }}>{new Date(e.ts).toLocaleTimeString()}</span>{" "}
-                  {e.user_name && <strong>{e.user_name}</strong>}{" "}
-                  <span style={{ color: "var(--text-secondary)" }}>{e.caption}</span>
+                <div key={`${e.run_id}-${e.seq}-${i}`} style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start", fontSize: "0.8125rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: 6 }}>
+                  {isAgentKey(e.agent) && <AgentAvatar agent={e.agent} size={28} style={{ marginTop: 2 }} />}
+                  <span>
+                    <span style={{ color: "var(--text-muted)" }}>{new Date(e.ts).toLocaleTimeString()}</span>{" "}
+                    {e.user_name && <strong>{e.user_name}</strong>}{" "}
+                    <span style={{ color: "var(--text-secondary)" }}>{e.caption}</span>
+                  </span>
                 </div>
               ))
             )}
@@ -139,13 +152,14 @@ export default function ControlRoom() {
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--space-2)" }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
+                    {routeAgent(r.route) && <AgentAvatar agent={routeAgent(r.route)!} size={28} />}
+                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 220 }}>
                       <strong>{r.user_name}</strong> — {r.query}
                     </span>
                     <Badge label={r.status} tone={statusTone(r.status)} />
                   </div>
                   <div style={{ color: "var(--text-muted)", fontSize: "0.8125rem" }}>
-                    {r.route ?? "—"} · {new Date(r.created_at).toLocaleTimeString()}
+                    {routeAgent(r.route) ? `Handled by ${AGENTS[routeAgent(r.route)!].name} (${AGENTS[routeAgent(r.route)!].role})` : "Routing…"} · {new Date(r.created_at).toLocaleTimeString()}
                   </div>
                 </div>
               ))}
@@ -185,11 +199,14 @@ function RunReplay({ runId, onClose }: { runId: string; onClose: () => void }) {
       ) : (
         <div tabIndex={0} style={{ display: "grid", gap: "var(--space-2)", maxHeight: 480, overflowY: "auto"  }}>
           {(detail.events as AgentEventPayload[]).map((e, i) => (
-            <div key={i} style={{ fontSize: "0.8125rem", borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
-              <div style={{ color: "var(--text-secondary)" }}>
-                <strong>{e.agent}</strong> — {e.status}
+            <div key={i} style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start", fontSize: "0.8125rem", borderLeft: "2px solid var(--border-subtle)", paddingLeft: "var(--space-3)" }}>
+              {isAgentKey(e.agent) && <AgentAvatar agent={e.agent} size={28} style={{ marginTop: 2 }} />}
+              <div>
+                <div style={{ color: "var(--text-secondary)" }}>
+                  <strong>{isAgentKey(e.agent) ? AGENTS[e.agent].name : e.agent}</strong> — {e.status}
+                </div>
+                <div style={{ color: "var(--text-muted)" }}>{e.caption}</div>
               </div>
-              <div style={{ color: "var(--text-muted)" }}>{e.caption}</div>
             </div>
           ))}
         </div>

@@ -288,7 +288,7 @@ export default function Assistant() {
             >
               <AgentAvatar agent="supervisor" size={64} style={{ marginBottom: "var(--space-4)" }} />
               <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "var(--space-4)", maxWidth: 420 }}>
-                Ask me anything IT or HR — or try one of these:
+                I'm Sage, the AI agent who routes your question to the right specialist agent. Ask anything IT or HR — or try one of these:
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", justifyContent: "center", maxWidth: 480 }}>
                 {SUGGESTED_QUESTIONS.map((q) => (
@@ -407,6 +407,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           >
             {chain.map((key, i) => (
               <span key={key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <AgentAvatar agent={key} size={20} />
                 <span style={{ fontWeight: 600, color: `var(--agent-${key})` }}>
                   {AGENTS[key].name} ({AGENTS[key].role})
                 </span>
@@ -416,10 +417,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         {identity && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "var(--space-2)" }}>
-            <AgentAvatar agent={routeKey as AgentKey} size={22} />
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <AgentAvatar agent={routeKey as AgentKey} size={30} />
             <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: `var(--agent-${identity.key})` }}>
               {identity.name}, {identity.role}
+              <span style={{ fontWeight: 500, color: "var(--text-muted)" }}> · AI agent</span>
             </span>
           </div>
         )}

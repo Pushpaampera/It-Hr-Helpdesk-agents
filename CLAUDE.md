@@ -23,8 +23,12 @@ HR audience, so the UI must be instantly understandable and must never fail on s
   Dark theme = black page + white text, same navy sidebar/banners, magenta lifted to #D77BD5.
   **No other hues**: navy, magenta, black/white/greys, plus one red for errors. All colours come
   from tokens in `src/design/tokens.css` — never hard-code a hex in a component. Montserrat font;
-  the official Ampera logo PNG. The UI is flat everywhere — no 3D (the operator removed it from the
-  landing page too).
+  the official Ampera logo PNG. 3D is used in ONE place only: the orbit animation in the landing
+  page's navy hero (`src/three/HeroOrbit.tsx`, lazy-loaded, aria-hidden, frozen under "Stop
+  animations"). The operator rejected the earlier robot/desk scene — don't bring it back. The
+  signed-in app is flat.
+  Agents are always shown with `AgentAvatar` (rounded-square icon badge + robot "AI" mark; one icon
+  per agent, see AGENT_ICONS) and their name — never a letter, never colour alone.
   Motion is light (Framer Motion fade/slide) and must honour the "Stop animations" setting.
 - `LLM_MOCK_MODE=true` must make every agent work deterministically with zero API keys.
 - Accessibility is a hard requirement (WCAG 2.2 AA): keyboard-only use, visible focus, >= 4.5:1

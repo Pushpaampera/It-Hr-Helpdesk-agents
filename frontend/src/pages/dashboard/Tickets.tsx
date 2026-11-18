@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 
 import { apiGet, apiPatch } from "../../api/client";
 import type { AgentEventPayload, RunEventsResponse, TicketDetail, TicketSummary } from "../../api/types";
+import AgentAvatar from "../../components/ui/AgentAvatar";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
+import { AGENTS, isAgentKey } from "../../design/agents";
 import PageTransition from "../../design/pageTransition";
 import hover from "../../design/hoverEffects.module.css";
 import { useAuthStore } from "../../store/authStore";
@@ -306,9 +308,12 @@ function TicketConversation({ runId }: { runId: string }) {
           {error && <p style={{ color: "var(--danger)", fontSize: "0.8125rem" }}>{error}</p>}
           {!run && !error && <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>Loading...</p>}
           {run?.events.map((e: AgentEventPayload, i: number) => (
-            <div key={i} style={{ fontSize: "0.8125rem" }}>
-              <strong style={{ color: "var(--text-secondary)" }}>{e.agent}</strong>{" "}
-              <span style={{ color: "var(--text-muted)" }}>{e.caption}</span>
+            <div key={i} style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-start", fontSize: "0.8125rem" }}>
+              {isAgentKey(e.agent) && <AgentAvatar agent={e.agent} size={28} style={{ marginTop: 2 }} />}
+              <span>
+                <strong style={{ color: "var(--text-secondary)" }}>{isAgentKey(e.agent) ? AGENTS[e.agent].name : e.agent}</strong>{" "}
+                <span style={{ color: "var(--text-muted)" }}>{e.caption}</span>
+              </span>
             </div>
           ))}
         </div>

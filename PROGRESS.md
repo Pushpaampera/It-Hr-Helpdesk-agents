@@ -1,8 +1,8 @@
 # PROGRESS.md
 
-## LATEST (2026-11-18, later): Campus Hire navy + magenta colours, new flat landing page
+## LATEST (2026-11-18, later): Campus Hire navy + magenta colours, new landing page + 3D orbit
 Whole app recoloured to match the Ampera Campus Hire portal (navy sidebar/banners, magenta
-actions); landing page redesigned flat and full width (no 3D anywhere); Accessibility button is
+actions); landing page redesigned full width, with a 3D orbit animation in the hero (src/three/HeroOrbit.tsx); Accessibility button is
 an icon-only wheelchair button. See docs/07_CHANGELOG.md. Not yet committed.
 
 ## LATEST (2026-11-18): Light / Dark / Match-my-device added; settings saved per signed-in person
