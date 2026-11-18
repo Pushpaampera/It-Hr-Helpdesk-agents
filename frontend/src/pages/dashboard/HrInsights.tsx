@@ -167,19 +167,19 @@ export default function HrInsights() {
                   <XAxis
                     type="number"
                     domain={[0, 100]}
-                    tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                    tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                     axisLine={false}
                     tickLine={false}
-                    label={{ value: "% of balance used", position: "insideBottom", offset: -4, fill: "#4a4560", fontSize: "0.8125rem" }}
+                    label={{ value: "% of balance used", position: "insideBottom", offset: -4, fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   />
-                  <YAxis type="category" dataKey="leave_type" tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} width={90} />
+                  <YAxis type="category" dataKey="leave_type" tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} width={90} />
                   <Tooltip
-                    contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }}
-                    labelStyle={{ color: "#4a4560" }}
+                    contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                     formatter={(v: number) => [`${v}%`, "Utilization"]}
                   />
-                  <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
-                  <Bar dataKey="utilization_pct" name="Utilization" fill="#5e5490" radius={[0, 4, 4, 0]} />
+                  <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }} />
+                  <Bar dataKey="utilization_pct" name="Utilization" fill="var(--accent-primary)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -114,7 +114,7 @@ export default function AgentActivityPanel({ activeAgent, captions, agentStates 
                 <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, background: "var(--text-muted)" }} />
               )}
               <span style={{ fontSize: "0.8125rem", lineHeight: 1.45 }}>
-                {identity && <strong style={{ color: identity.color }}>{identity.name}: </strong>}
+                {identity && <strong style={{ color: `var(--agent-${identity.key})` }}>{identity.name}: </strong>}
                 <span style={{ color: "var(--text-secondary)" }}>{entry.caption}</span>
               </span>
             </div>

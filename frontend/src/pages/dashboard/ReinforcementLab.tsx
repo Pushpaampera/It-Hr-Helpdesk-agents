@@ -20,10 +20,13 @@ import { fadeUp, staggerContainer } from "../../design/motion";
 import PageTransition from "../../design/pageTransition";
 import hover from "../../design/hoverEffects.module.css";
 
+// Dash patterns so the three lines differ by more than colour.
+const ARM_DASH: Record<string, string | undefined> = { hybrid_rerank: undefined, lexical_heavy: "6 4", semantic_heavy: "2 3" };
+
 const ARM_COLORS: Record<string, string> = {
-  hybrid_rerank: "#5e5490",
-  lexical_heavy: "#1d6fa5",
-  semantic_heavy: "#b45309",
+  hybrid_rerank: "var(--series-1)",
+  lexical_heavy: "var(--series-2)",
+  semantic_heavy: "var(--series-3)",
 };
 
 // Visible labels only — internal strategy ids (e.g. "hybrid_rerank") stay as-is everywhere else
@@ -144,19 +147,19 @@ export default function ReinforcementLab() {
             />
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} accessibilityLayer>
-                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
                 <YAxis
                   domain={[0, 1]}
-                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                  tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={36}
-                  label={{ value: "Success score (0-1)", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
+                  label={{ value: "Success score (0-1)", angle: -90, position: "insideLeft", fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                 />
-                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "#4a4560" }} />
-                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
+                <Tooltip contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "var(--text-secondary)" }} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }} />
                 {Object.keys(ARM_COLORS).map((arm) => (
-                  <Line key={arm} type="monotone" name={formatStrategyName(arm)} dataKey={arm} stroke={ARM_COLORS[arm]} strokeWidth={2} dot={false} connectNulls />
+                  <Line key={arm} type="monotone" name={formatStrategyName(arm)} dataKey={arm} stroke={ARM_COLORS[arm]} strokeDasharray={ARM_DASH[arm]} strokeWidth={2} dot={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>

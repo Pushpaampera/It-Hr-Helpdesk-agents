@@ -64,7 +64,7 @@ export default function DashboardLayout() {
 
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`} aria-label="Sidebar">
         <div className={styles.sidebarTop}>
-          <Logo to="/app/overview" size={26} />
+          <Logo to="/app/overview" size={26} onNavy />
           <button className={styles.closeButton} onClick={() => setSidebarOpen(false)} aria-label="Close menu">
             <X size={20} aria-hidden="true" />
           </button>

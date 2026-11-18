@@ -81,22 +81,22 @@ export default function Costs() {
               <AreaChart data={data.by_day} accessibilityLayer>
                 <defs>
                   <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c70af" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
+                    <stop offset="0%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0.5} />
+                    <stop offset="100%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tickFormatter={(d: string) => d.slice(5)} tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                  tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={56}
                   tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-                  label={{ value: "USD", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
+                  label={{ value: "USD", angle: -90, position: "insideLeft", fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                 />
-                <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "#4a4560" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
-                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
-                <Area type="monotone" dataKey="cost_usd" name="Cost (USD)" stroke="#5e5490" fill="url(#costGradient)" strokeWidth={2} />
+                <Tooltip contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "var(--text-secondary)" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }} />
+                <Area type="monotone" dataKey="cost_usd" name="Cost (USD)" stroke="var(--accent-primary)" fill="url(#costGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

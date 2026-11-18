@@ -392,8 +392,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div
         style={{
           maxWidth: "80%", padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)",
-          background: isUser ? "var(--agent-supervisor)" : "var(--bg-elevated)",
-          color: isUser ? "#fff" : "var(--text-primary)",
+          background: isUser ? "var(--accent-primary)" : "var(--bg-elevated)",
+          color: isUser ? "var(--text-on-accent)" : "var(--text-primary)",
           border: isUser ? "none" : "1px solid var(--border-subtle)",
           fontSize: "0.875rem", lineHeight: 1.5,
         }}
@@ -407,7 +407,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           >
             {chain.map((key, i) => (
               <span key={key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontWeight: 600, color: AGENTS[key].color }}>
+                <span style={{ fontWeight: 600, color: `var(--agent-${key})` }}>
                   {AGENTS[key].name} ({AGENTS[key].role})
                 </span>
                 {i < chain.length - 1 && <span>→</span>}
@@ -418,7 +418,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {identity && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "var(--space-2)" }}>
             <AgentAvatar agent={routeKey as AgentKey} size={22} />
-            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: identity.color }}>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: `var(--agent-${identity.key})` }}>
               {identity.name}, {identity.role}
             </span>
           </div>

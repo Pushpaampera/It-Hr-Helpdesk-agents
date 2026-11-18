@@ -1,7 +1,11 @@
 /** Reusable page header: a back arrow (every page except Overview, the dashboard's home), a
  * time-of-day greeting with the current user's first name, the page title as the page's <h1>,
- * and a one-line description. Used at the top of every dashboard page. */
-import { ArrowLeft } from "lucide-react";
+ * and a one-line description. Used at the top of every dashboard page.
+ *
+ * On Overview (the dashboard's home) it is drawn as the navy welcome banner from the Ampera
+ * Campus Hire portal: a small date line, the greeting as the <h1>, the description and a magenta
+ * "Ask the Assistant" button. */
+import { ArrowLeft, MessageCircle } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../../store/authStore";
@@ -24,7 +28,45 @@ export default function DashboardHeader({ title, subtitle }: DashboardHeaderProp
   const location = useLocation();
 
   const firstName = user?.name?.split(" ")[0];
-  const showBack = location.pathname !== "/app/overview";
+  const isHome = location.pathname === "/app/overview";
+  const showBack = !isHome;
+
+  if (isHome) {
+    const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+    return (
+      <section
+        aria-labelledby="page-title"
+        data-on-navy=""
+        style={{
+          background: "var(--banner-bg)", color: "var(--banner-text)", borderRadius: "var(--radius-lg)",
+          padding: "var(--space-6) var(--space-6)", marginBottom: "var(--space-5)",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-5)", flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--banner-text-muted)", marginBottom: "var(--space-2)" }}>
+            Ampera HelpDesk · {today}
+          </div>
+          <h1 id="page-title" style={{ fontSize: "clamp(1.5rem, 2.6vw, 2rem)", fontWeight: 500, color: "var(--banner-text)", marginBottom: "var(--space-2)" }}>
+            {firstName ? `${timeOfDayGreeting()}, ${firstName}` : title}
+          </h1>
+          <p style={{ margin: 0, color: "var(--banner-text-muted)" }}>{subtitle}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/app/assistant")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "var(--space-2)", minHeight: 48,
+            padding: "0 var(--space-5)", borderRadius: "var(--radius-full)", border: "2px solid var(--accent-primary)",
+            background: "var(--accent-primary)", color: "var(--text-on-accent)", fontWeight: 600, fontSize: "0.9375rem",
+          }}
+        >
+          <MessageCircle size={18} aria-hidden="true" />
+          Ask the Assistant
+        </button>
+      </section>
+    );
+  }
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>

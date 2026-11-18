@@ -83,23 +83,23 @@ export default function Evaluation() {
                     pass_rate_pct: Math.round(r.summary.pass_rate * 100),
                   }))}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(124,112,175,0.1)" vertical={false} />
-                <XAxis dataKey="run" tick={{ fill: "#4a4560", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                <XAxis dataKey="run" tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }} axisLine={false} tickLine={false} />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                  tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                   width={40}
-                  label={{ value: "Pass rate %", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
+                  label={{ value: "Pass rate %", angle: -90, position: "insideLeft", fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.18)", borderRadius: 8, fontSize: "0.8125rem" }}
-                  labelStyle={{ color: "#4a4560" }}
+                  contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }}
+                  labelStyle={{ color: "var(--text-secondary)" }}
                   formatter={(v: number) => [`${v}%`, "Pass rate"]}
                 />
-                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
-                <Bar dataKey="pass_rate_pct" name="Pass rate" fill="#15803d" radius={[4, 4, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }} />
+                <Bar dataKey="pass_rate_pct" name="Pass rate" fill="var(--success)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

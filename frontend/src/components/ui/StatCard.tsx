@@ -68,14 +68,14 @@ export default function StatCard({ label, value, unit, delta, sparklineData, ico
             <AreaChart data={sparklineData.map((v, i) => ({ i, v }))}>
               <defs>
                 <linearGradient id={`spark-${label.replace(/\s+/g, "-")}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#7c70af" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
+                  <stop offset="0%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0.45} />
+                  <stop offset="100%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
                 dataKey="v"
-                stroke="#5e5490"
+                stroke="var(--accent-primary)"
                 strokeWidth={1.5}
                 fill={`url(#spark-${label.replace(/\s+/g, "-")})`}
                 isAnimationActive={false}

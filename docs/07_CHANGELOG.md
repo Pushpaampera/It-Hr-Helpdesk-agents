@@ -1,5 +1,61 @@
 # 07 — Changelog
 
+### 2026-11-18 — Campus Hire colours (navy + magenta), new flat landing page, wheelchair button
+- Changed: the whole app now uses the same colours as the Ampera Campus Hire portal (sampled pixel
+  by pixel from its screenshot), replacing the lavender-only palette: navy #0F1D66 sidebar with a
+  #2D3778 active pill and #BCBED0 quiet text; navy #000F5C banners; magenta #9C369A buttons, links,
+  user chat bubbles, icon chips on #F7EDF7; #FCFCFC page with a faint haze, white cards, #050505
+  text. Dark = black page with the same navy sidebar/banners and magenta lifted to #D77BD5. High
+  contrast (light and dark) updated to match. New tokens: `--navy*`, `--sidebar-*`, `--banner-*`,
+  `--page-haze`.
+- Added: Overview opens with a navy welcome banner (date line, greeting, "Ask the Assistant").
+  White focus ring on navy surfaces (`[data-on-navy]`, sidebar).
+- Changed: the Accessibility button is now a round magenta button showing only the wheelchair
+  symbol (accessible name "Accessibility settings" via aria-label).
+- Changed: landing page redesigned, flat (a 3D hero was tried and removed at the operator's request;
+  `src/three/` deleted): navy hero banner with the promise + a still preview of the assistant chat
+  (with sources), four Campus Hire-style stat cards, how it works, features, helpers, navy
+  "Ready to try it?" banner. Header has section links (hidden under 760px so it stays short).
+- Changed: landing page is full screen width with only a small side margin (no 1200px column).
+- Verified live (Chrome, port 5174): axe clean on all 11 admin pages in light and dark, and the full
+  WCAG 2.2 AA + best-practice axe set clean on Landing light, dark and phone width (390px, no
+  sideways scroll); 0 console errors; `tsc` clean.
+
+### 2026-11-18 — Official Ampera colours everywhere; dark = black + brand purple; official logo
+- Checked against the live site's CSS: the real palette is #8175B3 (theme), #7C70AF, #5E5490,
+  #493F7B, tints #E4E1EE / #BEBAD6, text #303030, on white. The blues, pinks, oranges, teals and
+  yellows that had crept in (seven agent colours, info blue, chart colours, violet/teal tints) were
+  NOT brand colours and are removed. The app now uses only brand purples, black/white/greys and a
+  single red for errors; status badges rely on icon + words.
+- Changed: light theme = the site (white page, purple headings, purple pill for the active menu item,
+  #E4E1EE bands, #7C70AF borders). Dark theme = the site's own accessibility dark mode (pure black,
+  white text) with the purples lifted for contrast (`--accent-primary` #9C91CC from #8175B3).
+  All seven agents share one brand colour (name + initial identify them). Reinforcement Lab's three
+  lines use brand shades plus different dash patterns (`--series-*`).
+- Added: the official Ampera logo (`src/assets/ampera-logo.png`) and favicon (`public/favicon.png`),
+  both from amperadei.com, replacing the placeholder SVG mark/favicon; `theme-color` meta for
+  light/dark; `--heading` token.
+- Fixed: Overview chart's y-axis label no longer overlaps the numbers.
+- Verified live (Chrome): a script scanned every rendered colour on Landing, Sign-in and all dashboard
+  pages for all 4 roles in light, dark and both high-contrast modes — 0 off-brand colours, 0 axe
+  colour-contrast violations, 0 console errors; `npx tsc -b --noEmit` clean.
+
+### 2026-11-18 — Appearance choice: Light / Dark / Match my device (per signed-in person)
+- Added: "Appearance" in the Accessibility panel — Light (default), Dark, or "Match my device"
+  (follows the OS setting live). Dark has its own full token set in `design/tokens.css`
+  (`html[data-theme="dark"]`), and High contrast now has a dark variant (white on black) as well as
+  the existing light one, so the two settings combine.
+- Changed: settings are now saved per signed-in person (`store/uiStore.ts`): signing in applies
+  that person's own saved settings (first sign-in keeps what the browser was using), signing out
+  returns to the browser's general settings. Previously one set of settings per browser.
+- Changed: hard-coded colours replaced by theme tokens so they follow the theme — chart axes,
+  tooltips, gradients and strokes (Overview, Costs, Evaluation, HR Insights, Reinforcement Lab,
+  StatCard sparkline), the user's chat bubble, logo mark, skip link, sidebar avatar, agent names
+  (now `var(--agent-*)`) and `AgentAvatar`.
+- Verified live (Chrome + axe): 0 colour-contrast violations in dark on Landing and every admin
+  page, and in dark + high contrast; per-person save/restore across Emma/Mark/Emma; "Match my
+  device" follows the OS both ways; zero console errors; `npx tsc -b --noEmit` clean.
+
 ### 2026-11-17 — Stage 1: Ampera brand, plain UI, accessibility (no functionality changed)
 - Changed: fonts and colours now match amperadei.com — Montserrat everywhere; purple #7C70AF with
   its deeper shades #5E5490 / #493F7B (used for text and buttons, since #7C70AF alone is only 4.4:1

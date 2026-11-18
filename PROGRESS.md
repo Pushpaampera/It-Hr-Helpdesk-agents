@@ -1,5 +1,14 @@
 # PROGRESS.md
 
+## LATEST (2026-11-18, later): Campus Hire navy + magenta colours, new flat landing page
+Whole app recoloured to match the Ampera Campus Hire portal (navy sidebar/banners, magenta
+actions); landing page redesigned flat and full width (no 3D anywhere); Accessibility button is
+an icon-only wheelchair button. See docs/07_CHANGELOG.md. Not yet committed.
+
+## LATEST (2026-11-18): Light / Dark / Match-my-device added; settings saved per signed-in person
+UI only. See `docs/07_CHANGELOG.md` (2026-11-18). Stage 1 (below) is committed (`eb5c89d`); this
+theme work (appearance choice + official Ampera colours/logo, no non-brand hues) sits on top of it.
+
 ## LATEST (2026-11-17): Stage 1 done — Ampera brand + plain UI + accessibility
 UI only; no backend or feature changes. See `docs/07_CHANGELOG.md` (2026-11-17). Next stage (not
 started): new HR features, to be planned with the operator first.

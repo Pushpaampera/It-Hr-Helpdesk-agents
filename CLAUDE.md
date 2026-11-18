@@ -3,8 +3,8 @@
 ## Project, in one paragraph
 Helpdesk AI Agents is a runnable demo of an enterprise IT/HR helpdesk staffed by a team of
 cooperating AI agents (LangGraph), with real RAG over a Postgres+pgvector knowledge base, a
-FastAPI backend, and a plain, accessible React frontend in Ampera's brand (Montserrat, purple
-#7C70AF family) whose live agent activity is driven only by real backend SSE events (no fake timers). It is being built for a live demo to a non-technical
+FastAPI backend, and a plain, accessible React frontend in Ampera's colours (Montserrat, navy
+#0F1D66 + magenta #9C369A, matching the Ampera Campus Hire portal) whose live agent activity is driven only by real backend SSE events (no fake timers). It is being built for a live demo to a non-technical
 HR audience, so the UI must be instantly understandable and must never fail on stage.
 
 ## Hard constraints (never violate)
@@ -17,7 +17,14 @@ HR audience, so the UI must be instantly understandable and must never fail on s
   migrate; if it fails on permissions, stop with a clear message — never switch databases.
 - No placeholders / no TODOs in critical paths. Every file must be complete.
 - No Tailwind, no UI kit (no MUI/Chakra). Styling is plain CSS (CSS variables + CSS modules).
-  Look and feel follow amperadei.com: Montserrat, #7C70AF / #5E5490 / #493F7B / #E4E1EE on white.
+  Colours match the Ampera Campus Hire portal (sampled from its screenshot): navy #0F1D66 sidebar,
+  #2D3778 active item, #000F5C banners/chat headers, #BCBED0 quiet text on navy; magenta #9C369A
+  buttons/links (#7E2B7C pressed, #F7EDF7 tint); page #FCFCFC, white cards, text #050505/#5B5B5B.
+  Dark theme = black page + white text, same navy sidebar/banners, magenta lifted to #D77BD5.
+  **No other hues**: navy, magenta, black/white/greys, plus one red for errors. All colours come
+  from tokens in `src/design/tokens.css` — never hard-code a hex in a component. Montserrat font;
+  the official Ampera logo PNG. The UI is flat everywhere — no 3D (the operator removed it from the
+  landing page too).
   Motion is light (Framer Motion fade/slide) and must honour the "Stop animations" setting.
 - `LLM_MOCK_MODE=true` must make every agent work deterministically with zero API keys.
 - Accessibility is a hard requirement (WCAG 2.2 AA): keyboard-only use, visible focus, >= 4.5:1

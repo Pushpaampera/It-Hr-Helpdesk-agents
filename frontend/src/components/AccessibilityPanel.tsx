@@ -1,14 +1,22 @@
-/** The "Accessibility" button and its settings panel, available on every page (landing page,
- * sign-in and the dashboard top bar). It replaces the old standalone "Reduce motion" toggle.
+/** The accessibility button — a round magenta button showing only the wheelchair symbol (its
+ * accessible name, "Accessibility settings", comes from aria-label) — and its settings panel,
+ * available on every page (landing page, sign-in and the dashboard top bar).
  *
- * Modelled on the accessibility menu on amperadei.com but kept deliberately small: text size,
- * high contrast, an easy-to-read font, extra spacing and "stop animations". Choices are saved in
- * this browser (see src/store/uiStore.ts). Fully usable by keyboard and screen reader: the button
+ * Modelled on the accessibility menu on amperadei.com but kept deliberately small: appearance
+ * (light / dark / match my device), text size, high contrast, an easy-to-read font, extra spacing
+ * and "stop animations". Choices are saved in this browser, separately for each signed-in person
+ * (see src/store/uiStore.ts). Fully usable by keyboard and screen reader: the button
  * announces whether the panel is open, Esc closes it and returns focus to the button. */
-import { Accessibility, RotateCcw, X } from "lucide-react";
+import { Accessibility, Monitor, Moon, RotateCcw, Sun, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { useUIStore, type TextSize } from "../store/uiStore";
+import { useUIStore, type TextSize, type ThemeChoice } from "../store/uiStore";
+
+const THEMES: { value: ThemeChoice; label: string; Icon: typeof Sun }[] = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "Match my device", Icon: Monitor },
+];
 
 const TEXT_SIZES: { value: TextSize; label: string; sample: string }[] = [
   { value: "normal", label: "Normal", sample: "A" },
@@ -26,8 +34,8 @@ export default function AccessibilityPanel() {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const {
-    textSize, highContrast, readableFont, extraSpacing, reduceMotion,
-    setTextSize, setHighContrast, setReadableFont, setExtraSpacing, setReduceMotion, resetPreferences,
+    theme, textSize, highContrast, readableFont, extraSpacing, reduceMotion,
+    setTheme, setTextSize, setHighContrast, setReadableFont, setExtraSpacing, setReduceMotion, resetPreferences,
   } = useUIStore();
 
   // Move focus into the panel when it opens.
@@ -57,7 +65,7 @@ export default function AccessibilityPanel() {
   }, [open]);
 
   const switches = [
-    { id: "contrast", label: "High contrast", hint: "Black text, strong borders.", checked: highContrast, onChange: setHighContrast },
+    { id: "contrast", label: "High contrast", hint: "Maximum contrast, strong borders (works in light and dark).", checked: highContrast, onChange: setHighContrast },
     { id: "font", label: "Easy-to-read font", hint: "A font designed to be easier with dyslexia.", checked: readableFont, onChange: setReadableFont },
     { id: "spacing", label: "Extra spacing", hint: "More space between lines, letters and words.", checked: extraSpacing, onChange: setExtraSpacing },
     { id: "motion", label: "Stop animations", hint: "Turns off movement and transitions.", checked: reduceMotion, onChange: setReduceMotion },
@@ -72,15 +80,17 @@ export default function AccessibilityPanel() {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-haspopup="dialog"
+        aria-label="Accessibility settings"
+        title="Accessibility settings"
         style={{
-          display: "inline-flex", alignItems: "center", gap: "var(--space-2)", minHeight: 44,
-          padding: "0 var(--space-4)", borderRadius: "var(--radius-md)",
-          border: "1px solid var(--border-strong)", background: "var(--bg-elevated)",
-          color: "var(--text-primary)", fontSize: "0.875rem", fontWeight: 600,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 48, height: 48, padding: 0, borderRadius: "50%",
+          border: "2px solid var(--accent-primary)", background: "var(--accent-primary)",
+          color: "var(--text-on-accent)", boxShadow: "var(--glow-primary)", flexShrink: 0,
         }}
       >
-        <Accessibility size={18} aria-hidden="true" />
-        Accessibility
+        {/* The international wheelchair symbol — the button is named by aria-label. */}
+        <Accessibility size={26} strokeWidth={2.25} aria-hidden="true" />
       </button>
 
       {open && (
@@ -112,6 +122,33 @@ export default function AccessibilityPanel() {
               <X size={20} aria-hidden="true" />
             </button>
           </div>
+
+          <fieldset style={{ border: "none", padding: 0, margin: "0 0 var(--space-4)" }}>
+            <legend style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-2)", padding: 0 }}>Appearance</legend>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
+              {THEMES.map(({ value, label, Icon }) => {
+                const selected = theme === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setTheme(value)}
+                    aria-pressed={selected}
+                    style={{
+                      minHeight: 64, borderRadius: "var(--radius-md)", padding: "var(--space-2)",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                      border: `2px solid ${selected ? "var(--accent-primary)" : "var(--border-subtle)"}`,
+                      background: selected ? "var(--accent-primary)" : "var(--bg-elevated)",
+                      color: selected ? "var(--text-on-accent)" : "var(--text-primary)",
+                    }}
+                  >
+                    <Icon size={20} aria-hidden="true" />
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, textAlign: "center", lineHeight: 1.2 }}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <fieldset style={{ border: "none", padding: 0, margin: "0 0 var(--space-4)" }}>
             <legend style={{ fontSize: "0.875rem", fontWeight: 600, marginBottom: "var(--space-2)", padding: 0 }}>Text size</legend>

@@ -1,55 +1,92 @@
-/* Design tokens — Ampera brand.
-   Colours and font come straight from amperadei.com: Montserrat for everything, the signature
-   purple #7C70AF with its deeper shades (#5E5490, #493F7B used on the site's buttons) and the
-   soft lavender tint #E4E1EE, on white with #303030 text.
+/* Design tokens — Ampera colours, matched to the Ampera Campus Hire portal (sampled from its
+   screenshot pixel by pixel) so every Ampera product looks like one family.
 
-   Accessibility notes (checked against WCAG 2.2 AA):
-   - #7C70AF itself is only 4.4:1 on white, so it is used for borders, tints and chart fills.
-     Anything that carries text or must be a clear button uses #5E5490 (6.7:1) or darker.
-   - Every text colour below is >= 4.5:1 on both white and --bg.
-   - Agent colours in src/design/agents.ts mirror the --agent-* values here; update both together. */
+   THE COLOURS IN THIS APP:
+   - Navy   #0F1D66 sidebar · #2D3778 active menu item · #000F5C banners and chat headers
+            · #BCBED0 quiet text on navy
+   - Magenta #9C369A buttons, links, the user's chat bubble · #7E2B7C pressed/hover
+            · #F7EDF7 soft magenta tint for icon chips and avatars
+   - #FCFCFC page, #FFFFFF cards, #050505 headings and text, #5B5B5B secondary text
+   - Plus one red (--danger) for errors and destructive actions. No other hues.
+   Use these tokens — never hard-code a colour in a component.
+
+   Accessibility (WCAG 2.2 AA): magenta #9C369A is 6.2:1 on white, white on navy is 16:1, quiet
+   navy text #BCBED0 is 8.2:1 on #0F1D66. Dark mode keeps the navy sidebar/banners, uses a
+   black page, and lifts the magenta to #D77BD5 so magenta text is >= 4.5:1 on black. Agent
+   names all share one colour; who is speaking is shown by name and initial, never colour alone. */
 :root {
-  /* Brand palette */
-  --brand: #7c70af;
-  --brand-deep: #5e5490;
-  --brand-darkest: #493f7b;
-  --brand-tint: #e4e1ee;
-  --brand-soft: #f3f1f9;
+  /* Magenta — actions */
+  --brand: #9c369a;
+  --brand-deep: #7e2b7c;
+  --brand-darkest: #5e1f5c;
+  --brand-tint: #f7edf7;
+  --brand-soft: #fbf6fb;
+
+  /* Navy — structure (sidebar, banners, chat headers) */
+  --navy: #0f1d66;
+  --navy-deep: #000f5c;
+  --navy-active: #2d3778;
+  --navy-hover: #1c2a73;
+  --navy-plum: #2f1b6f;
+  --on-navy: #ffffff;
+  --on-navy-muted: #bcbed0;
+
+  /* Sidebar */
+  --sidebar-bg: var(--navy);
+  --sidebar-text: var(--on-navy-muted);
+  --sidebar-text-strong: var(--on-navy);
+  --sidebar-hover-bg: var(--navy-hover);
+  --sidebar-active-bg: var(--navy-active);
+  --sidebar-active-text: var(--on-navy);
+  --sidebar-border: var(--navy-active);
+
+  /* Banner (Overview welcome, landing call-to-action, chat headers) */
+  --banner-bg: radial-gradient(120% 160% at 100% 0%, #2f1b6f 0%, rgba(47, 27, 111, 0) 55%), #000f5c;
+  --banner-text: #ffffff;
+  --banner-text-muted: #b8bbcd;
 
   /* Surfaces */
-  --bg: #f6f5fa;
+  --bg: #fcfcfc;
   --bg-elevated: #ffffff;
   --bg-panel: #ffffff;
   --bg-panel-strong: #ffffff;
-  --border-subtle: #ddd9ea;
-  --border-strong: #8d84b6;
+  --page-haze: radial-gradient(60% 50% at 100% 100%, rgba(156, 54, 154, 0.06), transparent 70%),
+    radial-gradient(50% 40% at 0% 100%, rgba(15, 29, 102, 0.04), transparent 70%);
+  --border-subtle: #e6e6ec;
+  --border-strong: #8a8a99; /* 3.4:1 on white — form controls stay visible */
 
   /* Text */
-  --text-primary: #303030;
-  --text-secondary: #4a4560;
-  --text-muted: #5f5a75;
+  --text-primary: #050505;
+  --text-secondary: #3d3d3d;
+  --text-muted: #5b5b5b;
   --text-on-accent: #ffffff;
+  --heading: #050505;
 
-  /* Primary accent — buttons, links, active nav, focus ring */
-  --accent-primary: #5e5490;
-  --accent-secondary: #7c70af;
-  --focus-ring: #493f7b;
+  /* Accent — buttons, links, selected states */
+  --accent-primary: #9c369a;
+  --accent-secondary: #2d3778;
+  --focus-ring: #0f1d66;
 
-  /* Agent identity colours — muted, all >= 4.5:1 on white so names can be written in them */
-  --agent-supervisor: #5e5490; /* Sage */
-  --agent-it_support: #1d6fa5; /* Iris */
-  --agent-hr_policy: #b0306f; /* Hana */
-  --agent-action: #b45309; /* Atlas */
-  --agent-ticketing: #0f766e; /* Tess */
-  --agent-feedback: #946200; /* Finn */
-  --agent-guard: #be3a4a; /* Gus */
-  --agent-knowledge: #1d6fa5;
+  /* Agents — one colour for all seven (name + initial identify them) */
+  --agent-supervisor: #9c369a; /* Sage */
+  --agent-it_support: #9c369a; /* Iris */
+  --agent-hr_policy: #9c369a; /* Hana */
+  --agent-action: #9c369a; /* Atlas */
+  --agent-ticketing: #9c369a; /* Tess */
+  --agent-feedback: #9c369a; /* Finn */
+  --agent-guard: #9c369a; /* Gus */
+  --agent-knowledge: #9c369a;
 
-  /* Semantic — also readable as text on white */
-  --success: #15803d;
-  --warning: #b45309;
+  /* Chart series — navy, magenta, grey (lines also differ by dash pattern) */
+  --series-1: #0f1d66;
+  --series-2: #9c369a;
+  --series-3: #5b5b5b;
+
+  /* Status — always with an icon + words, never colour alone; one red for errors only */
+  --success: #2d3778;
+  --warning: #3d3d3d;
   --danger: #b91c1c;
-  --info: #1d6fa5;
+  --info: #9c369a;
 
   /* Typography — Montserrat, as on amperadei.com */
   --font-heading: "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -72,11 +109,11 @@
   --radius-lg: 14px;
   --radius-full: 999px;
 
-  /* Shadows — flat and quiet */
-  --shadow-panel: 0 1px 3px rgba(73, 63, 123, 0.1);
-  --shadow-panel-lift: 0 6px 18px rgba(73, 63, 123, 0.16);
-  --glow-primary: 0 6px 18px rgba(73, 63, 123, 0.16);
-  --glow-steel: 0 6px 18px rgba(73, 63, 123, 0.16);
+  /* Shadows — soft, like the Campus Hire cards */
+  --shadow-panel: 0 1px 2px rgba(15, 29, 102, 0.05), 0 4px 14px rgba(15, 29, 102, 0.05);
+  --shadow-panel-lift: 0 10px 28px rgba(15, 29, 102, 0.12);
+  --glow-primary: 0 8px 22px rgba(156, 54, 154, 0.22);
+  --glow-steel: 0 10px 28px rgba(15, 29, 102, 0.12);
 
   /* Motion */
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
@@ -104,9 +141,68 @@ html[data-text-size="xlarge"] {
   font-size: 137.5%; /* 22px */
 }
 
-/* High contrast: black on white, solid dark borders, deepest brand purple for actions. */
-html[data-contrast="high"] {
+/* Dark theme (Accessibility panel → Appearance → Dark, or "Match my device" on a dark system).
+   Black page, white text, the same navy sidebar and banners, and magenta lifted to #D77BD5 so it
+   reads on black (with black text on magenta buttons). */
+html[data-theme="dark"] {
+  --brand: #d77bd5;
+  --brand-deep: #e3a0e1;
+  --brand-darkest: #f0c8ef;
+  --brand-tint: #2a1530;
+  --brand-soft: #1a0f1d;
+
+  --sidebar-bg: #0a1450;
+  --sidebar-hover-bg: #16236a;
+  --banner-bg: radial-gradient(120% 160% at 100% 0%, #2f1b6f 0%, rgba(47, 27, 111, 0) 55%), #000a40;
+
+  --bg: #000000;
+  --bg-elevated: #121212;
+  --bg-panel: #121212;
+  --bg-panel-strong: #1a1a1a;
+  --page-haze: radial-gradient(60% 50% at 100% 100%, rgba(156, 54, 154, 0.12), transparent 70%);
+  --border-subtle: #2e2e3a;
+  --border-strong: #8a8aa0;
+
+  --text-primary: #ffffff;
+  --text-secondary: #e6e6ec;
+  --text-muted: #bcbed0;
+  --text-on-accent: #000000;
+  --heading: #ffffff;
+
+  --accent-primary: #d77bd5;
+  --accent-secondary: #8e98d6;
+  --focus-ring: #ffffff;
+
+  --agent-supervisor: #d77bd5;
+  --agent-it_support: #d77bd5;
+  --agent-hr_policy: #d77bd5;
+  --agent-action: #d77bd5;
+  --agent-ticketing: #d77bd5;
+  --agent-feedback: #d77bd5;
+  --agent-guard: #d77bd5;
+  --agent-knowledge: #d77bd5;
+
+  --series-1: #ffffff;
+  --series-2: #d77bd5;
+  --series-3: #a0a0a0;
+
+  --success: #bcbed0;
+  --warning: #e6e6ec;
+  --danger: #ff8a8a;
+  --info: #d77bd5;
+
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --shadow-panel-lift: 0 6px 18px rgba(0, 0, 0, 0.7);
+  --glow-primary: 0 6px 18px rgba(0, 0, 0, 0.7);
+  --glow-steel: 0 6px 18px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}
+
+/* High contrast (light): black on white, solid dark borders, deep magenta actions, navy kept. */
+html[data-contrast="high"]:not([data-theme="dark"]) {
   --bg: #ffffff;
+  --page-haze: none;
   --brand-tint: #ffffff;
   --brand-soft: #ffffff;
   --border-subtle: #303030;
@@ -114,20 +210,75 @@ html[data-contrast="high"] {
   --text-primary: #000000;
   --text-secondary: #000000;
   --text-muted: #1f1f1f;
-  --accent-primary: #3a3163;
-  --accent-secondary: #3a3163;
+  --heading: #000000;
+  --accent-primary: #6e1f6c;
+  --accent-secondary: #000f5c;
   --focus-ring: #000000;
-  --agent-supervisor: #3a3163;
-  --agent-it_support: #0b4f7c;
-  --agent-hr_policy: #8a1f55;
-  --agent-action: #8a3b00;
-  --agent-ticketing: #0a5a54;
-  --agent-feedback: #6b4700;
-  --agent-guard: #8f1d2c;
-  --success: #0b5c27;
-  --warning: #8a3b00;
+  --sidebar-bg: #000f5c;
+  --sidebar-text: #ffffff;
+  --sidebar-active-bg: #ffffff;
+  --sidebar-active-text: #000f5c;
+  --banner-bg: #000f5c;
+  --banner-text-muted: #ffffff;
+  --agent-supervisor: #6e1f6c;
+  --agent-it_support: #6e1f6c;
+  --agent-hr_policy: #6e1f6c;
+  --agent-action: #6e1f6c;
+  --agent-ticketing: #6e1f6c;
+  --agent-feedback: #6e1f6c;
+  --agent-guard: #6e1f6c;
+  --series-1: #000000;
+  --series-2: #6e1f6c;
+  --series-3: #4a4a4a;
+  --success: #000f5c;
+  --warning: #000000;
   --danger: #8f1111;
-  --info: #0b4f7c;
+  --info: #6e1f6c;
+  --shadow-panel: none;
+  --shadow-panel-lift: none;
+}
+
+/* High contrast (dark): white on pure black, white borders, bright accents. */
+html[data-theme="dark"][data-contrast="high"] {
+  --bg: #000000;
+  --page-haze: none;
+  --bg-elevated: #000000;
+  --bg-panel: #000000;
+  --bg-panel-strong: #000000;
+  --brand-tint: #000000;
+  --brand-soft: #000000;
+  --border-subtle: #ffffff;
+  --border-strong: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #f0f0f0;
+  --text-on-accent: #000000;
+  --heading: #ffffff;
+  --accent-primary: #f0c8ef;
+  --accent-secondary: #f0c8ef;
+  --focus-ring: #ffffff;
+  --sidebar-bg: #000000;
+  --sidebar-text: #ffffff;
+  --sidebar-hover-bg: #1a1a1a;
+  --sidebar-active-bg: #ffffff;
+  --sidebar-active-text: #000000;
+  --sidebar-border: #ffffff;
+  --banner-bg: #000000;
+  --banner-text-muted: #ffffff;
+  --agent-supervisor: #f0c8ef;
+  --agent-it_support: #f0c8ef;
+  --agent-hr_policy: #f0c8ef;
+  --agent-action: #f0c8ef;
+  --agent-ticketing: #f0c8ef;
+  --agent-feedback: #f0c8ef;
+  --agent-guard: #f0c8ef;
+  --series-1: #ffffff;
+  --series-2: #f0c8ef;
+  --series-3: #a0a0a0;
+  --success: #ffffff;
+  --warning: #ffffff;
+  --danger: #ff8a8a;
+  --info: #f0c8ef;
   --shadow-panel: none;
   --shadow-panel-lift: none;
 }

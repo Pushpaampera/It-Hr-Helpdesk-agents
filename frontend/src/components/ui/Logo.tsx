@@ -1,39 +1,25 @@
-/** The "Ampera HelpDesk" logo: a small mark (three nodes around a core — the helpers working
- * together) in Ampera's purples, the "Ampera" wordmark in Montserrat, and a "HelpDesk" pill.
- * Pure SVG/CSS, no image file. */
+/** The "Ampera HelpDesk" logo: Ampera's official logo (the same artwork as on amperadei.com,
+ * src/assets/ampera-logo.png) followed by a "HelpDesk" pill. `onNavy` styles the pill for the navy
+ * sidebar (white text on the lighter navy); otherwise it is magenta on the soft magenta tint. */
 import { Link } from "react-router-dom";
 
+import amperaLogo from "../../assets/ampera-logo.png";
 import styles from "./Logo.module.css";
 
 type LogoProps = {
   size?: number;
   to?: string | null;
   showPill?: boolean;
+  onNavy?: boolean;
 };
 
-export function LogoMark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
-      <circle cx="16" cy="16" r="6.5" fill="#5e5490" />
-      <circle cx="16" cy="4.5" r="3.2" fill="#7c70af" />
-      <circle cx="27" cy="22.5" r="3.2" fill="#7c70af" />
-      <circle cx="5" cy="22.5" r="3.2" fill="#7c70af" />
-      <path d="M16 8V13.5" stroke="#493f7b" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M21.5 19.5L18.3 16.6" stroke="#493f7b" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M10.5 19.5L13.7 16.6" stroke="#493f7b" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export default function Logo({ size = 28, to = "/", showPill = true }: LogoProps) {
+export default function Logo({ size = 28, to = "/", showPill = true, onNavy = false }: LogoProps) {
+  const height = Math.round(size * 1.15);
   const content = (
     <>
-      <LogoMark size={size} />
-      <span className={styles.wordmark} style={{ fontSize: `${(size * 0.72) / 16}rem` }}>
-        Ampera
-      </span>
+      <img src={amperaLogo} alt="Ampera" height={height} width={Math.round(height * (810 / 226))} style={{ display: "block", height, width: "auto" }} />
       {showPill && (
-        <span className={styles.pill} style={{ fontSize: `${Math.max(size * 0.42, 12) / 16}rem`, padding: `${size * 0.1}px ${size * 0.26}px` }}>
+        <span className={`${styles.pill} ${onNavy ? styles.pillOnNavy : ""}`} style={{ fontSize: `${Math.max(size * 0.42, 12) / 16}rem`, padding: `${size * 0.1}px ${size * 0.26}px` }}>
           HelpDesk
         </span>
       )}

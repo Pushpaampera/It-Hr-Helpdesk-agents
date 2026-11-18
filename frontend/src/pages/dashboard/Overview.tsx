@@ -100,7 +100,7 @@ export default function Overview() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                     width: 38, height: 38, borderRadius: "var(--radius-md)",
-                    background: "rgba(139, 92, 246, 0.12)", color: "var(--accent-primary)",
+                    background: "var(--brand-tint)", color: "var(--accent-primary)",
                   }}
                 >
                   <Icon size={18} />
@@ -193,39 +193,37 @@ function StaffOverview() {
           <p style={{ fontSize: "0.8125rem" }}>No run activity yet.</p>
         ) : (
           <div style={{ height: 220 }}>
-            {/* recharts needs concrete color strings, not CSS var() references, for SVG gradient
-                stops to render reliably — #5e5490/#4a4560 mirror tokens.css's --accent-primary/
-                --text-secondary, same duplication tradeoff as AgentOrb's AGENT_COLORS. */}
+            {/* Chart colours use the theme variables (tokens.css) so they follow light/dark; gradient stops set them through `style`, which SVG resolves reliably. */}
             <ChartTable caption="Questions asked per day, last 30 days" columns={["Day", "Questions asked"]} rows={series.map((p) => [p.day, p.total_runs])} />
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} accessibilityLayer>
                 <defs>
                   <linearGradient id="runsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c70af" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#7c70af" stopOpacity={0} />
+                    <stop offset="0%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0.5} />
+                    <stop offset="100%" style={{ stopColor: "var(--accent-secondary)" }} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="day"
                   tickFormatter={(d: string) => d.slice(5)}
-                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                  tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: "#4a4560", fontSize: "0.8125rem" }}
+                  tick={{ fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                   axisLine={false}
                   tickLine={false}
-                  width={32}
+                  width={52}
                   allowDecimals={false}
-                  label={{ value: "Questions", angle: -90, position: "insideLeft", fill: "#4a4560", fontSize: "0.8125rem" }}
+                  label={{ value: "Questions", angle: -90, position: "insideLeft", fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#ffffff", border: "1px solid rgba(124,112,175,0.25)", borderRadius: 8, fontSize: "0.8125rem" }}
-                  labelStyle={{ color: "#4a4560" }}
+                  contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }}
+                  labelStyle={{ color: "var(--text-secondary)" }}
                 />
-                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "#4a4560" }} />
-                <Area type="monotone" dataKey="total_runs" name="Questions asked" stroke="#5e5490" fill="url(#runsGradient)" strokeWidth={2} />
+                <Legend wrapperStyle={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }} />
+                <Area type="monotone" dataKey="total_runs" name="Questions asked" stroke="var(--accent-primary)" fill="url(#runsGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -330,8 +328,8 @@ function EmployeeOverview() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                     width: 28, height: 28, borderRadius: "50%",
-                    background: item.kind === "ticket" ? "rgba(45, 212, 191, 0.14)" : "rgba(139, 92, 246, 0.14)",
-                    color: item.kind === "ticket" ? "#0d9488" : "var(--accent-primary)",
+                    background: "var(--brand-tint)",
+                    color: "var(--accent-primary)",
                   }}
                 >
                   {item.kind === "ticket" ? <LifeBuoy size={13} /> : <MessageCircle size={13} />}

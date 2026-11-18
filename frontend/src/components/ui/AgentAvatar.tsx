@@ -22,7 +22,7 @@ export default function AgentAvatar({ agent, size = 40, label, style }: AgentAva
       style={{
         display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         width: size, height: size, borderRadius: "50%",
-        background: identity.color, color: "#ffffff",
+        background: `var(--agent-${agent})`, color: "var(--text-on-accent)",
         fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: size * 0.42, lineHeight: 1,
         ...style,
       }}

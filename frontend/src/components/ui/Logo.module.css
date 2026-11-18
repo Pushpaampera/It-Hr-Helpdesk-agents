@@ -6,21 +6,19 @@
   min-height: 44px;
 }
 
-.wordmark {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--brand-darkest);
-  line-height: 1;
-}
-
 .pill {
   font-family: var(--font-body);
   font-weight: 600;
   line-height: 1;
-  color: var(--brand-darkest);
+  color: var(--accent-primary);
   background: var(--brand-tint);
-  border: 1px solid var(--brand);
+  border: 1px solid var(--accent-primary);
   border-radius: var(--radius-full);
   white-space: nowrap;
+}
+
+.pillOnNavy {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  border-color: var(--sidebar-text);
 }
