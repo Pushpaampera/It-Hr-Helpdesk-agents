@@ -15,6 +15,7 @@ from langgraph.errors import NodeInterrupt
 from langgraph.graph import END, StateGraph
 
 from app.agents import action as action_agent
+from app.agents import general_chat
 from app.agents import guard as guard_agent
 from app.agents import hr_policy as hr_policy_agent
 from app.agents import it_support as it_support_agent
@@ -26,15 +27,6 @@ from app.mock_apis import approvals as approvals_api
 from app import observability
 
 _CHECKPOINTER = MemorySaver()
-
-# A greeting-only message ("hi", "hello there") routes to OTHER the same as any other
-# low-confidence message, but shouldn't get the same "I'm not totally sure how to help"
-# clarifying template — that reads as broken/unresponsive for something as simple as "hello".
-GREETING_RE = re.compile(
-    r"^\s*(hi|hi there|hiya|hey|hey there|hello|hello there|howdy|yo|good morning|good afternoon|"
-    r"good evening|greetings)[\s!.,]*$",
-    re.IGNORECASE,
-)
 
 # Keyword classifiers for the "did this solve your problem?" / "want a ticket?" confirmation
 # gates. Deliberately simple regex, not an LLM call — LLM_MOCK_MODE must stay deterministic and
@@ -53,6 +45,15 @@ def _is_affirmative(text: str) -> bool:
 
 def _is_negative(text: str) -> bool:
     return bool(NEGATIVE_RE.search(text))
+
+
+# Follow-up replies after a confirmation gate. The person has already seen the full answer (it
+# was part of the "Did this solve your problem?" prompt), so the final turn must close the loop
+# instead of repeating that answer back to them.
+SOLVED_REPLY = "Great, I'm glad that solved it! Is there anything else I can help you with?"
+DECLINED_TICKET_REPLY = (
+    "Okay, I won't open a ticket. If you change your mind or need help with anything else, just ask."
+)
 
 
 class AgentState(TypedDict):
@@ -99,6 +100,14 @@ def build_graph(ctx: RunContext):
 
     async def node_supervisor(state: AgentState) -> dict:
         await ctx.sink.emit("supervisor", "working")
+        # Small talk ("hi, how can you help me?", "who are you?", "thanks") never needs routing —
+        # answer it directly instead of letting it fall through to a generic OTHER reply.
+        if general_chat.small_talk_kind(state["query"]):
+            await ctx.sink.emit(
+                "supervisor", "completed", action="route", caption="Sage is answering this one directly.",
+                detail={"route": "OTHER", "confidence": 1.0, "intent": "small talk"},
+            )
+            return {"route": "OTHER", "confidence": 1.0, "needs_action": False, "intent": "small talk"}
         result = await supervisor_agent.route(state["query"])
         await ctx.sink.emit(
             "supervisor", "completed", action="route",
@@ -115,19 +124,20 @@ def build_graph(ctx: RunContext):
         }
 
     async def node_other_reply(state: AgentState) -> dict:
-        if GREETING_RE.match(state["query"]):
-            answer = (
-                f"Hey {ctx.user['name'].split()[0]}! I'm your IT/HR assistant — ask me about "
-                "things like a VPN error, your leave balance, or resetting a password, and "
-                "I'll route it to the right specialist."
-            )
-        else:
-            answer = (
-                f"I'm not totally sure how to help with \"{state['query']}\". Could you tell me a "
-                "bit more — is this an IT issue (laptop, VPN, password, email) or an HR question "
-                "(leave, payroll, benefits)?"
-            )
-        return {"answer": answer, "unresolved": False}
+        first_name = (ctx.user.get("name") or "").split(" ")[0]
+        kind = general_chat.small_talk_kind(state["query"])
+        if kind:
+            return {"answer": general_chat.small_talk_reply(kind, first_name), "unresolved": False}
+
+        # A general question that isn't IT or HR: answer it like a normal assistant would. Unsafe
+        # or private-data requests were already stopped by the Guard before routing.
+        await ctx.sink.emit("supervisor", "working", caption="Sage is answering a general question.")
+        result = await general_chat.general_answer(state["query"], first_name)
+        await ctx.sink.emit(
+            "supervisor", "completed", action="answer", model=result.model, latency_ms=result.latency_ms,
+            tokens_in=result.tokens_in, tokens_out=result.tokens_out,
+        )
+        return {"answer": result.text.strip(), "unresolved": False}
 
     async def node_it_support(state: AgentState) -> dict:
         await ctx.sink.emit("it_support", "retrieving", action="hybrid_search")
@@ -200,7 +210,7 @@ def build_graph(ctx: RunContext):
             raise NodeInterrupt("awaiting_user_confirmation")
 
         if _is_affirmative(reply):
-            return {"user_reply": None, "unresolved": False}
+            return {"user_reply": None, "unresolved": False, "answer": SOLVED_REPLY, "sources": []}
         if _is_negative(reply):
             return {"user_reply": None, "unresolved": True}
 
@@ -225,7 +235,8 @@ def build_graph(ctx: RunContext):
         if _is_affirmative(reply):
             return {"user_reply": None, "offered_ticket": True}
         if _is_negative(reply):
-            return {"user_reply": None, "offered_ticket": False, "unresolved": False}
+            return {"user_reply": None, "offered_ticket": False, "unresolved": False,
+                    "answer": DECLINED_TICKET_REPLY, "sources": []}
 
         await ctx.sink.emit_confirmation_required(
             "Sorry — would you like me to open a support ticket? (yes/no)",
@@ -245,8 +256,13 @@ def build_graph(ctx: RunContext):
         }
         result = ticketing_agent.create_ticket(ctx.user["id"], ctx.run_id, state.get("route", "OTHER"), state["query"], context)
         await ctx.sink.emit("ticketing", "completed", action="create_ticket", detail={"ticket_number": result["number"]})
-        answer = state.get("answer") or "I couldn't fully resolve this myself."
-        answer += f"\n\nI've created ticket {result['number']} so a human can take it from here."
+        # Only reached after the person said "yes" to the ticket offer, so the attempted answer
+        # was already shown — just confirm the ticket rather than repeating it.
+        team = {"IT": "IT", "HR": "HR"}.get(state.get("route") or "", "support")
+        answer = (
+            f"Thanks for letting me know. I've created ticket **{result['number']}** so someone from "
+            f"the {team} team can take it from here. You can follow its progress on the Tickets page."
+        )
         return {"answer": answer, "ticket_number": result["number"]}
 
     async def node_feedback(state: AgentState) -> dict:

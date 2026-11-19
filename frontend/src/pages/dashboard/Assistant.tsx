@@ -8,7 +8,7 @@
  * Accessibility: a hidden live region announces "working on it" and then the finished answer
  * once (not token by token), the message box has a label, and errors are announced.
  */
-import { AlertTriangle, BookOpen, Clock, Send, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BookOpen, Clock, Mic, Send, ShieldAlert, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { useSearchParams } from "react-router-dom";
@@ -28,6 +28,8 @@ import InfoBanner from "../../components/ui/InfoBanner";
 import Panel from "../../components/ui/Panel";
 import { AGENT_ORDER, AGENTS, type AgentKey } from "../../design/agents";
 import AgentAvatar from "../../components/ui/AgentAvatar";
+import { SILENCE_TIMEOUT_MS, useVoiceInput } from "../../hooks/useVoiceInput";
+import { useSpeechOutput } from "../../hooks/useSpeechOutput";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
 
@@ -82,6 +84,12 @@ export default function Assistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [input, setInput] = useState(() => searchParams.get("q") ?? "");
+  // Voice: speech is typed into the box live but only sent on Enter/Send. Sending turns the mic
+  // off, and the mic and read-aloud never run at the same time, so the mic can never pick up the
+  // assistant's own voice and turn it into a new question.
+  const voice = useVoiceInput({ onText: setInput });
+  const readAloud = useSpeechOutput({ onStart: voice.stop });
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeAgent, setActiveAgent] = useState<string | null>(null);
   const [pulse, setPulse] = useState<PulseState | null>(null);
@@ -128,6 +136,8 @@ export default function Assistant() {
     const query = (override ?? input).trim();
     if (!query || isStreaming) return;
     setInput("");
+    voice.stop(); // the message is on its way; the person clicks the mic again for the next one
+    readAloud.cancel(); // a new question interrupts any answer being read out
     setError(null);
     setCaptions([]);
     setPulse(null);
@@ -209,10 +219,12 @@ export default function Assistant() {
                     : msg,
                 ),
               );
+              readAloud.speak(event.prompt);
               break;
             }
 
             case "final":
+              readAloud.speak(event.answer);
               setApproval(null);
               setPendingGate(null);
               setActiveAgent(null);
@@ -255,9 +267,36 @@ export default function Assistant() {
       setMessages((m) => m.map((msg) => (msg.id === assistantMsgId ? { ...msg, pending: false } : msg)));
     } finally {
       setIsStreaming(false);
+      // The backend's last event is Finn "started" (waiting for feedback), which would otherwise
+      // leave the status line stuck on "Working on it" after the turn has actually finished.
+      setActiveAgent(null);
       setRefreshKey((k) => k + 1);
     }
   }
+
+  function toggleMic() {
+    if (!voice.supported) {
+      setVoiceNote("Voice typing isn't available in this browser. Try Chrome or Edge, or type your message.");
+      return;
+    }
+    setVoiceNote(null);
+    if (voice.listening) voice.stop();
+    else {
+      readAloud.cancel(); // stop any answer being read out before listening
+      voice.start(input);
+    }
+  }
+
+  const silenceSeconds = SILENCE_TIMEOUT_MS / 1000;
+  const voiceStatus = voice.error
+    ? voice.error
+    : voiceNote
+      ? voiceNote
+      : voice.listening
+        ? `Listening. Press Enter to send. The mic turns off when you send, or after ${silenceSeconds} seconds of silence.`
+        : voice.timedOut
+          ? `Mic turned off after ${silenceSeconds} seconds of silence.`
+          : null;
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -325,15 +364,51 @@ export default function Assistant() {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: "var(--space-3)", marginTop: "var(--space-4)", alignItems: "flex-end" }}>
+          {voiceStatus && (
+            <div
+              role="status"
+              className={voice.listening ? "voice-status voice-status--live" : "voice-status"}
+              style={{ color: voice.error ? "var(--danger)" : undefined }}
+            >
+              {voice.listening && <span className="voice-status__dot" aria-hidden="true" />}
+              {voiceStatus}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)", alignItems: "flex-end" }}>
+            <button
+              type="button"
+              className={`voice-btn${voice.listening ? " voice-btn--on" : ""}${voice.supported ? "" : " voice-btn--unsupported"}`}
+              onClick={toggleMic}
+              aria-pressed={voice.listening}
+              aria-label={voice.listening ? "Stop voice input" : "Start voice input"}
+              title={voice.supported ? (voice.listening ? "Stop voice input" : "Speak your message") : "Voice typing needs Chrome or Edge"}
+            >
+              <Mic size={20} aria-hidden="true" />
+            </button>
+            {readAloud.supported && (
+              <button
+                type="button"
+                className={`voice-btn${readAloud.enabled ? " voice-btn--on" : ""}`}
+                onClick={() => readAloud.setEnabled(!readAloud.enabled)}
+                aria-pressed={readAloud.enabled}
+                aria-label="Read answers aloud"
+                title={readAloud.enabled ? (readAloud.speaking ? "Stop reading and turn off read-aloud" : "Turn off read-aloud") : "Read answers aloud"}
+              >
+                {readAloud.enabled ? <Volume2 size={20} aria-hidden="true" /> : <VolumeX size={20} aria-hidden="true" />}
+              </button>
+            )}
             <textarea
               aria-label="Your message to the assistant"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                if (voice.listening) voice.syncText(e.target.value);
+              }}
               onKeyDown={handleKeyDown}
-              placeholder={isStreaming ? "Waiting for a response..." : "Type a message..."}
+              placeholder={isStreaming ? "Waiting for a response..." : voice.listening ? "Listening… start speaking" : "Type or speak a message..."}
               disabled={isStreaming}
-              rows={1}
+              rows={voice.listening || input.length > 80 ? 3 : 1}
               style={{
                 flex: 1, resize: "none", fontFamily: "var(--font-body)", fontSize: "0.875rem",
                 padding: "var(--space-3) var(--space-4)", borderRadius: "var(--radius-md)",
