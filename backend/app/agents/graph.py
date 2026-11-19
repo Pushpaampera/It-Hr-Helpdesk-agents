@@ -160,9 +160,9 @@ def build_graph(ctx: RunContext):
 
     async def _maybe_clarify(agent: str, state: AgentState) -> dict | None:
         """Vague question ("I have an issue with my laptop"): ask what's happening instead of
-        guessing which article fits. Skipped for an action fallback and for a run that is
-        already answering the reply to a clarifying question."""
-        if state.get("clarified") or state.get("action_fallback"):
+        guessing which article fits. Skipped for a run that is already answering the reply to
+        a clarifying question."""
+        if state.get("clarified"):
             return None
         subject = clarify.find_vague_subject(state["query"])
         if subject is None:
@@ -355,7 +355,10 @@ def build_graph(ctx: RunContext):
     graph.add_conditional_edges("guard", lambda s: "blocked_reply" if s.get("guard_blocked") else "supervisor")
     graph.add_edge("blocked_reply", "feedback")
     def _after_supervisor(s: AgentState) -> str:
-        if s.get("route") in ("IT", "HR") and s.get("needs_action"):
+        # A vague "I have an issue with my laptop" goes to the knowledge agent to be clarified,
+        # even if the supervisor read it as a request for Atlas: there's nothing to DO yet.
+        vague = not s.get("clarified") and clarify.find_vague_subject(s["query"]) is not None
+        if s.get("route") in ("IT", "HR") and s.get("needs_action") and not vague:
             return "action"
         return {"IT": "it_support", "HR": "hr_policy"}.get(s.get("route"), "other_reply")
 

@@ -128,6 +128,10 @@ async def call_gemini_with_groq_fallback(system: str, user: str, gemini_model: s
         return LLMResult(text=mock_text, tokens_in=len(user.split()), tokens_out=len(mock_text.split()),
                           latency_ms=400, model=f"{gemini_model} (mock)")
     try:
+        if not settings.GEMINI_API_KEY:
+            # No Gemini key: go straight to Groq instead of spending ~2s on retries that
+            # can't succeed.
+            raise ProviderError("GEMINI_API_KEY not set")
         return await asyncio.to_thread(_gemini_call_sync, system, user, gemini_model)
     except ProviderError:
         try:

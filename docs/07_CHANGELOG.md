@@ -9,6 +9,12 @@
 - The run ends with outcome `needs_clarification`; `routers/chat.py` then answers the next message
   as "<original question>: <reply>" (and never asks twice in a row), unless the reply names a
   different subject, which is treated as a new question.
+- Vague questions skip Atlas even if the supervisor reads them as a request ("i want a leave" is
+  still a request: "want"/"need" make a message specific).
+- Real-LLM mode: `.env` now has `LLM_MOCK_MODE=false` and `GROQ_SUPERVISOR_MODEL=openai/gpt-oss-20b`
+  (`llama-3.1-8b-instant` returns 404 for this Groq key). Without `GEMINI_API_KEY`, answers go
+  straight to Groq instead of retrying Gemini first. The answer prompt no longer leaks "the
+  excerpts you provided". Tests force mock mode in `tests/conftest.py`.
 
 ### 2026-11-19 — Requests get a clean reply; new questions aren't mistaken for yes/no
 - Changed (`agents/graph.py`): requests to DO something (leave, password reset, unlock, access)

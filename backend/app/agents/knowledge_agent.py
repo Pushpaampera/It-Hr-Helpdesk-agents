@@ -138,10 +138,12 @@ async def answer_from_knowledge(
     context_block = "\n\n---\n\n".join(c["text"] for c in chunks[:3])
     user_prompt = (
         f"Employee question: {query}\n\n"
-        f"Relevant knowledge base excerpts:\n{context_block}\n\n"
-        "Answer the employee's question directly and concisely using only the excerpts above. "
-        "Cite which excerpt(s) you used by article title. If the excerpts don't fully answer the "
-        "question, say what you do know and note what's missing."
+        f"Company help articles (internal reference, the employee has not seen these):\n{context_block}\n\n"
+        "Answer the employee's question directly and concisely using only these articles, speaking "
+        "to the employee. Name the article(s) you used by title. Never say 'excerpts', 'the "
+        "provided text' or 'you provided'. Use only articles that fit the question; ignore "
+        "unrelated ones rather than describing them. If none of them cover the problem, say so in "
+        "one sentence and suggest the employee reply 'no' so a person from the team can help."
     )
     result = await call_gemini_with_groq_fallback(system_prompt, user_prompt, gemini_model, groq_fallback_model, mock_text)
 

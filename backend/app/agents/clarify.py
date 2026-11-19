@@ -110,7 +110,7 @@ i i'm im me we us you he she they there here
 is am are was were be been being do does did have has had having get gets got getting
 with about regarding re on in of for to from at by and or but so
 issue issues problem problems trouble troubles question questions query concern doubt doubts
-help helping assist assistance support need needs want wants
+help helping assist assistance support
 not working work works broken wrong bad faulty error errors weird strange odd
 something anything thing things stuff
 facing experiencing seeing having
@@ -148,7 +148,15 @@ def subjects_mentioned(text: str) -> set[str]:
     return {s.key for s in SUBJECTS if tokens & s.words}
 
 
+_HR_SUBJECTS = frozenset({"leave", "pay", "benefits", "tax"})
+
+
 def clarifying_reply(subject: Subject) -> str:
+    if subject.key in _HR_SUBJECTS:
+        return (
+            f"I can help with {subject.label}. What would you like to know? Pick one of the "
+            f"options below, or ask in your own words."
+        )
     return (
         f"I can help with {subject.label}. So I give you the right steps rather than a guess, "
         f"what's happening? Pick one of the options below, or describe it in your own words "

@@ -8,7 +8,7 @@ from app.agents import clarify
     ("i have an issue with the laptop", "laptop"),
     ("Laptop problem", "laptop"),
     ("hi, my computer is not working", "laptop"),
-    ("need help with wifi", "wifi"),
+    ("help with wifi", "wifi"),
     ("question about leave", "leave"),
     ("issue with my salary", "pay"),
     ("outlook not working", "email"),
@@ -25,6 +25,8 @@ def test_vague_questions_are_detected(query, subject):
     "how many sick days do I have left?",
     "reset my password",
     "I want to apply for leave next Monday",
+    "i want a leave",                                  # a request, not a question
+    "i need a laptop",
     "hi",
     "what's the weather like?",
 ])
@@ -44,3 +46,10 @@ def test_followup_about_a_different_subject_is_a_new_question():
 def test_every_subject_offers_options():
     for subject in clarify.SUBJECTS:
         assert 2 <= len(subject.options) <= 6
+
+
+def test_hr_topics_are_not_asked_for_error_messages():
+    leave = clarify.find_vague_subject("question about leave")
+    assert "error" not in clarify.clarifying_reply(leave)
+    laptop = clarify.find_vague_subject("laptop issue")
+    assert "what's happening" in clarify.clarifying_reply(laptop)
