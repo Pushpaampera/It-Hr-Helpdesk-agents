@@ -17,6 +17,7 @@ from langgraph.errors import NodeInterrupt
 from langgraph.graph import END, StateGraph
 
 from app.agents import action as action_agent
+from app.agents import clarify
 from app.agents import general_chat
 from app.agents import guard as guard_agent
 from app.agents import hr_policy as hr_policy_agent
@@ -84,6 +85,11 @@ class AgentState(TypedDict):
     user_reply: NotRequired[str | None]
     offered_ticket: NotRequired[bool]
     action_fallback: NotRequired[bool]
+    # Set when the run is answering the reply to a clarifying question, so it never asks a
+    # second one in a row.
+    clarified: NotRequired[bool]
+    clarify: NotRequired[bool]
+    suggestions: NotRequired[list]
 
 
 class RunContext:
@@ -152,7 +158,28 @@ def build_graph(ctx: RunContext):
         )
         return {"answer": result.text.strip(), "unresolved": False}
 
+    async def _maybe_clarify(agent: str, state: AgentState) -> dict | None:
+        """Vague question ("I have an issue with my laptop"): ask what's happening instead of
+        guessing which article fits. Skipped for an action fallback and for a run that is
+        already answering the reply to a clarifying question."""
+        if state.get("clarified") or state.get("action_fallback"):
+            return None
+        subject = clarify.find_vague_subject(state["query"])
+        if subject is None:
+            return None
+        await ctx.sink.emit(
+            agent, "completed", action="clarify",
+            caption="The question was broad, so the assistant asked what exactly is happening.",
+            detail={"subject": subject.key},
+        )
+        return {
+            "answer": clarify.clarifying_reply(subject), "suggestions": list(subject.options),
+            "clarify": True, "unresolved": False, "sources": [],
+        }
+
     async def node_it_support(state: AgentState) -> dict:
+        if (asked := await _maybe_clarify("it_support", state)) is not None:
+            return asked
         await ctx.sink.emit("it_support", "retrieving", action="hybrid_search")
         result = await it_support_agent.answer(state["query"], ctx.run_id, state.get("confidence", 0.6))
         await ctx.sink.emit(
@@ -164,6 +191,8 @@ def build_graph(ctx: RunContext):
         return {"answer": result["answer"], "sources": result["sources"], "unresolved": result["unresolved"]}
 
     async def node_hr_policy(state: AgentState) -> dict:
+        if (asked := await _maybe_clarify("hr_policy", state)) is not None:
+            return asked
         await ctx.sink.emit("hr_policy", "retrieving", action="hybrid_search")
         result = await hr_policy_agent.answer(state["query"], ctx.run_id, state.get("confidence", 0.6), ctx.user["id"])
         await ctx.sink.emit(
@@ -289,11 +318,18 @@ def build_graph(ctx: RunContext):
         await ctx.sink.emit_final(
             answer=state.get("answer", "I'm not sure how to help with that."),
             sources=state.get("sources", []), route=state.get("route"), resolved=resolved,
-            ticket_number=state.get("ticket_number"),
+            ticket_number=state.get("ticket_number"), suggestions=state.get("suggestions") or None,
         )
         await ctx.sink.emit("feedback", "started", caption="Finn is waiting to hear how that went.")
 
-        outcome = "escalated" if state.get("ticket_number") else ("blocked" if state.get("guard_blocked") else "resolved")
+        if state.get("clarify"):
+            # chat.py looks for this outcome to treat the next message as the answer to the
+            # clarifying question (see runs_store.find_pending_clarification).
+            outcome = "needs_clarification"
+        elif state.get("ticket_number"):
+            outcome = "escalated"
+        else:
+            outcome = "blocked" if state.get("guard_blocked") else "resolved"
         update_run(
             ctx.run_id,
             route=state.get("route"), status="escalated" if state.get("ticket_number") else "resolved",
@@ -327,6 +363,8 @@ def build_graph(ctx: RunContext):
     graph.add_edge("other_reply", "feedback")
 
     def _after_knowledge(s: AgentState) -> str:
+        if s.get("clarify"):
+            return "feedback"  # a question back to the person: no "did this solve it?" step
         if s.get("needs_action"):
             return "action"
         if s.get("unresolved") and not s.get("sources"):
@@ -377,7 +415,8 @@ async def _settle_or_pause(run_id: str, queue: asyncio.Queue, graph, config: dic
     await queue.put(None)
 
 
-async def start_chat(user: dict, query: str, conversation_id: str | None, run_id: str, queue: asyncio.Queue) -> None:
+async def start_chat(user: dict, query: str, conversation_id: str | None, run_id: str, queue: asyncio.Queue,
+                     clarified: bool = False) -> None:
     """Runs (or starts, if it pauses for approval/confirmation) one full chat turn, streaming
     events into `queue` as they happen. Returns once the graph finishes OR pauses."""
     sink = EventSink(run_id, queue)
@@ -388,7 +427,9 @@ async def start_chat(user: dict, query: str, conversation_id: str | None, run_id
     config = {"configurable": {"thread_id": run_id}}
 
     try:
-        await graph.ainvoke({"run_id": run_id, "user_id": user["id"], "query": query}, config=config)
+        await graph.ainvoke(
+            {"run_id": run_id, "user_id": user["id"], "query": query, "clarified": clarified}, config=config,
+        )
     except Exception as exc:  # noqa: BLE001
         await sink.emit_error(str(exc))
         update_run(run_id, status="failed", outcome="error")

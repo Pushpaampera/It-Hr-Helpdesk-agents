@@ -65,6 +65,8 @@ type ChatMessage = {
   hrRedirect?: HrRedirect | null;
   /** What the person typed, kept only in this browser tab to pre-fill the private HR form. */
   hrPrefillText?: string;
+  /** One-click replies to a clarifying question. Only shown on the latest message. */
+  suggestions?: string[];
   route?: string | null;
   /** The chain of agents this turn actually passed through, in order (e.g. ["guard",
    * "supervisor", "it_support"]) — rendered as a routing strip above the answer so the
@@ -252,6 +254,7 @@ export default function Assistant() {
                         pending: false,
                         hrRedirect: event.hr_redirect ?? null,
                         hrPrefillText: event.hr_redirect ? query : undefined,
+                        suggestions: event.suggestions,
                       }
                     : msg,
                 ),
@@ -335,6 +338,20 @@ export default function Assistant() {
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {!isStreaming && !pendingGate && (messages[messages.length - 1]?.suggestions?.length ?? 0) > 0 && (
+            <div
+              role="group"
+              aria-label="Suggested replies"
+              style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginTop: "var(--space-3)" }}
+            >
+              {messages[messages.length - 1].suggestions!.map((option) => (
+                <Button key={option} variant="ghost" onClick={() => handleSend(option)}>
+                  {option}
+                </Button>
+              ))}
+            </div>
+          )}
 
           {pendingGate && !isStreaming && (
             <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
@@ -522,7 +539,7 @@ function MessageBubble({ message, showRoutingChain }: { message: ChatMessage; sh
           <HrRedirectCard redirect={message.hrRedirect} originalText={message.hrPrefillText} />
         )}
 
-        {!isUser && !message.pending && message.runId && (
+        {!isUser && !message.pending && message.runId && !message.suggestions?.length && (
           <div style={{ marginTop: "var(--space-3)" }}>
             <FeedbackWidget runId={message.runId} resolved={message.resolved ?? false} />
           </div>

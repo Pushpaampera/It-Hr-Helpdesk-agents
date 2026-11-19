@@ -68,6 +68,20 @@ def find_awaiting_reply_run(conversation_id: str) -> dict | None:
     return dict(row) if row else None
 
 
+def find_pending_clarification(conversation_id: str) -> dict | None:
+    """The conversation's latest run, if that run ended by asking a clarifying question — so the
+    next message is read as the answer to it, not as a brand-new question."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT * FROM agent_runs WHERE conversation_id = :cid ORDER BY created_at DESC LIMIT 1"),
+            {"cid": conversation_id},
+        ).mappings().first()
+    if row and row["outcome"] == "needs_clarification":
+        return dict(row)
+    return None
+
+
 def save_message(conversation_id: str, role: str, content: str, run_id: str | None = None,
                   routed_to: str | None = None, confidence: float | None = None, sources: list | None = None) -> None:
     engine = get_engine()

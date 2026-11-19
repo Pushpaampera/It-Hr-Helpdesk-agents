@@ -1,5 +1,15 @@
 # 07 — Changelog
 
+### 2026-11-19 — Vague questions get a clarifying question instead of a guess
+- Added (`agents/clarify.py`): "I have an issue with the laptop" (a subject but no symptom) no
+  longer gets the top-scoring article (e.g. blue screen steps). Iris/Hana ask what's happening and
+  offer one-click options (`suggestions` on the `final` event); no yes/no gate, no feedback stars.
+  A plain word check, so it behaves the same in LLM_MOCK_MODE. Covers laptop, Wi-Fi, email,
+  printer, MFA, account, VPN, Remote Desktop, software, leave, pay, benefits, tax.
+- The run ends with outcome `needs_clarification`; `routers/chat.py` then answers the next message
+  as "<original question>: <reply>" (and never asks twice in a row), unless the reply names a
+  different subject, which is treated as a new question.
+
 ### 2026-11-19 — Requests get a clean reply; new questions aren't mistaken for yes/no
 - Changed (`agents/graph.py`): requests to DO something (leave, password reset, unlock, access)
   go straight from the supervisor to Atlas, without a policy answer in front, and a completed

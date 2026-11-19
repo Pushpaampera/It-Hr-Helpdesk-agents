@@ -145,6 +145,9 @@ export type FinalEventPayload = {
   /** Set when the message was a private HR matter (complaint, conflict, personal issue): the
    * chat shows a "Talk to HR privately" card instead of handling it. */
   hr_redirect?: HrRedirect | null;
+  /** Set when the assistant asked a clarifying question (a vague "I have an issue with my
+   * laptop"): likely answers the chat shows as one-click replies. */
+  suggestions?: string[];
   ts: string | null;
 };
 

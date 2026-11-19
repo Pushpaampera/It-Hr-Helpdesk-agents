@@ -208,7 +208,7 @@ class EventSink:
         return event
 
     async def emit_final(self, answer: str, sources: list[dict], route: str | None, resolved: bool,
-                          ticket_number: str | None = None) -> dict:
+                          ticket_number: str | None = None, suggestions: list[str] | None = None) -> dict:
         # Stream the final answer as word-chunk "token" events first, for a typing effect.
         words = answer.split()
         chunk_size = 4
@@ -221,6 +221,9 @@ class EventSink:
             "run_id": self.run_id, "seq": self.seq, "type": "final", "answer": answer, "sources": sources,
             "route": route, "resolved": resolved, "ticket_number": ticket_number, "ts": self._ts(),
         }
+        if suggestions:
+            # One-click replies for a clarifying question ("what's happening with your laptop?").
+            event["suggestions"] = suggestions
         await self._publish(event)
         return event
 

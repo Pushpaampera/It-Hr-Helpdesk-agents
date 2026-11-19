@@ -10,10 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from app.agents import hr_confidential
+from app.agents import clarify, hr_confidential
 from app.agents.events import load_events_for_run, new_run_id
 from app.agents.graph import is_gate_reply, resume_after_user_reply, start_chat
-from app.agents.runs_store import find_awaiting_reply_run, get_run, save_message, update_run
+from app.agents.runs_store import (
+    find_awaiting_reply_run, find_pending_clarification, get_run, save_message, update_run,
+)
 from app.config import get_settings
 from app.deps import ensure_self_or_roles, get_current_user
 from app.models.user import User
@@ -107,7 +109,18 @@ async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current
         run_id = new_run_id()
         if req.conversation_id:
             save_message(req.conversation_id, "user", req.message, run_id=run_id)
-        task = asyncio.create_task(start_chat(user, req.message, req.conversation_id, run_id, queue))
+        # If the last turn asked "what's happening with your laptop?", this message is the
+        # answer: search with the original question plus this detail. Chat history keeps the
+        # person's own words; only the run's query is combined.
+        query, clarified = req.message, False
+        pending = find_pending_clarification(req.conversation_id) if req.conversation_id else None
+        if pending:
+            combined = clarify.combine_with_followup(pending["query"], req.message)
+            if combined:
+                query, clarified = combined, True
+        task = asyncio.create_task(
+            start_chat(user, query, req.conversation_id, run_id, queue, clarified=clarified)
+        )
 
     async def event_generator():
         try:
