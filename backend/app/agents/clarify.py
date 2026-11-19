@@ -117,10 +117,12 @@ facing experiencing seeing having
 can could would will please pls plz hi hello hey hii team sir madam
 quick small little some one
 company office work's new old
+check checking look looking into see fix fixing sort solve resolve figure out tell know let
+what what's whats why happening happened going wrong kindly just suddenly sudden today now again
 """.split())
 
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9'\-]*")
-_MAX_WORDS = 12
+_MAX_WORDS = 16
 
 
 def find_vague_subject(query: str) -> Subject | None:
@@ -143,6 +145,15 @@ def find_vague_subject(query: str) -> Subject | None:
     return None
 
 
+def single_subject(query: str) -> Subject | None:
+    """The one known subject a message mentions, or None (none, or several). Used when the
+    supervisor has judged a message vague but the word check above didn't catch it."""
+    keys = subjects_mentioned(query)
+    if len(keys) != 1:
+        return None
+    return next(s for s in SUBJECTS if s.key in keys)
+
+
 def subjects_mentioned(text: str) -> set[str]:
     tokens = set(_TOKEN.findall(text.lower()))
     return {s.key for s in SUBJECTS if tokens & s.words}
@@ -161,6 +172,13 @@ def clarifying_reply(subject: Subject) -> str:
         f"I can help with {subject.label}. So I give you the right steps rather than a guess, "
         f"what's happening? Pick one of the options below, or describe it in your own words "
         f"(for example, any error message you see)."
+    )
+
+
+def generic_clarifying_reply() -> str:
+    return (
+        "I'd like to help, but I need a little more detail first. What exactly is happening? "
+        "For example: what you were trying to do, what you see (any error message), and when it started."
     )
 
 

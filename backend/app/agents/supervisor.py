@@ -12,7 +12,7 @@ SYSTEM_PROMPT = """You are Sage, a request routing classifier for an enterprise 
 Given an employee's message, decide which specialist should handle it.
 
 Respond with ONLY a JSON object, no other text, in this exact shape:
-{"route": "IT"|"HR"|"OTHER", "confidence": <float 0-1>, "needs_action": <bool>, "intent": "<short phrase>"}
+{"route": "IT"|"HR"|"OTHER", "confidence": <float 0-1>, "needs_action": <bool>, "vague": <bool>, "intent": "<short phrase>"}
 
 Routing guide:
 - IT: laptops, VPN, Wi-Fi, email/Outlook, MFA, printers, software, passwords, SSO, remote
@@ -25,6 +25,11 @@ needs_action is true only if the user is asking to DO something (reset a passwor
 leave, request access, unlock an account) rather than just asking a question. Plain wishes count
 as requests: "I want a leave", "I need 2 days off tomorrow" -> needs_action true; "how much leave
 can I carry forward?" -> false.
+vague is true only when the message says something is wrong (or asks about a topic) but gives
+no symptom or detail to act on, so any answer would be a guess: "I have an issue with my laptop
+can you check what it is", "my computer has a problem", "question about my pay" -> true.
+"my laptop is very slow", "laptop won't turn on", "VPN error 619", "how many sick days do I get?",
+"I want a leave" -> false.
 If you are not confident (below 0.55), set route to OTHER."""
 
 IT_KEYWORDS = {
@@ -92,6 +97,8 @@ async def route(query: str) -> dict:
     return {
         "route": parsed["route"], "confidence": float(parsed.get("confidence", 0.5)),
         "needs_action": bool(parsed.get("needs_action", False)), "intent": parsed.get("intent", ""),
+        # Only meaningful from a real model; mock routing leaves it to clarify.find_vague_subject.
+        "vague": bool(parsed.get("vague", False)) and not is_mock_mode(),
         "tokens_in": result.tokens_in, "tokens_out": result.tokens_out,
         "latency_ms": result.latency_ms, "model": result.model,
     }

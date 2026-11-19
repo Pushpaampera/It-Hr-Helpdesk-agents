@@ -9,6 +9,9 @@
 - The run ends with outcome `needs_clarification`; `routers/chat.py` then answers the next message
   as "<original question>: <reply>" (and never asks twice in a row), unless the reply names a
   different subject, which is treated as a new question.
+- Wordier vague questions ("I have an issue with my laptop can you please check what it is") are
+  caught too: more filler words, and the supervisor's JSON now has a `vague` flag (real-LLM mode
+  only, no extra call). Vague with no known subject → a general "tell me more" question.
 - Vague questions skip Atlas even if the supervisor reads them as a request ("i want a leave" is
   still a request: "want"/"need" make a message specific).
 - Real-LLM mode: `.env` now has `LLM_MOCK_MODE=false` and `GROQ_SUPERVISOR_MODEL=openai/gpt-oss-20b`

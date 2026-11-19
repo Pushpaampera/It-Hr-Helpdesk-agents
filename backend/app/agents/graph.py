@@ -89,6 +89,7 @@ class AgentState(TypedDict):
     # second one in a row.
     clarified: NotRequired[bool]
     clarify: NotRequired[bool]
+    vague: NotRequired[bool]
     suggestions: NotRequired[list]
 
 
@@ -132,14 +133,15 @@ def build_graph(ctx: RunContext):
         )
         if result["route"] in ("IT", "HR"):
             # Requests to DO something go straight to Atlas; questions go to the knowledge agent.
-            if result["needs_action"]:
+            vague = result["vague"] or clarify.find_vague_subject(state["query"]) is not None
+            if result["needs_action"] and not vague:
                 friendly_agent = "action"
             else:
                 friendly_agent = "it_support" if result["route"] == "IT" else "hr_policy"
             await ctx.sink.emit_handoff("supervisor", friendly_agent, result["intent"] or "routing decision")
         return {
             "route": result["route"], "confidence": result["confidence"],
-            "needs_action": result["needs_action"], "intent": result["intent"],
+            "needs_action": result["needs_action"], "intent": result["intent"], "vague": result["vague"],
         }
 
     async def node_other_reply(state: AgentState) -> dict:
@@ -158,22 +160,31 @@ def build_graph(ctx: RunContext):
         )
         return {"answer": result.text.strip(), "unresolved": False}
 
+    def _is_vague(state: AgentState) -> bool:
+        if state.get("clarified"):
+            return False  # never ask twice in a row
+        return bool(state.get("vague")) or clarify.find_vague_subject(state["query"]) is not None
+
     async def _maybe_clarify(agent: str, state: AgentState) -> dict | None:
         """Vague question ("I have an issue with my laptop"): ask what's happening instead of
         guessing which article fits. Skipped for a run that is already answering the reply to
         a clarifying question."""
-        if state.get("clarified"):
+        if not _is_vague(state):
             return None
-        subject = clarify.find_vague_subject(state["query"])
-        if subject is None:
-            return None
+        # The word check names the subject; if only the supervisor judged it vague, use the one
+        # subject the message mentions (for its options), else a general "tell me more".
+        subject = clarify.find_vague_subject(state["query"]) or clarify.single_subject(state["query"])
         await ctx.sink.emit(
             agent, "completed", action="clarify",
             caption="The question was broad, so the assistant asked what exactly is happening.",
-            detail={"subject": subject.key},
+            detail={"subject": subject.key if subject else None},
         )
+        if subject:
+            answer, suggestions = clarify.clarifying_reply(subject), list(subject.options)
+        else:
+            answer, suggestions = clarify.generic_clarifying_reply(), []
         return {
-            "answer": clarify.clarifying_reply(subject), "suggestions": list(subject.options),
+            "answer": answer, "suggestions": suggestions,
             "clarify": True, "unresolved": False, "sources": [],
         }
 
@@ -357,8 +368,7 @@ def build_graph(ctx: RunContext):
     def _after_supervisor(s: AgentState) -> str:
         # A vague "I have an issue with my laptop" goes to the knowledge agent to be clarified,
         # even if the supervisor read it as a request for Atlas: there's nothing to DO yet.
-        vague = not s.get("clarified") and clarify.find_vague_subject(s["query"]) is not None
-        if s.get("route") in ("IT", "HR") and s.get("needs_action") and not vague:
+        if s.get("route") in ("IT", "HR") and s.get("needs_action") and not _is_vague(s):
             return "action"
         return {"IT": "it_support", "HR": "hr_policy"}.get(s.get("route"), "other_reply")
 

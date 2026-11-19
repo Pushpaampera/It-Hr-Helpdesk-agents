@@ -53,3 +53,18 @@ def test_hr_topics_are_not_asked_for_error_messages():
     assert "error" not in clarify.clarifying_reply(leave)
     laptop = clarify.find_vague_subject("laptop issue")
     assert "what's happening" in clarify.clarifying_reply(laptop)
+
+
+@pytest.mark.parametrize("query", [
+    "I have an issue with my laptop can you please check what it is",
+    "something is wrong with my laptop, can you look into it?",
+    "my computer has a problem, please fix it",
+])
+def test_polite_wordy_vague_questions_are_detected(query):
+    assert clarify.find_vague_subject(query).key == "laptop"
+
+
+def test_single_subject_is_found_for_supervisor_flagged_questions():
+    assert clarify.single_subject("my laptop is acting up").key == "laptop"
+    assert clarify.single_subject("laptop and vpn") is None
+    assert clarify.single_subject("it's acting up") is None
