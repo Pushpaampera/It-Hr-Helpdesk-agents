@@ -4,7 +4,7 @@ pending leave requests HR actually has to act on (seeded at ~15% pending, see
 app/seed/generators/ops.py). HR/admin only."""
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from app.db import get_db
 from app.deps import require_roles
 from app.mock_apis import log_action
 from app.models.user import User
+from app.notify import notify, notify_after_undo_window
 
 router = APIRouter(prefix="/api/hr", tags=["hr"], dependencies=[Depends(require_roles("hr", "admin"))])
 
@@ -102,7 +103,7 @@ class DecideLeaveRequest(BaseModel):
 
 @router.patch("/leave-requests/{leave_request_id}/decide")
 def decide_leave_request(
-    leave_request_id: str, req: DecideLeaveRequest,
+    leave_request_id: str, req: DecideLeaveRequest, background: BackgroundTasks,
     current_user: User = Depends(require_roles("hr", "admin")), db: Session = Depends(get_db),
 ):
     if req.decision not in ("approved", "rejected"):
@@ -111,7 +112,7 @@ def decide_leave_request(
         raise HTTPException(400, "A reason is required to reject a request")
 
     lr = db.execute(
-        text("SELECT id, user_id, leave_type, days, status FROM leave_requests WHERE id = :id"),
+        text("SELECT id, user_id, leave_type, start_date, end_date, days, status FROM leave_requests WHERE id = :id"),
         {"id": leave_request_id},
     ).mappings().first()
     if not lr:
@@ -119,10 +120,13 @@ def decide_leave_request(
     if lr["status"] != "pending":
         raise HTTPException(409, f"Leave request already {lr['status']}")
 
-    db.execute(
-        text("UPDATE leave_requests SET status = :status, decided_at = now() WHERE id = :id"),
-        {"status": req.decision, "id": leave_request_id},
-    )
+    comment = (req.comment or "").strip() or None
+    decided_at = db.execute(
+        text("""UPDATE leave_requests SET status = :status, decided_at = now(), decided_by = :by,
+                       decision_comment = :comment
+                WHERE id = :id RETURNING decided_at"""),
+        {"status": req.decision, "id": leave_request_id, "by": str(current_user.id), "comment": comment},
+    ).scalar_one()
     if req.decision == "approved":
         db.execute(
             text(
@@ -132,7 +136,40 @@ def decide_leave_request(
         )
     db.commit()
     log_action(str(current_user.id), f"leave_request_{req.decision}", "leave_request", leave_request_id, {"comment": req.comment})
+    background.add_task(
+        notify_after_undo_window,
+        lambda: _still_decided(leave_request_id, req.decision, decided_at),
+        lambda: _tell_employee(dict(lr), req.decision, comment, current_user.name),
+    )
     return {"id": leave_request_id, "status": req.decision}
+
+
+def _still_decided(leave_request_id: str, decision: str, decided_at) -> bool:
+    """True if the decision wasn't undone (or undone and re-decided) during the Undo window."""
+    from app.db import get_engine
+
+    with get_engine().connect() as conn:
+        row = conn.execute(
+            text("SELECT status, decided_at FROM leave_requests WHERE id = :id"), {"id": leave_request_id}
+        ).mappings().first()
+    return bool(row) and row["status"] == decision and row["decided_at"] == decided_at
+
+
+def _tell_employee(lr: dict, decision: str, comment: str | None, hr_name: str) -> None:
+    days = lr["days"]
+    days_txt = f"{int(days) if float(days).is_integer() else days} day{'' if days == 1 else 's'}"
+    fmt = lambda d: f"{d.day} {d.strftime('%b %Y')}"  # noqa: E731
+    dates = fmt(lr["start_date"]) if lr["start_date"] == lr["end_date"] else f"{fmt(lr['start_date'])} to {fmt(lr['end_date'])}"
+    leave = f"{lr['leave_type']} leave ({days_txt}, {dates})"
+    if decision == "approved":
+        title = "Your leave has been approved"
+        body = f"{hr_name} from HR approved your {leave}."
+        if comment:
+            body += f"\nNote from HR: {comment}"
+    else:
+        title = "Your leave request was not approved"
+        body = f"{hr_name} from HR rejected your {leave}.\nReason: {comment}\nIf you have questions, reply through Talk to HR or ask the Assistant."
+    notify(str(lr["user_id"]), f"leave_{decision}", title, body, important=True)
 
 
 @router.post("/leave-requests/{leave_request_id}/undo")
@@ -166,7 +203,7 @@ def undo_leave_request(
             {"days": lr["days"], "uid": str(lr["user_id"]), "lt": lr["leave_type"]},
         )
     db.execute(
-        text("UPDATE leave_requests SET status = 'pending', decided_at = NULL WHERE id = :id"),
+        text("UPDATE leave_requests SET status = 'pending', decided_at = NULL, decided_by = NULL, decision_comment = NULL WHERE id = :id"),
         {"id": leave_request_id},
     )
     db.commit()

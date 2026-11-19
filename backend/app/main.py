@@ -19,8 +19,10 @@ from app.routers import (
     costs,
     eval as eval_router,
     feedback,
+    hr_cases,
     hr_insights,
     kb,
+    notifications,
     team,
     tickets,
 )
@@ -70,6 +72,8 @@ app.include_router(admin.router)
 app.include_router(costs.router)
 app.include_router(team.router)
 app.include_router(hr_insights.router)
+app.include_router(hr_cases.router)
+app.include_router(notifications.router)
 
 
 @app.get("/metrics")

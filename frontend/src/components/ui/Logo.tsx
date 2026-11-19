@@ -17,7 +17,7 @@ export default function Logo({ size = 28, to = "/", showPill = true, onNavy = fa
   const height = Math.round(size * 1.15);
   const content = (
     <>
-      <img src={amperaLogo} alt="Ampera" height={height} width={Math.round(height * (810 / 226))} style={{ display: "block", height, width: "auto" }} />
+      <img className={styles.mark} src={amperaLogo} alt="Ampera" height={height} width={Math.round(height * (810 / 226))} style={{ display: "block", height, width: "auto" }} />
       {showPill && (
         <span className={`${styles.pill} ${onNavy ? styles.pillOnNavy : ""}`} style={{ fontSize: `${Math.max(size * 0.42, 12) / 16}rem`, padding: `${size * 0.1}px ${size * 0.26}px` }}>
           HelpDesk

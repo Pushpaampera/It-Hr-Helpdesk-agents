@@ -131,7 +131,8 @@ export type ApprovalRequiredEventPayload = {
 
 export type FinalEventPayload = {
   type: "final";
-  run_id: string;
+  /** null for a private HR matter: those are answered without creating an agent run. */
+  run_id: string | null;
   seq: number;
   answer: string;
   sources: ChatSource[];
@@ -141,7 +142,10 @@ export type FinalEventPayload = {
   route: string | null;
   resolved: boolean;
   ticket_number: string | null;
-  ts: string;
+  /** Set when the message was a private HR matter (complaint, conflict, personal issue): the
+   * chat shows a "Talk to HR privately" card instead of handling it. */
+  hr_redirect?: HrRedirect | null;
+  ts: string | null;
 };
 
 export type ErrorEventPayload = { type: "error"; run_id: string; seq: number; message: string; ts: string };
@@ -343,3 +347,74 @@ export type AuditLogEntry = {
   detail: Record<string, unknown>;
   ts: string;
 };
+
+// ---------- Confidential HR cases (/api/hr-cases) ----------
+// Visible only to the employee who raised the case and to HR. Never to managers or admins.
+export type HrCaseCategory =
+  | "harassment" | "discrimination" | "colleague_conflict" | "manager_concern"
+  | "misconduct" | "personal_wellbeing" | "safety" | "other";
+export type HrCaseStatus = "received" | "in_review" | "waiting_on_employee" | "resolved" | "closed";
+
+export type HrRedirect = {
+  category: HrCaseCategory;
+  category_label: string;
+  urgent: boolean;
+  crisis: boolean;
+  hr_email: string;
+};
+
+export type HrContact = { email: string; phone: string | null; hours: string };
+
+export type HrCase = {
+  id: string;
+  number: string;
+  anonymous: boolean;
+  category: HrCaseCategory;
+  subject: string;
+  description: string;
+  people_involved: string | null;
+  incident_date: string | null;
+  urgency: "normal" | "urgent";
+  preferred_contact: "portal" | "email" | "phone" | "in_person";
+  status: HrCaseStatus;
+  status_label: string;
+  assigned_hr_id: string | null;
+  assigned_hr_name: string | null;
+  resolution_note: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  reporter_name: string;
+  reporter_email: string | null;
+  reporter_department: string | null;
+  last_activity_at: string | null;
+  last_author_role: "employee" | "hr" | null;
+  is_mine: boolean;
+};
+
+export type HrCaseMessage = {
+  id: string;
+  author_role: "employee" | "hr" | "system";
+  author_name: string;
+  body: string;
+  created_at: string;
+  is_mine: boolean;
+};
+
+export type HrCaseDetail = { case: HrCase; messages: HrCaseMessage[] };
+
+export type AppNotification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  email_status: "sent" | "failed" | "not_configured" | "not_requested" | "skipped";
+  read: boolean;
+  created_at: string;
+};
+
+export type NotificationList = { unread_count: number; items: AppNotification[] };
+
+export type EmailPreference = "important" | "all" | "off";
+export type NotificationPreferences = { email: EmailPreference; email_available: boolean };

@@ -16,9 +16,10 @@ import remarkGfm from "remark-gfm";
 
 import { apiPost } from "../../api/client";
 import { streamSSE } from "../../api/sse";
-import type { ChatEvent, ChatSource, Conversation } from "../../api/types";
+import type { ChatEvent, ChatSource, Conversation, HrRedirect } from "../../api/types";
 import AgentActivityPanel, { type AgentDeskState, type CaptionLogEntry } from "../../components/chat/AgentActivityPanel";
 import FeedbackWidget from "../../components/chat/FeedbackWidget";
+import HrRedirectCard from "../../components/chat/HrRedirectCard";
 import RoleSidePanel from "../../components/chat/RoleSidePanel";
 import RoleWelcome from "../../components/chat/RoleWelcome";
 import { ROLE_ASSISTANT } from "../../components/chat/roleAssistant";
@@ -58,8 +59,12 @@ type ChatMessage = {
   sources?: ChatSource[];
   ticketNumber?: string | null;
   resolved?: boolean;
-  runId?: string;
+  runId?: string | null;
   pending?: boolean;
+  /** Private HR matter: show the "Talk to HR privately" card instead of feedback stars. */
+  hrRedirect?: HrRedirect | null;
+  /** What the person typed, kept only in this browser tab to pre-fill the private HR form. */
+  hrPrefillText?: string;
   route?: string | null;
   /** The chain of agents this turn actually passed through, in order (e.g. ["guard",
    * "supervisor", "it_support"]) — rendered as a routing strip above the answer so the
@@ -224,7 +229,6 @@ export default function Assistant() {
             }
 
             case "final":
-              readAloud.speak(event.answer);
               setApproval(null);
               setPendingGate(null);
               setActiveAgent(null);
@@ -246,10 +250,13 @@ export default function Assistant() {
                         route: event.route,
                         routeChain: [...routeChain],
                         pending: false,
+                        hrRedirect: event.hr_redirect ?? null,
+                        hrPrefillText: event.hr_redirect ? query : undefined,
                       }
                     : msg,
                 ),
               );
+              readAloud.speak(event.answer); // after the answer is on screen
               break;
 
             case "error":
@@ -509,6 +516,10 @@ function MessageBubble({ message, showRoutingChain }: { message: ChatMessage; sh
               </span>
             ))}
           </div>
+        )}
+
+        {!isUser && !message.pending && message.hrRedirect && (
+          <HrRedirectCard redirect={message.hrRedirect} originalText={message.hrPrefillText} />
         )}
 
         {!isUser && !message.pending && message.runId && (

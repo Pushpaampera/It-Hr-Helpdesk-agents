@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import AccessibilityPanel from "../components/AccessibilityPanel";
+import NotificationBell from "../components/NotificationBell";
 import SkipLink from "../components/SkipLink";
 import Logo from "../components/ui/Logo";
 import { useAuthStore } from "../store/authStore";
@@ -119,6 +120,7 @@ export default function DashboardLayout() {
             <Menu size={22} aria-hidden="true" />
           </button>
           <div style={{ flex: 1 }} />
+          <NotificationBell />
           <AccessibilityPanel />
         </header>
         <main id="main-content" ref={mainRef} tabIndex={-1}>

@@ -277,7 +277,7 @@ _SEED_TABLES = [
     "eval_results", "eval_runs", "golden_questions", "bandit_rewards", "bandit_decisions",
     "bandit_state", "bandit_arms", "feedback", "agent_events", "agent_runs", "messages",
     "conversations", "leave_requests", "access_requests", "approvals", "ticket_events",
-    "tickets", "payslips", "leave_balances", "kb_chunks", "knowledge_articles", "audit_log",
+    "tickets", "hr_case_messages", "hr_cases", "payslips", "leave_balances", "kb_chunks", "knowledge_articles", "audit_log",
     "users",
 ]
 

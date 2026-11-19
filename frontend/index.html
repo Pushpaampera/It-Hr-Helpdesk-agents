@@ -7,6 +7,32 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
     <title>Ampera HelpDesk</title>
+    <!-- Apply the saved Accessibility settings (dark mode, text size, contrast…) before the first
+         paint, on every page, so a dark-mode user never sees a white flash while the app loads.
+         Mirrors applyToDocument() in src/store/uiStore.ts; the app re-applies them once loaded. -->
+    <script>
+      (function () {
+        try {
+          var p = JSON.parse(localStorage.getItem("ampera.accessibility") || "null");
+          if (!p) return;
+          var dark = p.theme === "dark" || (p.theme === "system" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+          var r = document.documentElement;
+          r.dataset.theme = dark ? "dark" : "light";
+          r.dataset.textSize = p.textSize === "large" || p.textSize === "xlarge" ? p.textSize : "normal";
+          r.dataset.contrast = p.highContrast ? "high" : "normal";
+          r.dataset.readableFont = String(!!p.readableFont);
+          r.dataset.spacing = String(!!p.extraSpacing);
+          if (typeof p.reduceMotion === "boolean") r.dataset.reduceMotion = String(p.reduceMotion);
+        } catch (e) {
+          /* storage unavailable: the app applies defaults once it loads */
+        }
+      })();
+    </script>
+    <!-- Dark page colour for that first paint (same value as --bg in tokens.css), before CSS loads. -->
+    <style>
+      html[data-theme="dark"] { background: #1a1a1a; color-scheme: dark; }
+      html[data-theme="dark"][data-contrast="high"] { background: #000000; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

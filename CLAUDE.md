@@ -20,7 +20,11 @@ HR audience, so the UI must be instantly understandable and must never fail on s
   Colours match the Ampera Campus Hire portal (sampled from its screenshot): navy #0F1D66 sidebar,
   #2D3778 active item, #000F5C banners/chat headers, #BCBED0 quiet text on navy; magenta #9C369A
   buttons/links (#7E2B7C pressed, #F7EDF7 tint); page #FCFCFC, white cards, text #050505/#5B5B5B.
-  Dark theme = black page + white text, same navy sidebar/banners, magenta lifted to #D77BD5.
+  Dark theme = strictly black/grey/white, NO hues at all (operator request, 2026-11-19, for
+  low-vision users): page #1A1A1A, cards/sidebar/banners #202020–#2E2E2E, near-white text, white
+  buttons with near-black text; the logo and the landing orbit also turn greyscale. High contrast
+  (dark) is the pure black-and-white version. Accessibility settings are ONE browser-wide choice
+  (same on landing, sign-in and every portal page; synced across tabs), never per page or account.
   **No other hues**: navy, magenta, black/white/greys, plus one red for errors. All colours come
   from tokens in `src/design/tokens.css` — never hard-code a hex in a component. Montserrat font;
   the official Ampera logo PNG. 3D is used in ONE place only: the orbit animation in the landing

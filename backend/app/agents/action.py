@@ -1,9 +1,11 @@
 """Atlas, the Task Doer. Groq gpt-oss-20b with tool calling. request_access pauses the graph
 (via a LangGraph NodeInterrupt) pending the requester's manager's approval."""
+import asyncio
 import re
 from datetime import date, timedelta
 
 from app.agents.llm import call_groq_tools
+from app.agents.supervisor import LEAVE_REQUEST
 from app.config import get_settings
 from app.mock_apis import hr_system, it_system
 
@@ -38,7 +40,7 @@ TOOLS = [
         },
     }},
     {"type": "function", "function": {
-        "name": "apply_leave", "description": "Applies for a leave of absence for the employee.",
+        "name": "apply_leave", "description": "Submits a leave request for the employee; HR approves or rejects it.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -56,7 +58,7 @@ TOOLS = [
     }},
 ]
 
-LEAVE_TYPE_WORDS = {"annual": "annual", "vacation": "annual", "sick": "sick", "casual": "casual", "parental": "parental"}
+LEAVE_TYPE_WORDS = {"annual": "annual", "vacation": "annual", "holiday": "annual", "sick": "sick", "casual": "casual", "parental": "parental"}
 
 
 def _resolve_relative_date(query: str) -> tuple[date, date, int]:
@@ -89,7 +91,7 @@ def _mock_tool_call(query: str) -> dict | None:
         }}
     if "balance" in q and "leave" in q:
         return {"name": "get_leave_balance", "arguments": {}}
-    if "leave" in q and any(w in q for w in ("apply", "book", "request", "take")):
+    if ("leave" in q and any(w in q for w in ("apply", "book", "request", "take"))) or LEAVE_REQUEST.search(query):
         leave_type = next((v for k, v in LEAVE_TYPE_WORDS.items() if k in q), "annual")
         start, end, _ = _resolve_relative_date(query)
         return {"name": "apply_leave", "arguments": {
@@ -97,6 +99,53 @@ def _mock_tool_call(query: str) -> dict | None:
             "reason": "Requested via the AI Assistant.",
         }}
     return None
+
+
+def _days(n: float) -> str:
+    n = int(n) if float(n).is_integer() else n
+    return f"{n} day" if n == 1 else f"{n} days"
+
+
+def _dates(start: str, end: str) -> str:
+    from datetime import date
+
+    s, e = date.fromisoformat(start), date.fromisoformat(end)
+    fmt = lambda d: f"{d.day} {d.strftime('%b %Y')}"  # noqa: E731
+    return fmt(s) if s == e else f"{fmt(s)} to {fmt(e)}"
+
+
+def _announce_leave_request(user_id: str, result: dict) -> None:
+    """Tells the employee (in-app) and every HR person (in-app + email) about a new leave request,
+    off the event loop so a slow mail server never delays the chat reply."""
+    from app.notify import notify, notify_role
+    from app.mock_apis.directory import get_user
+
+    employee = get_user(user_id) or {"name": "An employee"}
+    leave = f"{result['leave_type']} leave, {_days(result['days'])} ({_dates(result['start_date'], result['end_date'])})"
+
+    def send() -> None:
+        notify(user_id, "leave_submitted", "Leave request sent to HR",
+               f"Your {leave} is waiting for HR's approval.", link=None, email=False)
+        notify_role("hr", "leave_pending", f"New leave request from {employee['name']}",
+                    f"{employee['name']} has asked for {leave}. Please approve or reject it on the HR Dashboard.",
+                    link="/app/hr-insights")
+
+    asyncio.get_running_loop().run_in_executor(None, send)
+
+
+def _announce_access_request(user_id: str, approver_id: str, system: str, level: str) -> None:
+    """Tells the approving manager (in-app + email) that a request is waiting for them."""
+    from app.notify import notify
+    from app.mock_apis.directory import get_user
+
+    employee = get_user(user_id) or {"name": "An employee"}
+
+    def send() -> None:
+        notify(approver_id, "approval_pending", f"{employee['name']} needs your approval",
+               f"{employee['name']} has asked for {level} access to {system}. Please approve or reject it in Approvals.",
+               link="/app/approvals")
+
+    asyncio.get_running_loop().run_in_executor(None, send)
 
 
 async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
@@ -133,8 +182,11 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
             user_id, args.get("leave_type", "annual"), args["start_date"], args["end_date"],
             args.get("reason", "Requested via the AI Assistant."),
         )
+        _announce_leave_request(user_id, result)
         return {**base, "tool": name, "args": args, "result": result, "paused": False,
-                "message": f"Your {result['leave_type']} leave request for {result['days']} day(s) has been submitted and approved."}
+                "message": f"Your {result['leave_type']} leave request for {_days(result['days'])} "
+                           f"({_dates(result['start_date'], result['end_date'])}) has been sent to HR for approval. "
+                           "You'll get a notification here and an email as soon as HR decides."}
 
     if name == "request_access":
         result = it_system.request_access(
@@ -144,8 +196,10 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
         if not result.get("success"):
             return {**base, "tool": name, "args": args, "result": result, "paused": False,
                     "message": result.get("message", "Could not submit the access request.")}
+        _announce_access_request(user_id, result["approver_id"], args["system"], args.get("access_level", "read"))
         return {**base, "tool": name, "args": args, "result": result, "paused": True,
-                "message": f"Your request for {args['system']} access is waiting on {result['approver_name']}'s approval."}
+                "message": f"Your request for {args['system']} access is waiting on {result['approver_name']}'s approval. "
+                           "You'll get a notification here and an email when they decide."}
 
     return {**base, "tool": name, "args": args, "result": None, "paused": False,
             "message": "Action not recognized."}

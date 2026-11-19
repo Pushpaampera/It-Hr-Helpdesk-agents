@@ -1,5 +1,96 @@
 # 07 — Changelog
 
+### 2026-11-19 — Requests get a clean reply; new questions aren't mistaken for yes/no
+- Changed (`agents/graph.py`): requests to DO something (leave, password reset, unlock, access)
+  go straight from the supervisor to Atlas, without a policy answer in front, and a completed
+  action finishes without "Did this solve your problem?". If Atlas can't tell what to do, the
+  knowledge agent answers it as a question.
+- Fixed (`routers/chat.py`): while a yes/no question is open, a message that isn't a yes/no
+  ("how can I put leave") closes it (outcome `moved_on`, no ticket) and is answered as a new question.
+
+### 2026-11-19 — Email only for important notifications (each person can choose)
+- Changed: the bell always gets every notification, but email follows each person's choice
+  (`users.email_notifications`, migration `0006`; `GET/PUT /api/notifications/preferences`; "Also
+  email me" at the bottom of the bell panel): **Important only** (default), **Everything**, **Never**.
+- Important = decisions on your own leave/access requests, HR replies / "needs your reply" /
+  resolved / closed on your case, and urgent new HR cases. Routine items (new leave request in
+  HR's queue, new access request for a manager, normal new case, employee replies, "HR is handling
+  your case") stay in the bell unless the person picks Everything.
+- Fixed: "I want a leave", "I need 2 days off", "can I take sick leave tomorrow" now book a leave
+  request in mock mode (they were answered as policy questions). Tests never send real email
+  (`tests/conftest.py`).
+
+### 2026-11-19 — Notifications and email; leave now needs HR approval
+- Changed: leave requested through the Assistant is saved as **pending** and goes to HR (it was
+  auto-approved). The balance is only deducted when HR approves on the HR Dashboard
+  (`mock_apis/hr_system.py`, `agents/action.py`).
+- Added: `app/notify.py` + migration `0005_notifications.sql` + `GET/POST /api/notifications`.
+  Every notification appears in a new bell in the top bar (`components/NotificationBell.tsx`, all
+  roles, checks every 20 s) and is also emailed when SMTP is configured (`SMTP_*`,
+  `EMAIL_REDIRECT_ALL_TO`, `APP_PUBLIC_URL` in `.env`; without them, in-app only).
+- Who is told what: HR on a new leave request; the employee when HR approves/rejects (with the
+  note or reason); the manager on a new access request; the employee when it's decided; HR (the
+  assigned person, else the whole team) on a new private case or employee reply; the employee
+  when HR replies, changes status or takes the case. Decisions with a 5-second Undo are only
+  announced once the window closes and only if not undone.
+- HR case notifications and emails never contain the case text or the reporter's name (only the
+  number and category) and link straight to the case (`?case=<id>` on Private Cases / Talk to HR).
+- "Talk to HR" is now only in the employee and manager sidebars; HR is redirected to Private
+  Cases and admins to Overview. The anonymous checkbox asks the person to name who is involved.
+
+### 2026-11-19 — No white flash in dark mode
+- Fixed: `frontend/index.html` applies the saved Accessibility settings (theme, text size,
+  contrast, font, spacing, motion) in an inline script before the first paint, with a dark page
+  colour, so pages and refreshes open dark immediately instead of flashing white while the app
+  loads. Verified with the app bundle blocked: Landing, Sign in, Overview, Assistant and Talk to HR
+  all paint #1A1A1A from the start.
+
+### 2026-11-19 — Dark mode is black/grey/white only; one accessibility setting everywhere
+- Changed: dark theme (and dark High contrast) in `design/tokens.css` has no hues at all — no
+  magenta, no navy: white buttons with near-black text, white links, grey icon chips, grey agent
+  badges, greyscale chart series and status colours (badges keep their icons + words). The Ampera
+  logo shows as a white mark (`Logo.module.css`) and the landing orbit switches to a grey palette
+  (`three/HeroOrbit.tsx`, follows `<html data-theme>`).
+- Changed: `store/uiStore.ts` — accessibility settings are one browser-wide choice instead of per
+  signed-in account: a change on the landing page applies on sign-in, in the portal and after
+  sign-out, and other open tabs update instantly (`storage` event). Old per-account settings are
+  read once as a fallback.
+- Verified in Chrome (Dark, signed in through the real form as HR): Landing, Sign in, Overview,
+  Assistant (with an answer), HR Dashboard, Talk to HR, Private Cases, Company Policies — 0 coloured
+  elements, 0 coloured screenshot pixels (LCD font smoothing off), axe WCAG 2.2 AA 0 violations;
+  second tab followed Light/Dark changes; still Dark after sign-out.
+
+### 2026-11-19 — Dark mode is dark grey everywhere; bigger text sizes; settings survive sign-in
+- Changed: `design/tokens.css` dark theme. The whole app (page, sidebar, landing hero, Overview
+  banner, cards, inputs, panels) is now soft dark grey (#1A1A1A page, #262626 cards, #202020
+  sidebar) instead of pure black with bright navy blocks. Near-white text; every text pair is
+  >= 7:1 except magenta links (5.5:1) and magenta-on-chip (4.7:1). High contrast (dark) keeps pure black.
+- Changed: text sizes Large = 125% (20px), Extra large = 150% (24px), up from 19px/22px.
+- Fixed: `store/uiStore.ts` — choosing Dark/Extra large on the landing or sign-in page and then
+  signing in used to load that account's older saved settings (often Light). Settings changed
+  while signed out now carry into the account.
+- Verified: Dark + Extra large on Landing, Overview, Assistant, Tickets, Talk to HR, signed in
+  through the real form: axe WCAG 2.2 AA 0 violations, no sideways scrolling.
+
+### 2026-11-19 — Private "Talk to HR" channel and HR-only Private Cases
+- Added: confidential HR cases for complaints, conflicts between colleagues, concerns about a
+  manager, harassment, discrimination, misconduct, personal/wellbeing and safety matters. Migration
+  `0004_hr_cases.sql` (`hr_cases`, `hr_case_messages`), router `app/routers/hr_cases.py`.
+  Visible ONLY to the employee who raised the case and to `hr` users — managers and admins get 403
+  on the list and 404 on any case. Optional anonymous mode (HR sees "Anonymous employee"). Safety
+  cases are always urgent. Case content is never written to `audit_log`, chat `messages`,
+  `agent_runs` or `agent_events`; the case thread is its own history.
+- Chat: `app/agents/hr_confidential.py` spots these matters (deterministic regex, no LLM) and
+  `routers/chat.py` answers them before any agent runs — a caring reply, no run, and only a
+  placeholder stored in chat history — with a "Talk to HR privately" card that pre-fills the form
+  (router state, never the URL). Ordinary questions ("report a phishing email", "bereavement leave
+  policy", "leave for personal reasons") still go to the agents.
+- Frontend: "Talk to HR" page for every role (direct HR contact, private case form, own cases with a
+  private thread) and HR-only "Private Cases" page (urgent/waiting first, assign to me, reply,
+  status + outcome). New settings `HR_CONTACT_EMAIL`, `HR_CONTACT_PHONE`, `HR_CONTACT_HOURS`.
+- Verified: 8 new backend tests (access rules, anonymity, status flow, chat never stores the
+  message); end-to-end in Chrome across all four roles; axe WCAG 2.2 AA clean on both new pages.
+
 ### 2026-11-18 — Each AI agent has its own icon badge, everywhere
 - Changed: `components/ui/AgentAvatar.tsx` — agents keep their names but no longer show a letter.
   Each is a rounded-square badge (people stay round) in a navy→magenta gradient with its own white

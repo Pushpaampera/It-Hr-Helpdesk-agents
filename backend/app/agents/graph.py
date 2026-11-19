@@ -1,5 +1,7 @@
-"""LangGraph wiring: guard -> supervisor -> (it_support | hr_policy | other_reply)
--> action (if needs_action) -> ticketing (if unresolved/escalated) -> feedback.
+"""LangGraph wiring: guard -> supervisor -> (action if it's a request to DO something | it_support |
+hr_policy | other_reply) -> ticketing (if unresolved/escalated) -> feedback. A completed action
+ends without the "did this solve your problem?" question; if Atlas can't tell what to do, the
+question goes to the knowledge agent instead.
 
 request_access pauses the graph via a LangGraph NodeInterrupt; approvals.decide() in the
 routers layer resumes it. A module-level MemorySaver checkpointer keeps paused-run state across
@@ -47,6 +49,12 @@ def _is_negative(text: str) -> bool:
     return bool(NEGATIVE_RE.search(text))
 
 
+def is_gate_reply(text: str) -> bool:
+    """True if a message answers a pending yes/no question rather than asking something new
+    ("how can I put leave" while "did this solve your problem?" is open is a new question)."""
+    return _is_affirmative(text) or _is_negative(text)
+
+
 # Follow-up replies after a confirmation gate. The person has already seen the full answer (it
 # was part of the "Did this solve your problem?" prompt), so the final turn must close the loop
 # instead of repeating that answer back to them.
@@ -75,6 +83,7 @@ class AgentState(TypedDict):
     ended: NotRequired[bool]
     user_reply: NotRequired[str | None]
     offered_ticket: NotRequired[bool]
+    action_fallback: NotRequired[bool]
 
 
 class RunContext:
@@ -116,7 +125,11 @@ def build_graph(ctx: RunContext):
             tokens_in=result["tokens_in"], tokens_out=result["tokens_out"],
         )
         if result["route"] in ("IT", "HR"):
-            friendly_agent = "it_support" if result["route"] == "IT" else "hr_policy"
+            # Requests to DO something go straight to Atlas; questions go to the knowledge agent.
+            if result["needs_action"]:
+                friendly_agent = "action"
+            else:
+                friendly_agent = "it_support" if result["route"] == "IT" else "hr_policy"
             await ctx.sink.emit_handoff("supervisor", friendly_agent, result["intent"] or "routing decision")
         return {
             "route": result["route"], "confidence": result["confidence"],
@@ -181,6 +194,12 @@ def build_graph(ctx: RunContext):
                      "unresolved": True}
 
         result = await action_agent.decide_and_execute(state["query"], ctx.user["id"], ctx.run_id)
+        if not result.get("tool") or result.get("message") == "Action not recognized.":
+            # Atlas couldn't tell what to do: answer it as a question instead (knowledge agent).
+            await ctx.sink.emit("action", "completed", caption="Atlas handed this back to be answered as a question.",
+                                model=result.get("model"), latency_ms=result.get("latency_ms"),
+                                tokens_in=result.get("tokens_in"), tokens_out=result.get("tokens_out"))
+            return {"needs_action": False, "action_fallback": True}
         await ctx.sink.emit(
             "action", "tool_call", action=result.get("tool"),
             detail={"tool": result.get("tool"), "args": result.get("args")},
@@ -299,10 +318,12 @@ def build_graph(ctx: RunContext):
     graph.set_entry_point("guard")
     graph.add_conditional_edges("guard", lambda s: "blocked_reply" if s.get("guard_blocked") else "supervisor")
     graph.add_edge("blocked_reply", "feedback")
-    graph.add_conditional_edges(
-        "supervisor",
-        lambda s: {"IT": "it_support", "HR": "hr_policy"}.get(s.get("route"), "other_reply"),
-    )
+    def _after_supervisor(s: AgentState) -> str:
+        if s.get("route") in ("IT", "HR") and s.get("needs_action"):
+            return "action"
+        return {"IT": "it_support", "HR": "hr_policy"}.get(s.get("route"), "other_reply")
+
+    graph.add_conditional_edges("supervisor", _after_supervisor)
     graph.add_edge("other_reply", "feedback")
 
     def _after_knowledge(s: AgentState) -> str:
@@ -317,7 +338,14 @@ def build_graph(ctx: RunContext):
 
     graph.add_conditional_edges("it_support", _after_knowledge)
     graph.add_conditional_edges("hr_policy", _after_knowledge)
-    graph.add_conditional_edges("action", lambda s: "confirm_resolution")
+    def _after_action(s: AgentState) -> str:
+        if s.get("action_fallback"):
+            return "hr_policy" if s.get("route") == "HR" else "it_support"
+        # A completed request (leave sent to HR, password reset, access approved) needs no
+        # "did this solve your problem?" question; only a failed/declined one does.
+        return "confirm_resolution" if s.get("unresolved") else "feedback"
+
+    graph.add_conditional_edges("action", _after_action)
     graph.add_conditional_edges("confirm_resolution", lambda s: "offer_ticket" if s.get("unresolved") else "feedback")
     graph.add_conditional_edges("offer_ticket", lambda s: "ticketing" if s.get("offered_ticket") else "feedback")
     graph.add_edge("ticketing", "feedback")

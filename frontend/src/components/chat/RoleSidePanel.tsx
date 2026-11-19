@@ -166,7 +166,21 @@ function EmployeeContent({ refreshKey }: { refreshKey: number }) {
           <li>If that doesn't fix it, say so and it'll raise a ticket for a person.</li>
         </ol>
       </Section>
+      <PrivateHrSection />
     </>
+  );
+}
+
+/** A quiet, always-visible way to reach HR privately, for complaints, conflicts or personal
+ * matters, without going through the AI at all. */
+function PrivateHrSection() {
+  return (
+    <Section title="Private matter?" linkTo="/app/hr-support" linkLabel="Talk to HR">
+      <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+        For complaints, problems with a colleague or your manager, or anything personal, talk to HR privately. Only HR
+        can see it, not your manager or admins.
+      </p>
+    </Section>
   );
 }
 
@@ -203,6 +217,7 @@ function ManagerContent({ refreshKey }: { refreshKey: number }) {
           </div>
         )}
       </Section>
+      <PrivateHrSection />
     </>
   );
 }

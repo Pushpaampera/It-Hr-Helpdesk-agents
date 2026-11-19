@@ -6,17 +6,14 @@
  * src/design/tokens.css turns into the actual look — so every page picks them up with no
  * per-page code.
  *
- * Saving: choices are saved in this browser *per signed-in person* — when someone signs in, their
- * own saved settings are applied (a person signing in for the first time keeps whatever they were
- * already using); when they sign out the browser's general settings come back. Signed-out pages
- * (landing, sign-in) use the browser's general settings.
+ * Saving: ONE setting for the whole browser. Whatever is chosen — on the landing page, the sign-in
+ * page or inside the portal — applies to every page, stays the same when signing in or out, and
+ * updates other open tabs immediately. (Accessibility needs must not reset or differ by page.)
  *
  * `reduceMotion` keeps its original name: framer-motion helpers (src/design/motion.ts, Reveal,
  * the page transitions) read it, and it starts from the operating system's "reduce motion"
  * setting when the person has never chosen one. */
 import { create } from "zustand";
-
-import { useAuthStore } from "./authStore";
 
 const STORAGE_KEY = "ampera.accessibility";
 const LEGACY_REDUCE_MOTION_KEY = "helpdesk.reduceMotion";
@@ -54,8 +51,16 @@ function defaults(): Preferences {
   };
 }
 
-function keyFor(userId: string | null): string {
-  return userId ? `${STORAGE_KEY}.user.${userId}` : STORAGE_KEY;
+/** Settings saved by older versions per signed-in person (`ampera.accessibility.user.<id>`).
+ * Used once, as a fallback, so nobody loses their choice when moving to the browser-wide setting. */
+function readLegacyPerUser(): Preferences | null {
+  try {
+    const raw = window.localStorage.getItem("helpdesk.auth");
+    const userId = raw ? (JSON.parse(raw)?.state?.user?.id as string | undefined) : undefined;
+    return userId ? readSaved(`${STORAGE_KEY}.user.${userId}`) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Saved preferences for this key, or null if nothing valid is stored. */
@@ -134,11 +139,8 @@ type UIState = Preferences & {
 
 const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
 
-/** Whose settings are active right now: the signed-in person's id, or null when signed out. */
-let activeUserId: string | null = isBrowser ? (useAuthStore.getState().user?.id ?? null) : null;
-
 const initial: Preferences = isBrowser
-  ? readSaved(keyFor(activeUserId)) ?? readSaved(keyFor(null)) ?? defaults()
+  ? readSaved(STORAGE_KEY) ?? readLegacyPerUser() ?? defaults()
   : { theme: "light", textSize: "normal", highContrast: false, readableFont: false, extraSpacing: false, reduceMotion: false };
 if (isBrowser) applyToDocument(initial);
 
@@ -146,7 +148,7 @@ export const useUIStore = create<UIState>((set, get) => {
   function update(patch: Partial<Preferences>) {
     const next = { ...pick(get()), ...patch };
     applyToDocument(next);
-    persist(keyFor(activeUserId), next);
+    persist(STORAGE_KEY, next);
     set(next);
   }
 
@@ -176,17 +178,11 @@ if (isBrowser) {
     if (s.theme === "system") applyToDocument(pick(s));
   });
 
-  // Sign-in / sign-out: switch to that person's saved settings (or back to the browser's own).
-  useAuthStore.subscribe((state) => {
-    const nextUserId = state.user?.id ?? null;
-    if (nextUserId === activeUserId) return;
-    const previous = pick(useUIStore.getState());
-    activeUserId = nextUserId;
-    // Signing in for the first time keeps what the person was already using, and saves it as theirs;
-    // signing out returns to the browser's general settings.
-    const next = readSaved(keyFor(nextUserId)) ?? (nextUserId ? previous : (readSaved(keyFor(null)) ?? defaults()));
+  // Another open tab changed a setting: apply it here too, straight away.
+  window.addEventListener("storage", (e) => {
+    if (e.key !== STORAGE_KEY) return;
+    const next = readSaved(STORAGE_KEY) ?? defaults();
     applyToDocument(next);
-    if (nextUserId) persist(keyFor(nextUserId), next);
     useUIStore.setState(next);
   });
 }

@@ -16,6 +16,8 @@ import Overview from "./pages/dashboard/Overview";
 import ReinforcementLab from "./pages/dashboard/ReinforcementLab";
 import Team from "./pages/dashboard/Team";
 import Tickets from "./pages/dashboard/Tickets";
+import TalkToHr from "./pages/dashboard/TalkToHr";
+import HrCases from "./pages/dashboard/HrCases";
 
 /**
  * Phase 11 adds the last admin-only pages: Control Room, Reinforcement Lab, Evaluation, Costs,
@@ -33,6 +35,8 @@ export default function AppRoutes() {
           <Route path="overview" element={<Overview />} />
           <Route path="assistant" element={<Assistant />} />
           <Route path="tickets" element={<Tickets />} />
+          <Route path="hr-support" element={<TalkToHr />} />
+          <Route path="hr-cases" element={<HrCases />} />
           <Route path="approvals" element={<Approvals />} />
           <Route path="team" element={<Team />} />
           <Route path="hr-insights" element={<HrInsights />} />

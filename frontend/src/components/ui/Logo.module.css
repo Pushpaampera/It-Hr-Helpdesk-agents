@@ -22,3 +22,8 @@
   background: var(--sidebar-active-bg);
   border-color: var(--sidebar-text);
 }
+
+/* Dark mode is strictly black/grey/white: show the logo as a clean white mark, no magenta. */
+:global(html[data-theme="dark"]) .mark {
+  filter: brightness(0) invert(1);
+}

@@ -22,7 +22,9 @@ Routing guide:
 - OTHER: anything unclear, off-topic, or that doesn't fit IT or HR.
 
 needs_action is true only if the user is asking to DO something (reset a password, apply for
-leave, request access, unlock an account) rather than just asking a question.
+leave, request access, unlock an account) rather than just asking a question. Plain wishes count
+as requests: "I want a leave", "I need 2 days off tomorrow" -> needs_action true; "how much leave
+can I carry forward?" -> false.
 If you are not confident (below 0.55), set route to OTHER."""
 
 IT_KEYWORDS = {
@@ -34,10 +36,20 @@ IT_KEYWORDS = {
 HR_KEYWORDS = {
     "leave", "payroll", "payslip", "pay slip", "salary", "tax", "benefits", "insurance",
     "travel", "reimbursement", "work from home", "onboarding", "performance review", "sick",
-    "casual", "parental", "annual leave", "bonus", "compensation",
+    "casual", "parental", "annual leave", "bonus", "compensation", "day off", "days off", "time off",
+    "holiday", "vacation",
 }
 ACTION_VERBS = {"reset", "apply", "request", "unlock", "submit", "book", "cancel"}
+# Everyday ways of asking for time off ("I want a leave", "I need 2 days off", "can I take sick
+# leave tomorrow"), as opposed to questions about leave ("how does leave carry forward?").
+LEAVE_REQUEST = re.compile(
+    r"^(?!\s*(?:how|what|why|which|where|who|is|are|does|do)\b)"
+    r".*\b(?:want|need|would like|like to|take|taking|get|have|apply|book|request)\b"
+    r".*\b(?:leave|day off|days off|time off|holiday|vacation)\b",
+    re.IGNORECASE,
+)
 ACTION_PHRASES = [
+    LEAVE_REQUEST,
     re.compile(r"\bneed(?:s)? access\b", re.IGNORECASE),
     re.compile(r"\bwant access\b", re.IGNORECASE),
     re.compile(r"\bgrant (?:me )?access\b", re.IGNORECASE),

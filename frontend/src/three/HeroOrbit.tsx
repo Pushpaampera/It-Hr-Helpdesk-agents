@@ -13,7 +13,7 @@
  * to #D77BD5 for the navy background, white) — hard-coded because Three.js can't read CSS
  * variables. If WebGL isn't available the banner simply shows without it. */
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Component, useEffect, useMemo, useRef } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import * as THREE from "three";
 
@@ -22,9 +22,11 @@ import { useUIStore } from "../store/uiStore";
 /** The stage's centre and size, as fractions of the banner (0–1). */
 export type OrbitAnchor = { x: number; y: number; w: number; h: number };
 
-const LAVENDER = "#bcbed0";
-const MAGENTA = "#d77bd5";
-const WHITE = "#ffffff";
+type Palette = { lavender: string; magenta: string; white: string };
+// Light theme: Ampera lavender + magenta on the navy banner.
+const BRAND_PALETTE: Palette = { lavender: "#bcbed0", magenta: "#d77bd5", white: "#ffffff" };
+// Dark theme is strictly black/grey/white, so the animation turns greyscale too.
+const GREY_PALETTE: Palette = { lavender: "#a8a8a8", magenta: "#dcdcdc", white: "#ffffff" };
 
 const SPHERE_DOTS = 900;
 const SHELL_DOTS = 360;
@@ -47,12 +49,15 @@ function spherePoints(count: number, radius: number): Float32Array {
 
 // Three tilted rings; the helper dots sit on them at these angles (3 + 2 + 2 = 7 helpers).
 const RINGS = [
-  { radius: 4.6, tilt: [1.05, 0.15, 0.32] as const, speed: 0.22, color: MAGENTA, opacity: 0.55, nodes: [0, 2.1, 4.2] },
-  { radius: 5.2, tilt: [1.2, -0.35, -0.45] as const, speed: -0.16, color: LAVENDER, opacity: 0.4, nodes: [1.0, 4.0] },
-  { radius: 5.8, tilt: [0.75, 0.5, 0.1] as const, speed: 0.12, color: MAGENTA, opacity: 0.32, nodes: [2.6, 5.6] },
+  { radius: 4.6, tilt: [1.05, 0.15, 0.32] as const, speed: 0.22, tone: "magenta" as const, opacity: 0.55, nodes: [0, 2.1, 4.2] },
+  { radius: 5.2, tilt: [1.2, -0.35, -0.45] as const, speed: -0.16, tone: "lavender" as const, opacity: 0.4, nodes: [1.0, 4.0] },
+  { radius: 5.8, tilt: [0.75, 0.5, 0.1] as const, speed: 0.12, tone: "magenta" as const, opacity: 0.32, nodes: [2.6, 5.6] },
 ];
 
-function Orbit({ anchor, pointer }: { anchor: OrbitAnchor; pointer: React.MutableRefObject<{ x: number; y: number }> }) {
+function Orbit({ anchor, pointer, palette }: { anchor: OrbitAnchor; pointer: React.MutableRefObject<{ x: number; y: number }>; palette: Palette }) {
+  const LAVENDER = palette.lavender;
+  const MAGENTA = palette.magenta;
+  const WHITE = palette.white;
   const { viewport } = useThree();
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const tiltRef = useRef<THREE.Group>(null);
@@ -135,7 +140,7 @@ function Orbit({ anchor, pointer }: { anchor: OrbitAnchor; pointer: React.Mutabl
               <group ref={(el) => { spinRefs.current[i] = el; }}>
                 <mesh>
                   <torusGeometry args={[ring.radius, 0.014, 6, 220]} />
-                  <meshBasicMaterial color={ring.color} transparent opacity={ring.opacity} depthWrite={false} />
+                  <meshBasicMaterial color={palette[ring.tone]} transparent opacity={ring.opacity} depthWrite={false} />
                 </mesh>
                 {ring.nodes.map((angle) => (
                   <group key={angle} position={[Math.cos(angle) * ring.radius, Math.sin(angle) * ring.radius, 0]}>
@@ -158,6 +163,19 @@ function Orbit({ anchor, pointer }: { anchor: OrbitAnchor; pointer: React.Mutabl
   );
 }
 
+/** True while the page is in dark mode (follows <html data-theme>, which the Accessibility panel
+ * sets — including "Match my device"). */
+function useDarkTheme(): boolean {
+  const read = () => document.documentElement.dataset.theme === "dark";
+  const [dark, setDark] = useState(read);
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(read()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 /** If WebGL fails for any reason, show nothing rather than break the page. */
 class Quiet extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -173,6 +191,7 @@ export default function HeroOrbit({ anchor }: { anchor: OrbitAnchor }) {
   const tabVisible = useUIStore((s) => s.tabVisible);
   const reduceMotion = useUIStore((s) => s.reduceMotion);
   const pointer = useRef({ x: 0, y: 0 });
+  const palette = useDarkTheme() ? GREY_PALETTE : BRAND_PALETTE;
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -192,7 +211,7 @@ export default function HeroOrbit({ anchor }: { anchor: OrbitAnchor }) {
         gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
         style={{ width: "100%", height: "100%", pointerEvents: "none" }}
       >
-        <Orbit anchor={anchor} pointer={pointer} />
+        <Orbit anchor={anchor} pointer={pointer} palette={palette} />
       </Canvas>
     </Quiet>
   );

@@ -110,13 +110,32 @@ async def test_c_reset_password_runs_action():
     assert tool_calls, "expected an action tool_call event"
     assert tool_calls[0]["action"] == "reset_password"
 
-    # Action results now also get a "did this solve your problem?" check-in before resolving.
-    confirmations = [e for e in events if e["type"] == "confirmation_required"]
-    assert confirmations and confirmations[0]["gate"] == "resolution_confirm"
-
-    followup = await _send_followup(run_id, "yes")
-    finals = [e for e in followup if e["type"] == "final"]
+    # A completed action goes straight to Atlas (no knowledge answer in front of it) and finishes
+    # without a "did this solve your problem?" question.
+    assert not [e for e in events if e.get("agent") == "it_support"], "requests skip the knowledge agent"
+    assert not [e for e in events if e["type"] == "confirmation_required"]
+    finals = [e for e in events if e["type"] == "final"]
     assert finals and finals[0]["resolved"] is True
+    assert get_run(run_id)["status"] == "resolved"
+
+
+@pytest.mark.asyncio
+async def test_c2_leave_request_goes_to_hr_without_policy_text():
+    from sqlalchemy import text
+
+    emma = _get_user("emma.employee@acme.test")
+    run_id, events = await _run_chat(emma, "i want a leave")
+    finals = [e for e in events if e["type"] == "final"]
+    assert finals, "a leave request should finish in one go"
+    answer = finals[0]["answer"]
+    assert "sent to HR for approval" in answer
+    assert "carried forward" not in answer and "Did this solve" not in answer
+    assert not [e for e in events if e["type"] == "confirmation_required"]
+    with get_engine().begin() as conn:  # keep HR's queue clean
+        conn.execute(text("""DELETE FROM leave_requests WHERE user_id = :u AND status = 'pending'
+                             AND reason = 'Requested via the AI Assistant.' AND created_at > now() - interval '5 minutes'"""),
+                     {"u": emma["id"]})
+        conn.execute(text("DELETE FROM notifications WHERE kind IN ('leave_pending','leave_submitted') AND created_at > now() - interval '5 minutes'"))
 
 
 @pytest.mark.asyncio
@@ -151,26 +170,16 @@ async def test_d_access_request_pauses_then_resumes_on_approval():
     approvals_api.decide(approval_id, "approved", "Approved for project work.", manager["id"])
     await resume_after_approval(run_id, True)
 
-    # The access-granted answer now also pauses for a "did this solve your problem?" check-in
-    # instead of resolving immediately — drain whatever the still-open original queue collected
-    # during that resume (get_queue() is dropped by the time we check, but the queue object
-    # itself still holds the events that were pushed before the drop).
-    run_after = get_run(run_id)
-    assert run_after["status"] == "awaiting_user_confirmation"
-    assert get_queue(run_id) is None, "queue should have been dropped once paused for user confirmation"
-
-    confirm_events = []
+    # The access-granted answer finishes the run straight away (no "did this solve" question).
+    finals = []
     while True:
         item = await asyncio.wait_for(queue.get(), timeout=10)
         if item is None:
             break
-        confirm_events.append(item)
-    confirmations = [e for e in confirm_events if e["type"] == "confirmation_required"]
-    assert confirmations and confirmations[0]["gate"] == "resolution_confirm"
-
-    followup = await _send_followup(run_id, "yes")
-    finals = [e for e in followup if e["type"] == "final"]
+        if item["type"] == "final":
+            finals.append(item)
     assert finals and finals[0]["resolved"] is True
+    assert "approved" in finals[0]["answer"]
 
     run_final = get_run(run_id)
     assert run_final["status"] == "resolved"

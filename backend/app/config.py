@@ -34,6 +34,27 @@ class Settings(BaseSettings):
 
     APP_PORT: int = 8000
 
+    # Direct HR contact shown to employees for confidential matters (complaints, conflicts,
+    # personal issues). Not secrets. HR_CONTACT_PHONE is optional: leave it empty to hide it.
+    HR_CONTACT_EMAIL: str = "hr@acme.test"
+    HR_CONTACT_PHONE: str = ""
+    HR_CONTACT_HOURS: str = "Monday to Friday, 9:00 to 17:00"
+
+    # Outgoing email for notifications (leave decisions, approvals, HR case updates). Leave
+    # SMTP_HOST empty to turn email off: in-app notifications still work. SMTP_SECURITY is
+    # "starttls" (port 587), "ssl" (port 465) or "none".
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_SECURITY: str = "starttls"
+    # Demo helper: when set, every email goes to this one address instead of the user's own
+    # (the seeded users have made-up @acme.test addresses). Leave empty in real use.
+    EMAIL_REDIRECT_ALL_TO: str = ""
+    # Public address of the site, used for the "Open HelpDesk" link inside emails.
+    APP_PUBLIC_URL: str = "http://localhost:5173"
+
 
 @lru_cache
 def get_settings() -> Settings:

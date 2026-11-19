@@ -149,73 +149,91 @@
 
 /* Text size: every font size in the app is in rem, so this scales the whole interface. */
 html[data-text-size="large"] {
-  font-size: 118.75%; /* 19px */
+  font-size: 125%; /* 20px */
 }
 
 html[data-text-size="xlarge"] {
-  font-size: 137.5%; /* 22px */
+  font-size: 150%; /* 24px: very big, for low-vision users */
 }
 
 /* Dark theme (Accessibility panel → Appearance → Dark, or "Match my device" on a dark system).
-   Black page, white text, the same navy sidebar and banners, and magenta lifted to #D77BD5 so it
-   reads on black (with black text on magenta buttons). */
+   Strictly black, grey and white: no magenta, no navy, no other hue anywhere (operator request,
+   for low-vision and light-sensitive users). Soft dark-grey surfaces, near-white text (>= 7:1),
+   white buttons with near-black text, white underlined links. The Ampera logo and the landing
+   orbit animation also switch to greyscale (Logo.module.css, three/HeroOrbit.tsx).
+   High contrast (dark), below, is the pure black-and-white version of this. */
 html[data-theme="dark"] {
-  --brand: #d77bd5;
-  --brand-deep: #e3a0e1;
-  --brand-darkest: #f0c8ef;
-  --brand-tint: #2a1530;
-  --brand-soft: #1a0f1d;
+  --brand: #ffffff;
+  --brand-deep: #e6e6e6;
+  --brand-darkest: #cccccc;
+  --brand-tint: #363636; /* icon chips */
+  --brand-soft: #2e2e2e; /* selected / active rows */
 
-  --sidebar-bg: #0a1450;
-  --sidebar-hover-bg: #16236a;
-  --banner-bg: radial-gradient(120% 160% at 100% 0%, #2f1b6f 0%, rgba(47, 27, 111, 0) 55%), #000a40;
+  --sidebar-bg: #202020;
+  --sidebar-hover-bg: #2e2e2e;
+  --sidebar-active-bg: #3a3a3a;
+  --sidebar-text: #d2d2d2;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-active-text: #ffffff;
+  --sidebar-border: #343434;
 
-  --bg: #000000;
-  --bg-elevated: #121212;
-  --bg-panel: #121212;
-  --bg-panel-strong: #1a1a1a;
-  --page-haze: radial-gradient(60% 50% at 100% 100%, rgba(156, 54, 154, 0.12), transparent 70%);
-  --border-subtle: #2e2e3a;
-  --border-strong: #8a8aa0;
+  --banner-bg: #262626;
+  --banner-text: #f5f5f5;
+  --banner-text-muted: #cfcfcf;
 
-  --text-primary: #ffffff;
-  --text-secondary: #e6e6ec;
-  --text-muted: #bcbed0;
-  --text-on-accent: #000000;
+  --bg: #1a1a1a;
+  --bg-elevated: #262626;
+  --bg-panel: #262626;
+  --bg-panel-strong: #2e2e2e;
+  --page-haze: none;
+  --border-subtle: #3d3d3d;
+  --border-strong: #a0a0a0;
+
+  --text-primary: #f2f2f2;
+  --text-secondary: #dcdcdc;
+  --text-muted: #bdbdbd;
+  --text-on-accent: #121212;
   --heading: #ffffff;
 
-  --accent-primary: #d77bd5;
-  --accent-secondary: #8e98d6;
+  /* Actions: white buttons with near-black text; links white (and underlined, global.css) */
+  --accent-primary: #ffffff;
+  --accent-secondary: #d0d0d0;
   --focus-ring: #ffffff;
 
-  --role-admin: #d77bd5;
+  --role-admin: #ffffff;
   --role-employee: var(--role-admin);
   --role-manager: var(--role-admin);
   --role-hr: var(--role-admin);
 
-  --agent-supervisor: #d77bd5;
-  --agent-it_support: #d77bd5;
-  --agent-hr_policy: #d77bd5;
-  --agent-action: #d77bd5;
-  --agent-ticketing: #d77bd5;
-  --agent-feedback: #d77bd5;
-  --agent-guard: #d77bd5;
-  --agent-knowledge: #d77bd5;
-  --agent-badge-ring: #121212;
+  --agent-supervisor: #ececec;
+  --agent-it_support: #ececec;
+  --agent-hr_policy: #ececec;
+  --agent-action: #ececec;
+  --agent-ticketing: #ececec;
+  --agent-feedback: #ececec;
+  --agent-guard: #ececec;
+  --agent-knowledge: #ececec;
+  --agent-chip-bg: #3d3d3d;
+  --agent-chip-icon: #ffffff;
+  --agent-badge-bg: #f2f2f2;
+  --agent-badge-icon: #1a1a1a;
+  --agent-badge-ring: #262626;
 
-  --series-1: #ffffff;
-  --series-2: #d77bd5;
-  --series-3: #a0a0a0;
+  /* Charts: three greys (series also differ by dash pattern, never by colour alone) */
+  --series-1: #f2f2f2;
+  --series-2: #a8a8a8;
+  --series-3: #707070;
 
-  --success: #bcbed0;
-  --warning: #e6e6ec;
-  --danger: #ff8a8a;
-  --info: #d77bd5;
+  /* Status: no hues. Badges and errors always carry an icon + words. */
+  --success: #dcdcdc;
+  --warning: #ececec;
+  --danger: #ffffff;
+  --info: #ececec;
 
-  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.6);
-  --shadow-panel-lift: 0 6px 18px rgba(0, 0, 0, 0.7);
-  --glow-primary: 0 6px 18px rgba(0, 0, 0, 0.7);
-  --glow-steel: 0 6px 18px rgba(0, 0, 0, 0.7);
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-panel-lift: 0 6px 18px rgba(0, 0, 0, 0.55);
+  --glow-primary: 0 6px 18px rgba(0, 0, 0, 0.55);
+  --glow-steel: 0 6px 18px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
@@ -261,7 +279,7 @@ html[data-contrast="high"]:not([data-theme="dark"]) {
   --shadow-panel-lift: none;
 }
 
-/* High contrast (dark): white on pure black, white borders, bright accents. */
+/* High contrast (dark): white on pure black, white borders, no hues. */
 html[data-theme="dark"][data-contrast="high"] {
   --bg: #000000;
   --page-haze: none;
@@ -277,8 +295,8 @@ html[data-theme="dark"][data-contrast="high"] {
   --text-muted: #f0f0f0;
   --text-on-accent: #000000;
   --heading: #ffffff;
-  --accent-primary: #f0c8ef;
-  --accent-secondary: #f0c8ef;
+  --accent-primary: #ffffff;
+  --accent-secondary: #ffffff;
   --focus-ring: #ffffff;
   --sidebar-bg: #000000;
   --sidebar-text: #ffffff;
@@ -288,25 +306,25 @@ html[data-theme="dark"][data-contrast="high"] {
   --sidebar-border: #ffffff;
   --banner-bg: #000000;
   --banner-text-muted: #ffffff;
-  --agent-supervisor: #f0c8ef;
-  --agent-it_support: #f0c8ef;
-  --agent-hr_policy: #f0c8ef;
-  --agent-action: #f0c8ef;
-  --agent-ticketing: #f0c8ef;
-  --agent-feedback: #f0c8ef;
-  --agent-guard: #f0c8ef;
+  --agent-supervisor: #ffffff;
+  --agent-it_support: #ffffff;
+  --agent-hr_policy: #ffffff;
+  --agent-action: #ffffff;
+  --agent-ticketing: #ffffff;
+  --agent-feedback: #ffffff;
+  --agent-guard: #ffffff;
   --series-1: #ffffff;
   --agent-chip-bg: #ffffff;
   --agent-chip-icon: #000000;
   --agent-badge-bg: #000000;
   --agent-badge-icon: #ffffff;
   --agent-badge-ring: #ffffff;
-  --series-2: #f0c8ef;
+  --series-2: #ffffff;
   --series-3: #a0a0a0;
   --success: #ffffff;
   --warning: #ffffff;
   --danger: #ff8a8a;
-  --info: #f0c8ef;
+  --info: #ffffff;
   --shadow-panel: none;
   --shadow-panel-lift: none;
 }

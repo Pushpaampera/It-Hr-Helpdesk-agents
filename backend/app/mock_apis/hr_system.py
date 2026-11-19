@@ -20,6 +20,7 @@ def get_leave_balances(user_id: str) -> list[dict]:
 
 
 def apply_leave(user_id: str, leave_type: str, start_date: str, end_date: str, reason: str) -> dict:
+    """Submits a leave request as 'pending' for HR to approve or reject on the HR Dashboard."""
     from datetime import date
 
     start = date.fromisoformat(start_date)
@@ -31,19 +32,15 @@ def apply_leave(user_id: str, leave_type: str, start_date: str, end_date: str, r
         row = conn.execute(
             text(
                 """INSERT INTO leave_requests (user_id, leave_type, start_date, end_date, days, reason, status)
-                   VALUES (:uid, :lt, :start, :end, :days, :reason, 'approved') RETURNING id"""
+                   VALUES (:uid, :lt, :start, :end, :days, :reason, 'pending') RETURNING id"""
             ),
             {"uid": user_id, "lt": leave_type, "start": start, "end": end, "days": days, "reason": reason},
         ).mappings().first()
-        conn.execute(
-            text(
-                "UPDATE leave_balances SET used_days = used_days + :days WHERE user_id = :uid AND leave_type = :lt"
-            ),
-            {"days": days, "uid": user_id, "lt": leave_type},
-        )
+        # The balance is only deducted when HR approves (app/routers/hr_insights.py).
     log_action(user_id, "apply_leave", "leave_request", str(row["id"]),
                {"leave_type": leave_type, "start_date": start_date, "end_date": end_date, "days": days})
-    return {"leave_request_id": str(row["id"]), "leave_type": leave_type, "days": days, "status": "approved"}
+    return {"leave_request_id": str(row["id"]), "leave_type": leave_type, "days": days, "status": "pending",
+            "start_date": start_date, "end_date": end_date}
 
 
 def get_payslip(user_id: str, month: str | None = None) -> dict | None:
