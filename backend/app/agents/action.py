@@ -5,6 +5,7 @@ import re
 from datetime import date, timedelta
 
 from app.agents.llm import call_groq_tools
+from app.agents.payslip import is_payslip_request
 from app.agents.supervisor import LEAVE_REQUEST
 from app.config import get_settings
 from app.mock_apis import hr_system, it_system
@@ -62,6 +63,11 @@ TOOLS = [
         "name": "get_leave_balance", "description": "Looks up the employee's own leave balance.",
         "parameters": {"type": "object", "properties": {}, "required": []},
     }},
+    {"type": "function", "function": {
+        "name": "get_payslip",
+        "description": "Shows the employee their own payslip (gross pay, deductions, net pay) for a month.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    }},
 ]
 
 LEAVE_TYPE_WORDS = {"annual": "annual", "vacation": "annual", "holiday": "annual", "sick": "sick", "casual": "casual", "parental": "parental"}
@@ -100,6 +106,8 @@ def _mock_tool_call(query: str) -> dict | None:
         }}
     if "balance" in q and "leave" in q:
         return {"name": "get_leave_balance", "arguments": {}}
+    if is_payslip_request(query):
+        return {"name": "get_payslip", "arguments": {}}
     if ("leave" in q and any(w in q for w in ("apply", "book", "request", "take"))) or LEAVE_REQUEST.search(query):
         leave_type = next((v for k, v in LEAVE_TYPE_WORDS.items() if k in q), "annual")
         start, end, _ = _resolve_relative_date(query)
@@ -185,6 +193,10 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
         lines = [f"{b['leave_type'].title()}: {b['remaining_days']}/{b['total_days']} days" for b in balances]
         return {**base, "tool": name, "args": args, "result": {"balances": balances}, "paused": False,
                 "message": "Here's your leave balance:\n" + "\n".join(lines)}
+
+    if name == "get_payslip":
+        # The graph shows it (graph.node_payslip), always for the signed-in person only.
+        return {**base, "tool": name, "args": args, "result": None, "paused": False, "message": ""}
 
     if name == "apply_leave":
         # Never submit here: the graph sends this to the step-by-step leave request

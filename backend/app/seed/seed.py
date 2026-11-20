@@ -154,6 +154,44 @@ def run_seed() -> None:
     print(f"[seed] done in {elapsed:.1f}s")
 
 
+def refresh_knowledge() -> None:
+    """`poetry run refresh-kb`: brings the stored knowledge articles in line with
+    seed/generators/knowledge.py after an article's text was edited. Only articles whose body
+    changed (matched by department + title) are rewritten and re-chunked/re-embedded; their ids,
+    and everything else in the database, stay as they are. Safe to run any time."""
+    it_list, hr_list = it_articles(), hr_articles()
+    wanted = {("IT", a["title"]): a for a in it_list} | {("HR", a["title"]): a for a in hr_list}
+    with psycopg.connect(_dsn(), autocommit=False) as conn:
+        from pgvector.psycopg import register_vector
+
+        register_vector(conn)
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, dept, title, body FROM knowledge_articles")
+            stored = cur.fetchall()
+        changed = [(str(aid), wanted[(dept, title)]) for aid, dept, title, body in stored
+                   if (dept, title) in wanted and wanted[(dept, title)]["body"] != body]
+        if not changed:
+            print("[refresh-kb] every stored article already matches knowledge.py; nothing to do.")
+            return
+        for aid, a in changed:
+            dept = "IT" if any(x is a for x in it_list) else "HR"
+            chunks = chunk_article(a["title"], a["body"])
+            embeddings = embed_texts([c.text for c in chunks])
+            with conn.cursor() as cur:
+                cur.execute("UPDATE knowledge_articles SET body = %s WHERE id = %s", (a["body"], aid))
+                cur.execute("DELETE FROM kb_chunks WHERE article_id = %s", (aid,))
+                cur.executemany(
+                    """INSERT INTO kb_chunks (id, article_id, chunk_index, text, embedding, metadata)
+                       VALUES (%s,%s,%s,%s,%s,%s)""",
+                    [(str(uuid.uuid4()), aid, c.chunk_index, c.text, emb,
+                      Json({"section": c.section, "dept": dept, "category": a["category"]}))
+                     for c, emb in zip(chunks, embeddings, strict=True)],
+                )
+            print(f"[refresh-kb] updated: {a['title']} ({len(chunks)} chunks)")
+        conn.commit()
+    print(f"[refresh-kb] done: {len(changed)} article(s) updated.")
+
+
 def reset_and_reseed() -> None:
     """Returns the showcase to its pristine state between demo runs (admin 'reset demo'): replaces
     all people and activity with the small demo set. The knowledge base, golden questions and

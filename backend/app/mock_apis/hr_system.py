@@ -43,6 +43,16 @@ def apply_leave(user_id: str, leave_type: str, start_date: str, end_date: str, r
             "start_date": start_date, "end_date": end_date}
 
 
+def list_payslip_months(user_id: str) -> list[str]:
+    """The person's own payslip months, newest first ('2026-10', '2026-09', ...)."""
+    engine = get_engine()
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT month FROM payslips WHERE user_id = :uid ORDER BY month DESC"), {"uid": user_id},
+        ).scalars().all()
+    return list(rows)
+
+
 def get_payslip(user_id: str, month: str | None = None) -> dict | None:
     engine = get_engine()
     with engine.connect() as conn:

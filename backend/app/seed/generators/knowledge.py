@@ -509,14 +509,16 @@ Full-time employees accrue 24 days of annual leave per year, credited monthly (2
 Part-time employees accrue on a pro-rated basis matching their contracted hours.
 
 ## How to apply
-Apply through the AI Assistant or the My Requests page at least 5 working days before the
-first day of leave where possible. Your manager is notified automatically and approves or
-declines within the system.""")
+Apply through the AI Assistant (for example "I want annual leave from 1 Dec to 3 Dec") at
+least 5 working days before the first day of leave where possible. The assistant asks for
+anything missing, shows a summary and sends it to HR once you say yes. HR approves or declines
+it, and you get a notification and an email with the decision.""")
     add("Annual Leave", "Cancelling or changing approved annual leave", """## Steps
-1. Go to My Requests and select the leave request you want to change.
-2. Cancellations more than 3 days before the start date are self-service and immediate.
-3. Changes within 3 days of the start date need your manager's re-approval, since team
-   coverage may already be arranged around your absence.""")
+1. Tell the AI Assistant which leave request you want to cancel or change. If it can't do it
+   for you, it raises a ticket so HR can update the request.
+2. Cancellations more than 3 days before the start date are normally accepted straight away.
+3. Changes within 3 days of the start date need HR's re-approval, since team coverage may
+   already be arranged around your absence.""")
     add("Annual Leave", "Annual leave during probation period", """## Policy
 Leave accrues from day one of employment, including during the probation period, but new
 hires are asked to avoid taking leave in the first 4 weeks unless there's a pre-planned,
@@ -546,7 +548,7 @@ you, HR, and your manager only on a need-to-know basis.""")
 appliance delivery, a personal errand) that don't warrant using annual leave or sick leave.
 
 ## How to apply
-Same process as annual leave — apply through the AI Assistant or My Requests. Casual leave can
+Same process as annual leave — apply through the AI Assistant. Casual leave can
 be requested with less notice than annual leave, same-day if needed.""")
     add("Casual Leave", "Casual leave vs. annual leave - which to use", """## Guidance
 Use casual leave for short (often half-day or 1-day), lower-notice personal matters. Use
@@ -596,13 +598,13 @@ balances reset at the start of each calendar year and do not roll over.""")
 
     # Payroll / payslip (4)
     add("Payroll", "Payroll cycle and pay dates", """## Policy
-Salaries are paid monthly, on the last working day of each month. Payslips are available in the
-system from 3 working days before pay date.
+Salaries are paid monthly, on the last working day of each month. Payslips are available from
+3 working days before pay date.
 
 ## Viewing your payslip
-Go to My Requests > Payslips, or ask the AI Assistant "show me my payslip" — you can only ever
-view your own payslip; HR and Admin roles can view others' for legitimate payroll purposes
-only, and every such access is logged.""")
+Ask the AI Assistant "show me my payslip". It shows your latest payslip right in the chat: gross
+pay, each deduction and net pay. For an earlier month, ask for it by name, for example "my
+payslip for October". You can only ever view your own payslip, and every view is logged.""")
     add("Payroll", "Understanding deductions on your payslip", """## Common deduction lines
 Tax withholding, retirement/pension contribution, and health insurance premium (if you've opted
 into the company plan) are the three most common deduction lines. Each is itemized separately

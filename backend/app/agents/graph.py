@@ -29,6 +29,7 @@ from app.agents import it_support as it_support_agent
 from app.agents import leave_request as leave
 from app.agents import spelling
 from app.agents import password_reset as pw_reset
+from app.agents import payslip as payslip_view
 from app.agents import supervisor as supervisor_agent
 from app.agents import ticketing as ticketing_agent
 from app.agents.events import EventSink, drop_queue, get_queue
@@ -105,6 +106,8 @@ class AgentState(TypedDict):
     wants_password_reset: NotRequired[bool]
     # Leave request (Atlas, step by step): set when the message asks for leave.
     wants_leave: NotRequired[bool]
+    # Payslip (Atlas): set when the message asks to see the person's own payslip.
+    wants_payslip: NotRequired[bool]
     # The person's own words, when spelling fixes changed what the agents read (state["query"]).
     original_query: NotRequired[str]
     # Which account the action agent's tool call named ('email', 'windows', ...), if any.
@@ -172,6 +175,17 @@ def build_graph(ctx: RunContext):
             await ctx.sink.emit_handoff("supervisor", "action", "leave request")
             return {"route": "HR", "confidence": 1.0, "needs_action": True, "intent": "leave request",
                     "vague": False, "wants_leave": True}
+        # "I want my payslip": always HR, always Atlas showing the person's own payslip (a word
+        # check; "my payslip looks wrong" is not this and stays a question for Hana).
+        if payslip_view.is_payslip_request(state["query"]):
+            await ctx.sink.emit(
+                "supervisor", "completed", action="route",
+                caption="Sage saw this is a request to see a payslip and handed it to Atlas, the Task Doer.",
+                detail={"route": "HR", "confidence": 1.0, "intent": "view payslip"},
+            )
+            await ctx.sink.emit_handoff("supervisor", "action", "view payslip")
+            return {"route": "HR", "confidence": 1.0, "needs_action": True, "intent": "view payslip",
+                    "vague": False, "wants_payslip": True}
         result = await supervisor_agent.route(state["query"])
         await ctx.sink.emit(
             "supervisor", "completed", action="route",
@@ -293,6 +307,11 @@ def build_graph(ctx: RunContext):
                                 model=result.get("model"), latency_ms=result.get("latency_ms"),
                                 tokens_in=result.get("tokens_in"), tokens_out=result.get("tokens_out"))
             return {"wants_leave": True}
+        if result.get("tool") == "get_payslip":
+            await ctx.sink.emit("action", "completed", caption="Atlas will look up your own payslip.",
+                                model=result.get("model"), latency_ms=result.get("latency_ms"),
+                                tokens_in=result.get("tokens_in"), tokens_out=result.get("tokens_out"))
+            return {"wants_payslip": True}
         if result.get("tool") == "reset_password":
             # Never reset straight away: go through the explained, email-verified flow.
             await ctx.sink.emit("action", "completed", caption="Atlas will check it's really you before resetting the password.",
@@ -585,6 +604,23 @@ def build_graph(ctx: RunContext):
             draft = leave.update(draft_id, reason=reason)
         return await _leave_ask(draft, user_id, problem)
 
+    async def node_payslip(state: AgentState) -> dict:
+        """Atlas shows the signed-in person's own payslip (never anyone else's: ctx.user only)."""
+        await ctx.sink.emit("action", "working", caption="Atlas is looking up your payslip.")
+        user_id = ctx.user["id"]
+        available = hr_system.list_payslip_months(user_id)
+        month = payslip_view.requested_month(state["query"], available)
+        if not available:
+            answer = payslip_view.NO_PAYSLIPS_REPLY
+        elif month and month not in available:
+            answer = payslip_view.missing_month_reply(month, available)
+        else:
+            slip = hr_system.get_payslip(user_id, month or available[0])
+            answer = payslip_view.format_payslip(slip, available) if slip else payslip_view.NO_PAYSLIPS_REPLY
+        await ctx.sink.emit("action", "completed", action="get_payslip",
+                            caption="Atlas showed you your own payslip.", detail={"tool": "get_payslip"})
+        return {"answer": answer, "unresolved": False, "sources": [], "author": "action"}
+
     async def node_confirm_resolution(state: AgentState) -> dict:
         # NodeInterrupt discards any returned state update (LangGraph only persists state from a
         # *returned* dict, never from code reached after a raise) — so "first entry vs resumed"
@@ -756,6 +792,7 @@ def build_graph(ctx: RunContext):
     graph.add_node("action", node_action)
     graph.add_node("password_reset", node_password_reset)
     graph.add_node("leave_request", node_leave_request)
+    graph.add_node("payslip", node_payslip)
     graph.add_node("confirm_resolution", node_confirm_resolution)
     graph.add_node("offer_ticket", node_offer_ticket)
     graph.add_node("ticketing", node_ticketing)
@@ -769,6 +806,8 @@ def build_graph(ctx: RunContext):
             return "password_reset"
         if s.get("wants_leave"):
             return "leave_request"
+        if s.get("wants_payslip"):
+            return "payslip"
         # A vague "I have an issue with my laptop" goes to the knowledge agent to be clarified,
         # even if the supervisor read it as a request for Atlas: there's nothing to DO yet.
         if s.get("route") in ("IT", "HR") and s.get("needs_action") and not _is_vague(s):
@@ -797,6 +836,8 @@ def build_graph(ctx: RunContext):
             return "password_reset"
         if s.get("wants_leave"):
             return "leave_request"
+        if s.get("wants_payslip"):
+            return "payslip"
         if s.get("action_fallback"):
             return "hr_policy" if s.get("route") == "HR" else "it_support"
         # A completed request (leave sent to HR, password reset, access approved) needs no
@@ -814,6 +855,7 @@ def build_graph(ctx: RunContext):
 
     graph.add_conditional_edges("password_reset", _after_password_reset)
     graph.add_edge("leave_request", "feedback")
+    graph.add_edge("payslip", "feedback")
     graph.add_conditional_edges("confirm_resolution", lambda s: "offer_ticket" if s.get("unresolved") else "feedback")
     graph.add_conditional_edges("offer_ticket", lambda s: "ticketing" if s.get("offered_ticket") else "feedback")
     graph.add_edge("ticketing", "feedback")

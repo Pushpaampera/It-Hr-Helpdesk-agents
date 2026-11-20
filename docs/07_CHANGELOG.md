@@ -1,5 +1,25 @@
 # 07 — Changelog
 
+### 2026-11-20 — See your own payslip in the chat; help articles no longer name a missing page
+- **Problem**: "I want my payslip" was answered from the "Payroll cycle and pay dates" article,
+  which said "Go to My Requests > Payslips", a page that never existed; nothing showed payslips,
+  although every demo person has 3 months of them (`payslips` table) and `hr_system.get_payslip`
+  existed.
+- **Now** (`agents/payslip.py`, `graph.node_payslip`): "I want my payslip", "show my payslip for
+  October", "last month's pay slip", "sept payslip" go straight to **Atlas** (word check in the
+  supervisor, like leave and password requests; also a `get_payslip` tool for real-LLM mode), who
+  shows that month's gross pay, each deduction, total deductions and net pay, lists the other
+  months available, and offers help if it looks wrong. Only the signed-in person's own payslip;
+  someone else's is still blocked by Gus; every view audited (`view_payslip`). A month with no
+  payslip lists the available ones. No "did this solve it?" step. Problems and questions ("my
+  payslip looks wrong", "when are payslips available?") still go to Hana. New
+  `hr_system.list_payslip_months`.
+- **Help articles corrected** (`seed/generators/knowledge.py`): the payslip article, and the annual
+  and casual leave articles, no longer mention a "My Requests" page or a manager approving leave
+  (HR approves). New `poetry run refresh-kb` re-chunks and re-embeds only articles whose text
+  changed, keeping everything else; already run on the dev DB (4 articles).
+- `tests/test_payslip.py` (18). Full suite 191 passed.
+
 ### 2026-11-20 — HR Overview redesigned: simpler and clearer
 - Replaced the three crowded columns of nested cards and the "Who's off soon" chip strip
   (`components/dashboard/RoleOverviews.tsx`, `HrOverview`). Now: three summary tiles (Leave to
