@@ -15,3 +15,17 @@ def _no_real_email_or_llm():
     yield
     settings.SMTP_HOST = smtp_host
     settings.LLM_MOCK_MODE = mock_mode
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _restore_demo_data_afterwards():
+    """The tests run against the real dev database and leave chats, leave requests, approvals and
+    tickets behind. Put the small hand-written demo set back when they finish, so the app is always
+    clean to present (seed/generators/demo_data.py; same as `poetry run reset-demo`)."""
+    yield
+    from app.db import check_db_connection
+
+    if check_db_connection()[0]:
+        from app.seed.generators.demo_data import reset_demo
+
+        reset_demo()

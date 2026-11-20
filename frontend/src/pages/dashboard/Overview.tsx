@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 import { KeyRound, LifeBuoy, MessageCircle, PlaneTakeoff } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Area, AreaChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { apiGet } from "../../api/client";
-import type { ConversationSummary, Kpis, TicketSummary, TimeseriesPoint } from "../../api/types";
+import type { ConversationSummary, Kpis, Role, TicketSummary, TimeseriesPoint } from "../../api/types";
+import { AdminHealth, AdminHelpRequests, HrOverview, ItSupportOverview } from "../../components/dashboard/RoleOverviews";
 import Badge from "../../components/ui/Badge";
 import ChartTable from "../../components/ui/ChartTable";
 import InfoBanner from "../../components/ui/InfoBanner";
@@ -18,13 +20,25 @@ import PageTransition from "../../design/pageTransition";
 import hover from "../../design/hoverEffects.module.css";
 import { useAuthStore } from "../../store/authStore";
 
-const STAFF_ROLES = ["manager", "hr", "admin"];
+type QuickAction = { label: string; icon: LucideIcon; to: string };
 
-const QUICK_ACTIONS = [
-  { label: "Ask a question", icon: MessageCircle, query: "" },
-  { label: "Apply for leave", icon: PlaneTakeoff, query: "I'd like to apply for leave" },
-  { label: "Reset password", icon: KeyRound, query: "I need to reset my password" },
-  { label: "Request access", icon: LifeBuoy, query: "I need access to a system" },
+const ask = (query: string) => `/app/assistant?q=${encodeURIComponent(query)}`;
+
+// Each role has its own Overview: employees get a self-service home; IT support, HR and admins
+// get a layout built around their own work (components/dashboard/RoleOverviews.tsx).
+const ROLE_OVERVIEW: Record<Role, { title: (firstName: string) => string; subtitle: string }> = {
+  employee: { title: (n) => `Welcome back, ${n}`, subtitle: "A quick look at your own recent activity." },
+  it_support: { title: () => "IT support", subtitle: "IT problems the AI couldn't solve. Start with the one at the top." },
+  hr: { title: () => "HR overview", subtitle: "What's waiting for HR today. Pick a tile to see its list." },
+  admin: { title: () => "System health", subtitle: "How the AI agents are running, what changed recently, and company-wide results." },
+};
+
+const EMPLOYEE_BANNER = "This page shows your own recent tickets and conversations with the AI assistant.";
+const EMPLOYEE_ACTIONS: QuickAction[] = [
+  { label: "Ask a question", icon: MessageCircle, to: "/app/assistant" },
+  { label: "Apply for leave", icon: PlaneTakeoff, to: ask("I'd like to apply for leave") },
+  { label: "Reset password", icon: KeyRound, to: ask("I need to reset my password") },
+  { label: "Request access", icon: LifeBuoy, to: ask("I need access to a system") },
 ];
 
 // "User asked: "X". The assistant's best attempt: ..." -> just X, for a clean card title instead
@@ -33,6 +47,13 @@ function ticketTitle(summary: string): string {
   const match = summary.match(/"([^"]+)"/);
   const text = match ? match[1] : summary;
   return text.length > 72 ? `${text.slice(0, 72)}…` : text;
+}
+
+/** Status in plain words for the employee: "waiting on you" when IT/HR asked them something;
+ * a question to an admin is staff-only, so it just reads "in progress". */
+function employeeStatus(t: TicketSummary): string {
+  if (t.status === "waiting") return t.waiting_on === "employee" ? "waiting on you" : "in progress";
+  return t.status.replace(/_/g, " ");
 }
 
 function statusTone(status: string): "success" | "warning" | "info" | "danger" {
@@ -54,26 +75,37 @@ function timeAgo(iso: string): string {
 
 export default function Overview() {
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
   if (!user) return null;
-  const isStaff = STAFF_ROLES.includes(user.role);
+  const view = ROLE_OVERVIEW[user.role] ?? ROLE_OVERVIEW.employee;
 
   return (
     <PageTransition routeKey="overview">
       <div>
-        <DashboardHeader
-          title={isStaff ? "Overview" : `Welcome back, ${user.name.split(" ")[0]}`}
-          subtitle={
-            isStaff
-              ? "Company-wide activity: questions asked, how many were solved, and open tickets."
-              : "A quick look at your own recent activity."
-          }
-        />
-        <InfoBanner id="overview">
-          {isStaff
-            ? "This page is a company-wide snapshot: how many questions people asked, how often the Assistant solved them on its own, and what is still open."
-            : "This page shows your own recent tickets and conversations with the AI assistant."}
-        </InfoBanner>
+        <DashboardHeader title={view.title(user.name.split(" ")[0])} subtitle={view.subtitle} hero={user.role === "employee"} />
+        {user.role === "employee" ? (
+          <EmployeeHome />
+        ) : user.role === "admin" ? (
+          <div style={{ display: "grid", gap: "var(--space-5)" }}>
+            <AdminHelpRequests />
+            <AdminHealth />
+            <StaffOverview />
+          </div>
+        ) : user.role === "hr" ? (
+          <HrOverview />
+        ) : (
+          <ItSupportOverview />
+        )}
+      </div>
+    </PageTransition>
+  );
+}
+
+/** The employee's home: welcome banner text, self-service shortcuts and their own activity. */
+function EmployeeHome() {
+  const navigate = useNavigate();
+  return (
+    <>
+        <InfoBanner id="overview">{EMPLOYEE_BANNER}</InfoBanner>
 
         <motion.div
           initial="hidden"
@@ -81,14 +113,14 @@ export default function Overview() {
           variants={staggerContainer()}
           style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}
         >
-          {QUICK_ACTIONS.map((action) => {
+          {EMPLOYEE_ACTIONS.map((action) => {
             const Icon = action.icon;
             return (
               <motion.button
                 key={action.label}
                 variants={fadeUp}
                 className={hover.liftOnHover}
-                onClick={() => navigate(`/app/assistant${action.query ? `?q=${encodeURIComponent(action.query)}` : ""}`)}
+                onClick={() => navigate(action.to)}
                 style={{
                   display: "flex", alignItems: "center", gap: "var(--space-3)",
                   padding: "var(--space-4)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border-subtle)",
@@ -111,9 +143,8 @@ export default function Overview() {
           })}
         </motion.div>
 
-        {isStaff ? <StaffOverview /> : <EmployeeOverview />}
-      </div>
-    </PageTransition>
+        <EmployeeOverview />
+    </>
   );
 }
 
@@ -180,7 +211,7 @@ function StaffOverview() {
         <StatCard
           label="Pending approvals"
           value={kpis.pending_approvals}
-          infoText="Access requests waiting on a manager's decision."
+          infoText="Access requests waiting on an admin's decision."
         />
       </motion.div>
 
@@ -257,13 +288,15 @@ function EmployeeOverview() {
   }
 
   const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
+  // A conversation that ended in a ticket is shown once, as the ticket.
+  const ticketQuestions = new Set(tickets.map((t) => t.summary.match(/"([^"]+)"/)?.[1] ?? ""));
 
   const timeline = [
     ...tickets.slice(0, 6).map((t) => ({
       id: `t-${t.id}`, kind: "ticket" as const, at: t.created_at,
       text: `Ticket opened: ${ticketTitle(t.summary)}`, status: t.status,
     })),
-    ...conversations.slice(0, 6).map((c) => ({
+    ...conversations.filter((c) => !ticketQuestions.has(c.title)).slice(0, 6).map((c) => ({
       id: `c-${c.id}`, kind: "conversation" as const, at: c.created_at,
       text: c.title || "Conversation with the AI Assistant", status: c.status,
     })),
@@ -307,7 +340,7 @@ function EmployeeOverview() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--space-2)" }}>
                   <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>{t.number}</span>
-                  <Badge label={t.status} tone={statusTone(t.status)} />
+                  <Badge label={employeeStatus(t)} tone={statusTone(t.status)} />
                 </div>
                 <span style={{ fontSize: "0.8438rem", lineHeight: 1.4 }}>{ticketTitle(t.summary)}</span>
               </motion.div>

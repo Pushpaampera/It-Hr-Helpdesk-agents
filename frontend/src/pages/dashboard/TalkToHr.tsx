@@ -7,7 +7,7 @@
  *   2. a private case form (optionally anonymous);
  *   3. the person's own cases, with a private two-way conversation with HR.
  *
- * Only the person and HR can see a case; managers and admins can't (enforced by the backend,
+ * Only the person and HR can see a case; IT support and admins can't (enforced by the backend,
  * app/routers/hr_cases.py). The chat's redirect card opens this page with the person's message
  * pre-filled via router state, which is never put in the URL or browser history. */
 import { AlertTriangle, CheckCircle2, Clock, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
@@ -36,7 +36,7 @@ const fieldStyle = {
 const labelStyle = { fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)" } as const;
 const hintStyle = { fontSize: "0.8125rem", color: "var(--text-muted)" } as const;
 
-/** Employees and managers only. HR users handle cases rather than raise them, so they're sent to
+/** Employees and IT support. HR users handle cases rather than raise them, so they're sent to
  * their Private Cases inbox; admins don't use this page, so they go back to the Overview. */
 export default function TalkToHr() {
   const role = useAuthStore((s) => s.user?.role);
@@ -213,7 +213,7 @@ function PrivacyNotice() {
       <ShieldCheck size={22} color="var(--accent-primary)" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
       <div style={{ display: "grid", gap: "var(--space-2)", fontSize: "0.9375rem" }}>
         <p>
-          <strong>Who can see this:</strong> only the HR team. <strong>Your manager and admins cannot</strong>, even if the
+          <strong>Who can see this:</strong> only the HR team. <strong>Your manager, IT support and admins cannot</strong>, even if the
           matter is about them. The AI assistant doesn't read or store it either.
         </p>
         <p>

@@ -19,7 +19,7 @@ hidden in the UI.
 | Role | Email | Lands on |
 |------|-------|----------|
 | employee | emma.employee@acme.test | AI Assistant |
-| manager | mark.manager@acme.test | Overview (Approvals badge) |
+| it_support | ivan.it@acme.test | Overview (IT ticket queue; also the assistant and Talk to HR for their own needs) |
 | hr | hannah.hr@acme.test | HR Insights |
 | admin | alex.admin@acme.test | Control Room |
 

@@ -5,6 +5,8 @@
  *   header (logo, section links, accessibility button, sign in)
  *   → navy hero banner: the promise on the left, the 3D orbit animation on the right
  *   → four stat cards (like the Campus Hire dashboard cards)
+ *   → about (what HelpDesk is, who it serves, why it can be trusted; the header's "About" button,
+ *     visible on every screen size, scrolls here)
  *   → how it works (4 steps) → what you can do (6 features) → meet the helpers (7 agents)
  *   → navy "ready to try it" banner → footer.
  *
@@ -12,7 +14,8 @@
  * navy; the 3D orbit is decoration (aria-hidden) and, like the fade-up on scroll, stops with
  * "Stop animations". */
 import {
-  ArrowRight, BookOpen, CheckCircle2, FileText, KeyRound, MessageCircle, ShieldCheck, Sparkles, Ticket, TrendingUp, Users, Workflow,
+  ArrowRight, BookOpen, Briefcase, CheckCircle2, ClipboardCheck, FileText, Headset, Info, KeyRound, LockKeyhole, MessageCircle,
+  ScrollText, ShieldCheck, Sparkles, Ticket, TrendingUp, UserCheck, Users, Workflow,
 } from "lucide-react";
 import { lazy, Suspense, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -47,13 +50,13 @@ const TEAM: { slug: AgentKey; job: string }[] = [
 const STEPS = [
   { icon: MessageCircle, title: "Ask in your own words", body: "Type a question — a VPN error, your leave balance, a policy. No forms and no ticket category to pick." },
   { icon: Workflow, title: "It goes to the right AI agent", body: "Sage, the routing agent, decides whether it is an IT or an HR question and passes it to the specialist agent for that." },
-  { icon: CheckCircle2, title: "Get an answer or an action", body: "Answers come from Ampera's own policies and guides, with the source shown. It can also reset a password or apply for leave, with a manager's approval where needed." },
+  { icon: CheckCircle2, title: "Get an answer or an action", body: "Answers come from Ampera's own policies and guides, with the source shown. It can also reset a password or apply for leave, with an admin or HR approving where needed." },
   { icon: TrendingUp, title: "Gets better over time", body: "Your thumbs up or down on each answer helps it choose better answers next time." },
 ];
 
 const CAPABILITIES = [
   { icon: BookOpen, title: "Answers you can trust", body: "Every IT and HR answer comes from your own knowledge base and shows where it came from." },
-  { icon: KeyRound, title: "It can do things, not just chat", body: "Reset a password, apply for leave or request access — done directly, with manager approval where it matters." },
+  { icon: KeyRound, title: "It can do things, not just chat", body: "Reset a password, apply for leave or request access — done directly, with an admin approving system access." },
   { icon: ShieldCheck, title: "Private by design", body: "Every message is checked for sensitive data before any specialist sees it." },
   { icon: Ticket, title: "A person steps in when needed", body: "If the assistant cannot solve something, a ticket is opened with the full details attached." },
   { icon: Workflow, title: "See what is happening", body: "A side panel lists each step as it happens, so nothing is hidden." },
@@ -65,6 +68,21 @@ const STATS = [
   { icon: Sparkles, label: "Areas covered", value: "IT + HR", note: "One place for both" },
   { icon: FileText, label: "Sourced answers", value: "100%", note: "Every answer shows its source" },
   { icon: Workflow, label: "Transparency", value: "Live", note: "Watch each step as it happens" },
+];
+
+// About: what the product is, for a visitor who hasn't signed in.
+const AUDIENCES = [
+  { icon: Users, title: "Employees", body: "Get answers about laptops, accounts, leave and policies at any time, reset a password safely, apply for leave, and follow their tickets." },
+  { icon: Briefcase, title: "HR team", body: "Approve or reject leave in one place, see who is on leave today, and handle private matters confidentially." },
+  { icon: Headset, title: "IT support", body: "Receive only the issues the assistant could not solve, with the full conversation attached, and reset passwords after checking identity." },
+  { icon: ClipboardCheck, title: "Administrators", body: "Approve system access, and review answer quality, running costs and a complete audit log." },
+];
+
+const TRUST = [
+  { icon: UserCheck, title: "Verified", body: "Password resets need a code sent to the person's own email." },
+  { icon: LockKeyhole, title: "Private", body: "Personal and confidential matters never go to other staff." },
+  { icon: ScrollText, title: "Accountable", body: "Every action is recorded in an audit log." },
+  { icon: ShieldCheck, title: "People decide", body: "Leave and system access are always approved by HR or an admin." },
 ];
 
 const NAV_LINKS = [
@@ -144,6 +162,16 @@ export default function Landing() {
                 </a>
               ))}
             </span>
+            {/* Always visible, also on phones: jumps to the About section below the hero. */}
+            <a
+              href="#about"
+              style={{
+                ...PILL, padding: "0 var(--space-4)", minHeight: 44, fontWeight: 600, fontSize: "0.9375rem",
+                color: "var(--accent-primary)", textDecoration: "none", border: "2px solid var(--accent-primary)",
+              }}
+            >
+              <Info size={16} aria-hidden="true" /> About
+            </a>
             <AccessibilityPanel />
             <Button variant="primary" onClick={() => navigate("/login")} style={PILL}>
               Sign in
@@ -219,7 +247,75 @@ export default function Landing() {
           </ul>
         </section>
 
-        <section id="how-it-works" aria-labelledby="how-heading" style={{ ...SECTION, scrollMarginTop: 72 }}>
+        <section id="about" aria-labelledby="about-heading" style={{ ...SECTION, scrollMarginTop: 72 }}>
+          <SectionHeading
+            id="about-heading"
+            title="About Ampera HelpDesk"
+            intro="One place where employees get help with IT and HR, from an assistant that answers, acts and knows when to bring in a person."
+          />
+          <Reveal>
+            <Panel style={{ padding: "clamp(20px, 3vw, 36px)", marginBottom: "var(--space-5)" }}>
+              <div style={{ ...GRID(320), gap: "clamp(20px, 3vw, 40px)" }}>
+                <div>
+                  <h3 style={{ fontSize: "1.125rem", marginBottom: "var(--space-2)" }}>What it is</h3>
+                  <p style={{ fontSize: "0.9375rem" }}>
+                    Ampera HelpDesk is an AI-powered service desk for IT and HR. Employees describe what they need in their
+                    own words, in a single chat. A team of specialised AI agents finds the answer in Ampera's own guides and
+                    policies, or completes the task directly, such as resetting a password or sending a leave request to HR.
+                  </p>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.125rem", marginBottom: "var(--space-2)" }}>Why it matters</h3>
+                  <p style={{ fontSize: "0.9375rem" }}>
+                    Instead of searching portals, filling in forms and waiting in a ticket queue, people get help in seconds.
+                    Simple requests are resolved straight away, and anything that needs a decision or a human goes to the
+                    right person with the full context, so nobody has to explain the problem twice.
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          </Reveal>
+
+          <h3 style={{ fontSize: "1.25rem", textAlign: "center", marginBottom: "var(--space-4)" }}>Who it helps</h3>
+          <ul style={{ ...GRID(250), listStyle: "none", margin: "0 0 var(--space-6)", padding: 0 }}>
+            {AUDIENCES.map((a) => {
+              const Icon = a.icon;
+              return (
+                <li key={a.title}>
+                  <Reveal>
+                    <Panel style={{ padding: "var(--space-5)", height: "100%" }}>
+                      <span aria-hidden="true" style={{ ...ICON_CHIP, marginBottom: "var(--space-3)" }}><Icon size={20} /></span>
+                      <h4 style={{ fontSize: "1.0625rem", marginBottom: "var(--space-2)" }}>{a.title}</h4>
+                      <p style={{ fontSize: "0.9375rem" }}>{a.body}</p>
+                    </Panel>
+                  </Reveal>
+                </li>
+              );
+            })}
+          </ul>
+
+          <h3 style={{ fontSize: "1.25rem", textAlign: "center", marginBottom: "var(--space-4)" }}>Built to be trusted</h3>
+          <ul style={{ ...GRID(220), listStyle: "none", margin: 0, padding: 0 }}>
+            {TRUST.map((t) => {
+              const Icon = t.icon;
+              return (
+                <li key={t.title}>
+                  <Reveal>
+                    <Panel style={{ padding: "var(--space-4) var(--space-5)", height: "100%", display: "flex", gap: "var(--space-3)", alignItems: "flex-start" }}>
+                      <span aria-hidden="true" style={{ ...ICON_CHIP, width: 36, height: 36 }}><Icon size={18} /></span>
+                      <div>
+                        <h4 style={{ fontSize: "1rem", marginBottom: 2 }}>{t.title}</h4>
+                        <p style={{ fontSize: "0.875rem" }}>{t.body}</p>
+                      </div>
+                    </Panel>
+                  </Reveal>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section id="how-it-works" aria-labelledby="how-heading" style={{ ...SECTION, paddingTop: 0, scrollMarginTop: 72 }}>
           <SectionHeading id="how-heading" title="How it works" />
           <ol style={{ ...GRID(260), listStyle: "none", margin: 0, padding: 0 }}>
             {STEPS.map((step, i) => {

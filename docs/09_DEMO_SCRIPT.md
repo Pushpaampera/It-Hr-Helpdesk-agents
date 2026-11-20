@@ -48,9 +48,9 @@ the Audit Log (shown later in step 9).
 *(Phase 3 scenario (c).)*
 
 ### 5. The approval pause/resume — the "wow" moment
-Ask: *"I need read access to the Finance system."* The chat visibly pauses with a "Waiting for
-[manager]'s approval" banner — the input disables, nothing fakes a timeout. In a **second
-browser tab or window**, log in as `mark.manager@acme.test`, open **Approvals**, and click
+Ask: *"I need write access to Jira for my project."* The chat visibly pauses while it waits for
+an admin's approval — the input disables, nothing fakes a timeout. In a **second
+browser tab or window**, log in as `alex.admin@acme.test` (admin), open **Approvals**, and click
 **Approve** on the real pending request. Switch back to Emma's tab: without any refresh, the
 chat automatically resolves and confirms access was granted. Say: "That was a real pause on a
 real backend process, resumed by a real human decision in a different session — nothing was
@@ -72,11 +72,14 @@ deterministic, rules-based guard that runs first on every single message, not a 
 asking the model to behave."
 *(Phase 3 scenario (f).)*
 
-### 8. The manager's view: Team and Approvals
-Switch to Mark Manager's tab (already logged in from step 5). Open **Team**: his real direct
-reports with live open-ticket and pending-leave counts — point out whoever has the most open
-tickets as "this is who Mark should check on today." Open **Approvals**' Approved tab to show
-the Finance-access decision from step 5 now has a real timestamp.
+### 8. IT support takes over what the AI couldn't fix
+Before the demo: `cd backend && poetry run reset-demo`. Log in as `ivan.it@acme.test`: the
+sidebar is only **Overview** and **Tickets**. **Next up** shows the one ticket to work on now, and
+the stage tabs (New / Working on / Waiting on employee / Waiting on admin / Solved) show the rest;
+the bell has the new tickets Tess handed over. Open a ticket: **What the AI already tried**, then
+**Ask employee a question** (the employee sees "waiting on you" and answers on the ticket), **Ask
+an admin** if stuck (Alex sees it under "Asked for your help"; the employee never sees it), and
+**Resolve…** with what fixed it — the employee gets that in their bell and can reply to reopen.
 
 ### 9. The HR view: HR Insights and Policy Knowledge Base
 Log in as `hannah.hr@acme.test`. Open **HR Insights**: real company-wide headcount, leave-

@@ -1,4 +1,4 @@
-"""Confidential HR cases: only the reporter and HR can see a case — never managers or admins —
+"""Confidential HR cases: only the reporter and HR can see a case — never IT support or admins —
 anonymous reporters stay anonymous to HR, and private matters typed into the chat are redirected
 to HR without being stored in chat history or agent runs. Requires a migrated + seeded database."""
 import json
@@ -50,8 +50,8 @@ def _h(email: str) -> dict:
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
 
 
-EMMA, MARK, HANNAH, ALEX = (
-    "emma.employee@acme.test", "mark.manager@acme.test", "hannah.hr@acme.test", "alex.admin@acme.test",
+EMMA, IVAN, HANNAH, ALEX = (
+    "emma.employee@acme.test", "ivan.it@acme.test", "hannah.hr@acme.test", "alex.admin@acme.test",
 )
 
 
@@ -74,15 +74,15 @@ def test_employee_creates_case_and_sees_it_in_their_list():
     assert case["id"] in [c["id"] for c in mine]
 
 
-def test_hr_sees_case_but_manager_and_admin_cannot():
+def test_hr_sees_case_but_it_support_and_admin_cannot():
     case = _new_case()
     # HR: list + detail
     hr_list = client.get("/api/hr-cases", headers=_h(HANNAH))
     assert hr_list.status_code == 200
     assert case["id"] in [c["id"] for c in hr_list.json()]
     assert client.get(f"/api/hr-cases/{case['id']}", headers=_h(HANNAH)).status_code == 200
-    # Manager (the very person the complaint is about) and admin: no list, no detail, no reply.
-    for who in (MARK, ALEX):
+    # IT support and admin: no list, no detail, no reply.
+    for who in (IVAN, ALEX):
         assert client.get("/api/hr-cases", headers=_h(who)).status_code == 403
         assert client.get(f"/api/hr-cases/{case['id']}", headers=_h(who)).status_code == 404
         assert client.post(f"/api/hr-cases/{case['id']}/messages", json={"body": "hi"}, headers=_h(who)).status_code == 404

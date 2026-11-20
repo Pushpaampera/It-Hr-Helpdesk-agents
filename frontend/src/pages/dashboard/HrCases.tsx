@@ -2,7 +2,7 @@
  * discrimination, manager concerns, misconduct, personal/wellbeing and safety matters raised by
  * employees on the "Talk to HR" page.
  *
- * HR only. Managers and admins are refused by the backend (403 on the list, 404 on any case);
+ * HR only. IT support and admins are refused by the backend (403 on the list, 404 on any case);
  * the page also says so instead of showing an empty table. Urgent and "waiting for HR" cases sort
  * to the top. HR can reply privately, pick a case up ("Assign to me"), ask the employee for more
  * information, and resolve or close it with an outcome the employee can read. */
@@ -85,7 +85,7 @@ export default function HrCases() {
         <DashboardHeader title="Private Cases" subtitle="Confidential matters raised by employees. Visible to the HR team only." />
         <InfoBanner id="hr-cases">
           Complaints, conflicts between colleagues, harassment, discrimination, concerns about managers and personal
-          matters land here, never in the normal ticket list. Managers and admins can't see this page or these cases.
+          matters land here, never in the normal ticket list. IT support and admins can't see this page or these cases.
         </InfoBanner>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(160px, 100%), 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>

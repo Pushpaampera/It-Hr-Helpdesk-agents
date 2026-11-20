@@ -304,6 +304,20 @@ th {
   gap: var(--space-3);
 }
 
+/* HR Overview: the selected list (wide) beside "Who's away" (narrow); stacked on small screens. */
+.hr-overview__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .hr-overview__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Masonry-style columns so a short group (e.g. "For you") and the approvals card stack
  * together instead of leaving a gap under the shorter card. */
 .role-welcome__groups {

@@ -1,4 +1,4 @@
-/** Costs (manager/hr/admin — nav-gated to admin, see navItems.ts). Token/$ spend from the real
+/** Costs (hr/admin — nav-gated to admin, see navItems.ts). Token/$ spend from the real
  * agent_runs/agent_events data (GET /api/costs): totals, a 30-day daily chart, and breakdowns
  * by route and by model. */
 import { motion } from "framer-motion";
@@ -15,6 +15,16 @@ import StatCard from "../../components/ui/StatCard";
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import { staggerContainer } from "../../design/motion";
 import PageTransition from "../../design/pageTransition";
+
+const ROUTE_LABEL: Record<string, string> = {
+  IT: "IT questions (Iris)", HR: "HR questions (Hana)", OTHER: "General chat (Sage)", BLOCKED: "Blocked by the privacy guard (Gus)",
+};
+
+/** Dollar label with enough decimals to tell small amounts apart (AI costs are often fractions of a cent). */
+function usd(v: number, max: number): string {
+  const digits = max >= 1 ? 2 : max >= 0.1 ? 3 : 4;
+  return `$${v.toFixed(digits)}`;
+}
 
 export default function Costs() {
   const [data, setData] = useState<CostsResponse | null>(null);
@@ -91,7 +101,7 @@ export default function Costs() {
                   axisLine={false}
                   tickLine={false}
                   width={56}
-                  tickFormatter={(v: number) => `$${v.toFixed(2)}`}
+                  tickFormatter={(v: number) => usd(v, Math.max(0, ...data.by_day.map((d) => d.cost_usd)))}
                   label={{ value: "USD", angle: -90, position: "insideLeft", fill: "var(--text-secondary)", fontSize: "0.8125rem" }}
                 />
                 <Tooltip contentStyle={{ background: "var(--bg-elevated)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, fontSize: "0.8125rem" }} labelStyle={{ color: "var(--text-secondary)" }} formatter={(v: number) => `$${v.toFixed(4)}`} />
@@ -110,12 +120,9 @@ export default function Costs() {
             <InfoTooltip text="How much was spent on conversations handled by each specialist (IT, HR, or other)." />
           </h2>
           <div style={{ display: "grid", gap: "var(--space-2)" }}>
-            {data.by_route.map((r, i) => (
-              // Index, not `r.route`, as the key: the backend groups by the raw `route` column
-              // (NULL vs the literal string 'OTHER'), so two distinct rows can both display as
-              // "OTHER" and collide on a value-based key.
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
-                <span>{r.route} ({r.runs} runs)</span>
+            {data.by_route.map((r) => (
+              <div key={r.route} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem" }}>
+                <span>{ROUTE_LABEL[r.route] ?? r.route} ({r.runs} {r.runs === 1 ? "run" : "runs"})</span>
                 <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>${r.cost_usd.toFixed(4)}</span>
               </div>
             ))}

@@ -1,5 +1,196 @@
 # 07 — Changelog
 
+### 2026-11-20 — HR Overview redesigned: simpler and clearer
+- Replaced the three crowded columns of nested cards and the "Who's off soon" chip strip
+  (`components/dashboard/RoleOverviews.tsx`, `HrOverview`). Now: three summary tiles (Leave to
+  approve / Private cases / HR tickets, each with a count and a one-line hint such as "1 urgent")
+  that choose the one list shown below; that list has one row per item with a single clear action
+  (Approve + "Review or decline", Open, Start + Open); beside it a "Who's away" panel (Today /
+  Coming up). Opens on the first list that has items. Private cases still show number, type and
+  status only.
+- Page title "HR overview", subtitle "What's waiting for HR today. Pick a tile to see its list."
+  (`pages/dashboard/Overview.tsx`); layout class `.hr-overview__layout` in `design/global.css`
+  (stacks below 1000px). Same data and endpoints as before. `tsc` clean; not checked in a browser.
+
+### 2026-11-20 — Admin assistant: no test-scenario cards
+- Removed the six "Normal paths" / "Guardrails" starter cards from the admin's Ask the Assistant
+  welcome (`components/chat/roleAssistant.ts`, admin `groups: []`). The welcome is now just the
+  greeting and "Ask a question below and watch each agent work in the panel on the right."
+  `RoleWelcome.tsx` renders nothing below the greeting when a role has no groups. Other roles
+  unchanged. `tsc` clean.
+
+### 2026-11-19 (night) — Typos forgiven; leave requests asked step by step
+- **Spelling mistakes are forgiven** (`agents/spelling.py`): before routing, the leave / password
+  checks and the guide search, likely typos of helpdesk words are fixed ("sicck leave tomorow" →
+  "sick leave tomorrow", "pasword", "laptp", "tmrw"). Plain rules, no LLM; real words that only look
+  similar ("lease") are left alone. The chat still shows the person's own words.
+- **Leave requests always go to Atlas** (a word check, not a model guess), so "i want to put a sick
+  leave" is no longer answered with an unrelated policy guide. Atlas reads the type, dates
+  ("tomorrow", "25 Nov", "monday for 2 days", "1 Dec to 3 Dec", "next week") and reason ("because …",
+  "for my sister's wedding", "I have fever") from the message and asks only for what's missing,
+  with one-click answers. Then a summary with the remaining balance and "Shall I send it to HR for
+  approval?" (Yes / Change dates / Change reason / Cancel). Past dates, too-long requests and
+  overlaps with existing leave are caught. Yes → pending request; HR approves or rejects on the HR
+  Dashboard (reason shown) and the employee is notified, as before. Nothing is sent without a yes;
+  a new question part-way cancels it. Migration 0012 (`leave_drafts`).
+- `tests/test_leave_request.py` (34). Full suite 172 passed; `npm run build` clean.
+
+### 2026-11-19 (late) — Plain emails with full decision details; realistic access requests
+- **Emails read like normal emails** (`notify.py`): greeting, text, "Regards, Ampera HelpDesk", in
+  the reader's normal email font. No coloured card, no header band, no "Open HelpDesk" button or
+  link. Applies to every email (password reset codes too).
+- **Decision emails are short and signed by the person who decided** (operator asked for no
+  detail blocks): e.g. "Your request for write access to Jira has been declined. Reason: … Regards,
+  Alex Admin, IT Administration, Ampera" or "Your annual leave from 28 Nov to 29 Nov 2026 (2 days)
+  has been approved. … Regards, Hannah HR, HR Team, Ampera". The inbox shows "Alex Admin via Ampera
+  HelpDesk"; other emails are signed "Ampera HelpDesk".
+- **No more "Finance System" access requests**: demo data now has Emma → Jira (write, pending),
+  Aiden → Zendesk (write, pending), Priya → Power BI (read, approved), Aiden → AWS Console (admin,
+  declined). Starter questions, the evaluation question (migration `0011`), the graph test and the
+  demo script use Jira / GitHub. Atlas keeps tool names as written ("Jira", not "Jira System") and
+  in mock mode records the person's own words as the reason.
+- Checked: my changes' tests pass; the only failing test is the in-progress password-reset one
+  (`test_c_reset_password_asks_first_and_changes_nothing_yet`, from another session's work).
+
+### 2026-11-19 (late night) — Password help for company accounts (assistant + IT support)
+- **Company accounts** (`mock_apis/company_accounts.py`, migration 0010): **Windows / VPN login**
+  (the company sign-in, which is also the HelpDesk sign-in: `users.password_hash`), **Email
+  (Outlook)**, **Payroll portal**, **HR portal** (`company_accounts` table, rows made on first use).
+- **"I forgot my password"** (any role; also "forgot my mail password", "reset my VPN password",
+  "change my payroll password", "my password expired") goes straight to **Atlas** on the IT side,
+  decided by a word check (`agents/password_reset.py`), not a model guess. If the message doesn't
+  name the account, Atlas asks with buttons. Then Atlas **explains the steps and asks** ("Shall I
+  start?"); nothing happens on No.
+- On Yes, a **6-digit code is emailed** (never a phone): to the **work email**, or to the
+  **personal email** on file when the forgotten password is the work email's own (that mailbox
+  can't be opened). No personal email → Atlas offers an IT support ticket instead. Code valid 10 min,
+  3 tries, "Resend code" (max 3) / "Cancel"; only an HMAC is stored. A new question part-way cancels.
+- **Right code** → a real temporary password for that account, shown once, valid 15 minutes, must
+  be changed at its next sign-in. For Windows / VPN that's this HelpDesk too: signing in with it
+  gives a limited 30-minute session that only reaches **Choose a new password** (`/change-password`).
+- **3 wrong codes** → reset blocked (all accounts), nothing changed, **Tess opens a high-priority IT
+  ticket**. On password tickets IT support picks the account, ticks "I've confirmed this is really …"
+  and **issues a temporary password** (shown once, never stored on the ticket); the block lifts.
+- **New Password Resets page** (IT support + admin, `/app/password-resets`, `routers/it_accounts.py`):
+  find anyone, see each account's state, reset any account after confirming identity, and record the
+  person's personal email. This is the route for people who can't sign in at all. Nobody resets
+  their own accounts there.
+- Every step is audited; the person gets a security notification. Codes and temporary passwords
+  never reach chat history, agent events or traces. Chat turns that hit an error now end their
+  stream instead of hanging. `reset-demo` restores demo passwords and gives the cast personal emails
+  (`<name>.home@example.com`). 57 tests in `tests/test_password_reset.py`; `npm run build` clean.
+
+### 2026-11-19 (night) — Small, readable demo data everywhere
+- **One hand-written demo set** (`seed/generators/demo_data.py`, `poetry run reset-demo`, also run by
+  `poetry run seed`, the admin reset endpoint, and at the end of every test run) replaces all the
+  random mock data. People: **Emma Employee** (main demo employee), Priya Sharma, Aiden Ramirez,
+  Ivan IT, Hannah HR, Alex Admin (was 48 people). History: ~27 conversations over two weeks, each a
+  readable chat with its agent steps, rating and learning decision (was 4,930 runs / 12,219 events /
+  3,338 ratings). 11 tickets (TCK-1000…1010: 8 IT, 3 HR) each linked to its chat; 4 leave requests,
+  4 access requests, 1 private HR case, 16 notifications, 14 audit entries — all matching the chats.
+  Kept: knowledge base, golden questions, 2 newest evaluation runs; the strategy learner's state is
+  rebuilt from the new history. Old random generators removed (`ops.py` keeps only the sample
+  questions `simulate-feedback` uses); `it_demo.py` / `reset-it-demo` folded into `reset-demo`.
+- **Readability fixes**: employee Overview shows statuses in words ("in progress", "waiting on you")
+  and lists a chat that became a ticket once; the assistant side panel does the same; Costs labels
+  each specialist in words, keeps privacy-blocked chats in their own row ("Blocked by the privacy
+  guard") and uses enough decimals on the axis; Audit Log shows "leave request", not "leave_request".
+- `poetry run dev` now gives a reload 3 seconds to finish open chat streams (a reload otherwise
+  waited forever for browser tabs with an open chat, hanging the backend).
+- DB dump from before: `backups/db-before-demo-reset-*.dump`. pytest 81 passed, tsc clean.
+
+### 2026-11-19 (latest) — IT support can ask for their own help too
+- IT support has everyday needs like any employee, so they get **Ask the Assistant** (leave
+  balance, apply for leave, pay and policy questions; it raises a ticket for HR / an admin when it
+  can't help) and **Talk to HR** (private matters) back. Their assistant view has its own starter
+  questions and a side panel that keeps "Your IT work" (link to the queue) apart from "Your own
+  requests". Still no Approvals or admin pages for IT support.
+- Tickets: IT support also see tickets they raised themselves ("My own requests" filter,
+  `GET /api/tickets?scope=own`); their Overview queue stays IT / General only.
+- Contacting people uses the existing channels (operator's choice): the assistant / tickets for
+  HR and admin, Talk to HR for private matters, ticket replies for employees. No new messaging page.
+- Checked: pytest 81 passed, tsc clean, live in Chrome as Ivan (assistant answered his real leave
+  balance; Talk to HR opens; Approvals still sends him to Overview), axe: no violations.
+
+### 2026-11-19 (later) — IT support only works IT tickets; small demo data
+- **One IT support person**, Ivan IT (`ivan.it@acme.test`). Migration `0008_it_support_tickets_only.sql`
+  turns the 2 other IT support accounts from 0007 back into employees (old department and title).
+  Every IT / General ticket and its notifications go to Ivan.
+- **IT support sees only Overview and Tickets.** No Ask the Assistant, Talk to HR or Approvals
+  (sidebar, a route guard in `RequireAuth.tsx`, and the backend: chat stream, HR case creation and
+  analytics/costs/bandit refuse `it_support`). IT support only sees IT / General tickets.
+- **Access requests are approved by an admin** (`directory.pick_access_approver`, approvals router).
+- **On a ticket, IT support can only talk to the employee or ask an admin** (`/consult` accepts
+  `admin` only; "move to HR" / `/transfer` removed). Admins see "Asked for your help" on their
+  Overview and an "Asked for my help" filter on Tickets. HR is no longer asked about IT tickets.
+- **New IT support Overview**: a "Next up" banner (the one ticket to work on now: overdue, then most
+  urgent, then oldest) and the queue by stage (New / Working on / Waiting on employee / Waiting on
+  admin / Solved).
+- **Data**: the 125 random IT tickets are replaced by 8 hand-made ones (`seed/generators/it_demo.py`,
+  `poetry run reset-it-demo`, also run by `poetry run seed`): 2 new, 2 in progress (1 overdue),
+  1 waiting on the employee, 1 waiting on an admin, 2 resolved. Pending access requests trimmed to
+  4 (ones from long-gone chats removed). 31 leftover "bonus was wrongly calculated" test tickets
+  removed, and `test_e_unanswerable_question_creates_ticket` now deletes its ticket. Fresh seeds
+  make 1 IT support user, 90 HR history tickets and ~4 pending access requests. DB dump from before:
+  `backups/db-before-it-cleanup-*.dump`.
+- Checked: pytest 81 passed, tsc clean, Chrome: Ivan's sidebar is Overview + Tickets and
+  /app/approvals, /app/assistant, /app/hr-support, /app/control-room all send him back to Overview;
+  no console errors; axe: no violations.
+
+### 2026-11-19 — The manager role is replaced by IT support, who take over tickets the AI can't solve
+- **Roles** (migration `0007_it_support_role.sql`): `employee | it_support | hr | admin`. Nothing was
+  deleted: Mark Manager became **Ivan IT** (`ivan.it@acme.test`, `Demo@1234`, the IT support demo
+  login); the next 2 managers became IT support staff; the other 3 became employees (titles kept).
+  Pending access requests moved to Ivan; unfinished IT tickets were shared out between IT support,
+  HR tickets between HR. A database dump from before the change is in `backups/`.
+- **Auto-assignment** (`agents/ticketing.py`): Tess gives each new ticket to the least busy person in
+  the owning team (IT / General → IT support, HR → HR), notifies them, and tells the employee who has
+  it in the chat reply.
+- **Tickets API** (`routers/tickets.py`): IT support sees IT + General tickets, their own, anything
+  assigned to them, and anything another team asked IT about. New: `POST /{id}/claim` (take it),
+  `POST /{id}/messages` (`reply` / `question` → waits on the employee / `internal` staff-only note;
+  employees reply, and replying to a resolved ticket reopens it), `POST /{id}/consult` + `POST
+  /{id}/consults/{cid}/answer` (ask HR / IT support / admin for help; staff only, the employee never
+  sees it), `POST /{id}/transfer` (move IT ↔ HR, re-assigned there), `GET /consults`, `GET /staff`.
+  Resolving needs a note of what fixed it, which the employee is sent. Lists show a response-time
+  target per priority (urgent 4h, high 8h, medium 24h, low 72h) and whether it's overdue. New columns
+  `tickets.waiting_on`, `tickets.resolution`, `ticket_events.author_id/visibility`, table
+  `ticket_consults`.
+- **Approvals**: access requests go to the IT support person with the fewest pending; any IT support
+  person or an admin can decide them. Analytics / costs / bandit endpoints: `it_support` replaces
+  `manager`. IT support can open an agent run only when it belongs to a ticket they can see.
+- **Removed**: the manager-only Team page and `/api/team`.
+- **Frontend**: Tickets page rebuilt as a workspace (quick views: mine / unassigned / asked my team /
+  overdue; what the AI already tried; take, reply, ask, internal note, ask another team, move,
+  resolve; `?ticket=<id>` deep links used by notifications). IT support Overview (my queue overdue
+  first, unassigned with "Take it", access requests with one-click Approve); HR Overview shows
+  questions from other teams. Ask the Assistant has an IT support view and side panel. Login page
+  lists Ivan.
+- Checked: `pytest` 81 passed (new IT support workflow tests in `tests/test_ticket_visibility.py`),
+  `tsc` clean, the full take → ask employee → ask HR → resolve → employee notified flow run live in
+  Chrome as Ivan, Emma and Hannah with no console errors, axe: no violations on the changed pages.
+
+### 2026-11-19 — Manager, HR and admin each get their own Overview and Tickets
+- Changed (`pages/dashboard/Overview.tsx`, `components/dashboard/RoleOverviews.tsx`): each role has
+  its own Overview layout, not the same banner + tiles + stat row. **Employee**: unchanged (welcome
+  banner, self-service shortcuts, own activity). **Manager** ("Your team"): approval inbox with
+  one-click Approve beside a team roster sorted by who has open tickets. **HR** ("HR work queue"):
+  three columns — leave to approve (one-click Approve), private cases (urgent first, number and
+  status only), HR tickets oldest first ("Start working on it" sets in_progress) — plus "Who's off
+  soon". **Admin** ("System health"): a tile per AI agent (steps, latency, errors in 24h) and the
+  latest audit activity, above the company-wide stats and chart. Declining always opens the full
+  page, since it needs a reason. Only employees get the navy welcome banner (`DashboardHeader hero`).
+- Changed (`routers/tickets.py`): tickets are scoped per role (list, detail and update): employee →
+  own; manager → own + direct reports; HR → HR tickets + own; admin → all. The Tickets page
+  wording follows the role. Tests: `tests/test_ticket_visibility.py`.
+
+### 2026-11-19 — Each browser tab keeps its own role
+- Fixed (`frontend/src/store/authStore.ts`): the login was one shared localStorage entry, so with
+  employee / manager / HR in separate tabs, the last login won and refreshing the employee tab
+  opened the HR panel. Each tab now keeps its own session in sessionStorage (survives refresh).
+  A new tab starts from the most recent login (`helpdesk.auth.last`); signing out in one tab
+  doesn't sign out the others.
+
 ### 2026-11-19 — Vague questions get a clarifying question instead of a guess
 - Added (`agents/clarify.py`): "I have an issue with the laptop" (a subject but no symptom) no
   longer gets the top-scoring article (e.g. blue screen steps). Iris/Hana ask what's happening and

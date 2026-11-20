@@ -13,7 +13,7 @@ client = TestClient(app)
 DEMO_PASSWORD = "Demo@1234"
 DEMO_ACCOUNTS = [
     ("emma.employee@acme.test", "employee"),
-    ("mark.manager@acme.test", "manager"),
+    ("ivan.it@acme.test", "it_support"),
     ("hannah.hr@acme.test", "hr"),
     ("alex.admin@acme.test", "admin"),
 ]

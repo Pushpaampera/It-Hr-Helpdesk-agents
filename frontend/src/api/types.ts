@@ -1,6 +1,7 @@
 /** Shapes mirrored from the backend's Pydantic response models (see docs/03_BACKEND.md's
  * endpoint table). Kept minimal — only the fields pages built so far actually read. */
-export type Role = "employee" | "manager" | "hr" | "admin";
+/** There is no manager role: IT support only works IT tickets; admins approve system access. */
+export type Role = "employee" | "it_support" | "hr" | "admin";
 
 export type User = {
   id: string;
@@ -10,6 +11,8 @@ export type User = {
   department: string;
   title: string;
   manager_id: string | null;
+  /** Signed in with a temporary password: only the "choose a new password" screen is allowed. */
+  must_change_password?: boolean;
 };
 
 export type LoginResponse = {
@@ -26,7 +29,7 @@ export type HealthResponse = {
   pgvector: { enabled: boolean; detail: string };
 };
 
-// GET /api/analytics/kpis (manager/hr/admin only)
+// GET /api/analytics/kpis (hr/admin only)
 export type Kpis = {
   total_runs: number;
   resolved_runs: number;
@@ -41,7 +44,7 @@ export type Kpis = {
   pending_approvals: number;
 };
 
-// GET /api/analytics/timeseries (manager/hr/admin only)
+// GET /api/analytics/timeseries (hr/admin only)
 export type TimeseriesPoint = {
   day: string;
   total_runs: number;
@@ -62,9 +65,16 @@ export type TicketSummary = {
   summary: string;
   assignee_id: string | null;
   assignee_name: string | null;
+  /** Set while status is "waiting": who the ticket is waiting on. */
+  waiting_on: "employee" | "admin" | null;
   resolved_at: string | null;
   created_at: string;
-  run_id: string | null;
+  /** Response-time target from the priority (urgent 4h, high 8h, medium 24h, low 72h). */
+  due_at: string;
+  overdue: boolean;
+  user_department?: string;
+  open_consults?: number;
+  run_id?: string | null;
 };
 
 // GET /api/conversations
@@ -142,6 +152,9 @@ export type FinalEventPayload = {
   route: string | null;
   resolved: boolean;
   ticket_number: string | null;
+  /** Who wrote the answer when it isn't the route's specialist ("action" = Atlas for a password
+   * reset, "ticketing" = Tess when a blocked reset became a ticket). */
+  agent?: string | null;
   /** Set when the message was a private HR matter (complaint, conflict, personal issue): the
    * chat shows a "Talk to HR privately" card instead of handling it. */
   hr_redirect?: HrRedirect | null;
@@ -158,11 +171,29 @@ export type ConfirmationRequiredEventPayload = {
   run_id: string;
   seq: number;
   prompt: string;
-  gate: "resolution_confirm" | "ticket_offer";
+  gate: ConfirmationGate;
   sources: ChatSource[];
   caption: string;
+  /** Who is asking ("action" = Atlas during a password reset); null leaves it to the route. */
+  agent?: string | null;
+  /** One-click answers, e.g. the accounts for "which password did you forget?". */
+  options?: string[];
   ts: string;
 };
+
+/** resolution_confirm / ticket_offer / password_reset_consent take a yes or no;
+ * password_reset_system asks which company account (options); password_reset_code waits for the
+ * 6-digit code from the person's email. */
+export type ConfirmationGate =
+  | "resolution_confirm"
+  | "ticket_offer"
+  | "password_reset_system"
+  | "password_reset_consent"
+  | "password_reset_code"
+  | "leave_type"
+  | "leave_dates"
+  | "leave_reason"
+  | "leave_confirm";
 
 export type ChatEvent =
   | AgentEventPayload
@@ -177,8 +208,64 @@ export type ChatEvent =
 export type FeedbackResponse = { reward: number; updated_bandit: boolean };
 
 // GET /api/tickets/{id}
-export type TicketEvent = { id: string; actor: string; type: string; note: string | null; created_at: string };
-export type TicketDetail = { ticket: TicketSummary; events: TicketEvent[] };
+export type TicketEvent = {
+  id: string;
+  actor: string;
+  type: string;
+  note: string | null;
+  author_id: string | null;
+  /** "internal" = staff only; the employee never receives these. */
+  visibility: "public" | "internal";
+  created_at: string;
+};
+/** A question IT support / HR asked an admin about a ticket (staff only). */
+export type TicketConsult = {
+  id: string;
+  target_role: "admin";
+  question: string;
+  answer: string | null;
+  status: "open" | "answered";
+  created_at: string;
+  answered_at: string | null;
+  requested_by: string;
+  requested_by_name: string;
+  answered_by_name: string | null;
+};
+export type TicketDetail = {
+  ticket: TicketSummary & {
+    resolution: string | null;
+    /** What the AI tried before handing over (staff only). */
+    context?: {
+      original_question?: string; summary_note?: string; route?: string; sources?: { title?: string; source_name?: string }[];
+      /** "password_reset_blocked" (3 wrong reset codes) or "password_reset" (the assistant couldn't
+       * verify the person): IT support can issue a temporary password from the ticket. */
+      kind?: string;
+      /** Which company account the password ticket is about (windows / email / payroll / hr_portal). */
+      account?: string;
+    };
+  };
+  events: TicketEvent[];
+  consults: TicketConsult[];
+  permissions: { can_manage: boolean; is_requester: boolean; staff_view: boolean; can_answer_consult: boolean };
+};
+// GET /api/tickets/consults — admin: every question asked of an admin; others: the ones they asked
+export type ConsultInboxItem = {
+  id: string;
+  ticket_id: string;
+  ticket_number: string;
+  ticket_summary: string;
+  priority: string;
+  target_role: "admin";
+  question: string;
+  answer: string | null;
+  status: "open" | "answered";
+  created_at: string;
+  requested_by: string;
+  requested_by_name: string;
+  requested_by_role: Role;
+};
+// GET /api/tickets/staff
+export type StaffMember = { id: string; name: string; role: Role; title: string; open_tickets: number };
 
 // GET /api/approvals
 export type Approval = {
@@ -195,19 +282,6 @@ export type Approval = {
   created_at: string;
 };
 
-// GET /api/team (manager/admin)
-export type TeamMember = {
-  id: string;
-  name: string;
-  email: string;
-  title: string;
-  department: string;
-  open_tickets: number;
-  total_tickets: number;
-  pending_leave_requests: number;
-  last_activity_at: string | null;
-};
-
 // GET /api/hr/overview (hr/admin)
 export type HrOverview = {
   headcount_by_department: { department: string; count: number }[];
@@ -215,6 +289,12 @@ export type HrOverview = {
   leave_balances_by_type: { leave_type: string; total_days: number; used_days: number; utilization: number }[];
   upcoming_approved_leave: {
     id: string; user_id: string; user_name: string; leave_type: string;
+    start_date: string; end_date: string; days: number;
+  }[];
+  /** The server's today (YYYY-MM-DD) and who is away on approved leave today. */
+  today: string;
+  on_leave_today: {
+    id: string; user_id: string; user_name: string; department: string; leave_type: string;
     start_date: string; end_date: string; days: number;
   }[];
 };
@@ -296,7 +376,7 @@ export type LiveAgentEvent = {
   user_name?: string;
 };
 
-// GET /api/bandit/stats (manager/hr/admin)
+// GET /api/bandit/stats (hr/admin)
 export type BanditArm = { arm_id: string; name: string; config: Record<string, unknown>; pulls: number; avg_reward: number | null };
 export type BanditStats = {
   arms: BanditArm[];
@@ -328,7 +408,7 @@ export type EvalResult = {
 };
 export type EvalRunDetail = EvalRun & { results: EvalResult[] };
 
-// GET /api/costs (manager/hr/admin)
+// GET /api/costs (hr/admin)
 export type CostsResponse = {
   total_cost_usd: number;
   total_tokens_in: number;
@@ -352,7 +432,7 @@ export type AuditLogEntry = {
 };
 
 // ---------- Confidential HR cases (/api/hr-cases) ----------
-// Visible only to the employee who raised the case and to HR. Never to managers or admins.
+// Visible only to the employee who raised the case and to HR. Never to IT support or admins.
 export type HrCaseCategory =
   | "harassment" | "discrimination" | "colleague_conflict" | "manager_concern"
   | "misconduct" | "personal_wellbeing" | "safety" | "other";
@@ -421,3 +501,35 @@ export type NotificationList = { unread_count: number; items: AppNotification[] 
 
 export type EmailPreference = "important" | "all" | "off";
 export type NotificationPreferences = { email: EmailPreference; email_available: boolean };
+
+// POST /api/tickets/{id}/temporary-password (IT support, blocked password reset tickets)
+export type TemporaryPasswordResponse = {
+  temporary_password: string; expires_at: string; system: string; account: string; ticket: TicketDetail;
+};
+
+// GET /api/it/accounts (IT support / admin: Password Resets page)
+export type CompanySystem = "windows" | "email" | "payroll" | "hr_portal";
+export type CompanyAccount = {
+  system: CompanySystem;
+  label: string;
+  username: string | null;
+  must_change_password: boolean;
+  temp_password_expires_at: string | null;
+};
+export type AccountPerson = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  department: string;
+  is_active: boolean;
+  /** Masked (e.g. "em•••@example.com"); where the code goes for a forgotten work email password. */
+  personal_email: string | null;
+  reset_blocked: boolean;
+  blocked_ticket: string | null;
+  accounts: CompanyAccount[];
+};
+export type AccountsResponse = { people: AccountPerson[]; systems: { system: CompanySystem; label: string }[] };
+export type AccountResetResponse = {
+  temporary_password: string; expires_at: string; system: CompanySystem; account: string; person: AccountPerson;
+};

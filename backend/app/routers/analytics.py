@@ -1,5 +1,5 @@
 """GET /api/analytics/kpis, /timeseries, /departments — dashboard charts over agent_runs,
-feedback, tickets and approvals. Manager/hr/admin only (company-wide numbers, not an
+feedback, tickets and approvals. HR/admin only (company-wide numbers, not an
 employee's own data)."""
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
@@ -9,7 +9,7 @@ from app.db import get_db
 from app.deps import require_roles
 
 router = APIRouter(
-    prefix="/api/analytics", tags=["analytics"], dependencies=[Depends(require_roles("manager", "hr", "admin"))]
+    prefix="/api/analytics", tags=["analytics"], dependencies=[Depends(require_roles("hr", "admin"))]
 )
 
 

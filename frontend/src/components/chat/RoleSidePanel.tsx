@@ -1,7 +1,6 @@
 /** The right-hand panel on the Ask the Assistant page for non-admin roles. Admins keep the full
  * live AgentActivityPanel; everyone else gets a panel built around their own work:
  *   - employee: their own recent tickets
- *   - manager:  approvals waiting on them + a team snapshot
  *   - hr:       pending leave requests + upcoming approved leave
  * Every variant opens with a plain-language status line ("Iris, IT Support, is working on it")
  * so the person still knows the assistant is busy, without the agent internals.
@@ -13,7 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { apiGet } from "../../api/client";
-import type { Approval, HrOverview, LeaveRequest, Role, TeamMember, TicketSummary } from "../../api/types";
+import type { HrOverview, LeaveRequest, Role, TicketSummary } from "../../api/types";
 import { AGENTS, isAgentKey } from "../../design/agents";
 import Badge from "../ui/Badge";
 import Panel from "../ui/Panel";
@@ -25,9 +24,8 @@ export default function RoleSidePanel({ role, activeAgent, refreshKey }: Props) 
     <Panel style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%" }}>
       <StatusHeader activeAgent={activeAgent} />
       <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4)", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: "var(--space-5)", alignContent: "start" }}>
-        {role === "employee" && <EmployeeContent refreshKey={refreshKey} />}
-        {role === "manager" && <ManagerContent refreshKey={refreshKey} />}
-        {role === "hr" && <HrContent refreshKey={refreshKey} />}
+        {(role === "employee" || role === "it_support") && <EmployeeContent refreshKey={refreshKey} itSupport={role === "it_support"} />}
+                {role === "hr" && <HrContent refreshKey={refreshKey} />}
       </div>
     </Panel>
   );
@@ -137,24 +135,35 @@ function statusTone(status: string): "success" | "warning" | "info" | "neutral" 
   return "neutral";
 }
 
-function prettyStatus(status: string) {
-  return status.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+function prettyStatus(t: TicketSummary) {
+  // "Waiting on you" when IT/HR asked the employee something; a question to an admin is staff-only.
+  const label = t.status === "waiting" ? (t.waiting_on === "employee" ? "waiting on you" : "in progress") : t.status.replace(/_/g, " ");
+  return label.replace(/^\w/, (c) => c.toUpperCase());
 }
 
 /* ---------- employee ---------- */
 
-function EmployeeContent({ refreshKey }: { refreshKey: number }) {
-  const { data, error } = useFetch<TicketSummary[]>("/tickets", refreshKey);
+/** Employee and IT support: the tickets they raised themselves (for IT support, not their IT
+ * work queue, which has its own link). */
+function EmployeeContent({ refreshKey, itSupport = false }: { refreshKey: number; itSupport?: boolean }) {
+  const { data, error } = useFetch<TicketSummary[]>(itSupport ? "/tickets?scope=own" : "/tickets", refreshKey);
   const open = data?.filter((t) => t.status !== "resolved" && t.status !== "closed") ?? [];
   return (
     <>
-      <Section title="Your open tickets" linkTo="/app/tickets" linkLabel="All tickets">
+      {itSupport && (
+        <Section title="Your IT work" linkTo="/app/overview" linkLabel="IT queue">
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+            This page is for your own questions. The IT tickets you work on are on your Overview and Tickets pages.
+          </p>
+        </Section>
+      )}
+      <Section title={itSupport ? "Your own requests" : "Your open tickets"} linkTo="/app/tickets" linkLabel="All tickets">
         <Status error={error} loading={!data} empty={open.length === 0} emptyText="You have no open tickets." />
         {open.length > 0 && (
           <ul style={listStyle}>
             {open.slice(0, 5).map((t) => (
               <Row key={t.id} primary={ticketTitle(t.summary)} secondary={`${t.number} · ${t.category} · ${shortDate(t.created_at)}`}
-                right={<Badge label={prettyStatus(t.status)} tone={statusTone(t.status)} />} />
+                right={<Badge label={prettyStatus(t)} tone={statusTone(t.status)} />} />
             ))}
           </ul>
         )}
@@ -178,47 +187,9 @@ function PrivateHrSection() {
     <Section title="Private matter?" linkTo="/app/hr-support" linkLabel="Talk to HR">
       <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
         For complaints, problems with a colleague or your manager, or anything personal, talk to HR privately. Only HR
-        can see it, not your manager or admins.
+        can see it, not your manager, IT support or admins.
       </p>
     </Section>
-  );
-}
-
-/* ---------- manager ---------- */
-
-function ManagerContent({ refreshKey }: { refreshKey: number }) {
-  const approvals = useFetch<Approval[]>("/approvals?status=pending", refreshKey);
-  const team = useFetch<TeamMember[]>("/team", refreshKey);
-  const pending = approvals.data ?? [];
-  const members = team.data ?? [];
-  const openTickets = members.reduce((n, m) => n + m.open_tickets, 0);
-  const pendingLeave = members.reduce((n, m) => n + m.pending_leave_requests, 0);
-  return (
-    <>
-      <Section title={`Waiting on your approval${pending.length ? ` (${pending.length})` : ""}`} linkTo="/app/approvals" linkLabel="Decide">
-        <Status error={approvals.error} loading={!approvals.data} empty={pending.length === 0} emptyText="Nothing waiting on you." />
-        {pending.length > 0 && (
-          <ul style={listStyle}>
-            {pending.slice(0, 4).map((a) => (
-              <Row key={a.id} primary={a.requester_name}
-                secondary={`${String(a.payload.system ?? a.type.replace(/_/g, " "))} · ${shortDate(a.created_at)}`}
-                right={<Badge label="Pending" tone="warning" />} />
-            ))}
-          </ul>
-        )}
-      </Section>
-      <Section title="Your team" linkTo="/app/team" linkLabel="Team">
-        <Status error={team.error} loading={!team.data} empty={false} emptyText="" />
-        {team.data && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--space-2)" }}>
-            <Stat label="People" value={members.length} />
-            <Stat label="Open tickets" value={openTickets} />
-            <Stat label="Leave pending" value={pendingLeave} />
-          </div>
-        )}
-      </Section>
-      <PrivateHrSection />
-    </>
   );
 }
 

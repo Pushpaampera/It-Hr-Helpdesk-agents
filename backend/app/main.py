@@ -21,9 +21,9 @@ from app.routers import (
     feedback,
     hr_cases,
     hr_insights,
+    it_accounts,
     kb,
     notifications,
-    team,
     tickets,
 )
 
@@ -70,10 +70,10 @@ app.include_router(bandit.router)
 app.include_router(eval_router.router)
 app.include_router(admin.router)
 app.include_router(costs.router)
-app.include_router(team.router)
 app.include_router(hr_insights.router)
 app.include_router(hr_cases.router)
 app.include_router(notifications.router)
+app.include_router(it_accounts.router)
 
 
 @app.get("/metrics")

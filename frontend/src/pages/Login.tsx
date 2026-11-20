@@ -20,7 +20,7 @@ import type { Role } from "../api/types";
 // page it *would* be once the dashboard shell exists.
 const DEMO_ACCOUNTS: { email: string; role: Role; label: string }[] = [
   { email: "emma.employee@acme.test", role: "employee", label: "Emma — Employee" },
-  { email: "mark.manager@acme.test", role: "manager", label: "Mark — Manager" },
+  { email: "ivan.it@acme.test", role: "it_support", label: "Ivan — IT Support" },
   { email: "hannah.hr@acme.test", role: "hr", label: "Hannah — HR" },
   { email: "alex.admin@acme.test", role: "admin", label: "Alex — Admin" },
 ];

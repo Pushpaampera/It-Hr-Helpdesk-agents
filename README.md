@@ -21,5 +21,5 @@ cd backend && poetry install && poetry run migrate && poetry run seed && poetry 
 cd frontend && npm install && npm run dev   # separate terminal
 ```
 Open `http://localhost:5173`. Demo accounts (password `Demo@1234` for all): `emma.employee@
-acme.test`, `mark.manager@acme.test`, `hannah.hr@acme.test`, `alex.admin@acme.test`. Full detail
+acme.test`, `ivan.it@acme.test`, `hannah.hr@acme.test`, `alex.admin@acme.test`. Full detail
 in `docs/05_RUNBOOK.md`.

@@ -78,10 +78,11 @@ def build_caption(agent: str, status: str, action: str | None, detail: dict | No
         tool = detail.get("tool")
         tool_captions = {
             "reset_password": f"{name} is resetting the password.",
+            "password_reset": f"{name} is getting ready to reset your password.",
             "unlock_account": f"{name} is unlocking the account.",
             "apply_leave": f"{name} is submitting the leave request.",
             "get_leave_balance": f"{name} is looking up the leave balance.",
-            "request_access": f"{name} is requesting access and needs a manager's approval.",
+            "request_access": f"{name} is requesting access and needs an admin's approval.",
         }
         if status == "tool_call" and tool in tool_captions:
             return tool_captions[tool]
@@ -197,18 +198,25 @@ class EventSink:
         await self._publish(event)
         return event
 
-    async def emit_confirmation_required(self, prompt: str, gate: str, sources: list[dict] | None = None) -> dict:
+    async def emit_confirmation_required(self, prompt: str, gate: str, sources: list[dict] | None = None,
+                                          agent: str | None = None, caption: str | None = None,
+                                          options: list[str] | None = None) -> dict:
+        """`agent` names who is asking (e.g. "action" for Atlas's password-reset steps) so the chat
+        shows that helper on the message; None leaves it to the route."""
         self.seq += 1
         event = {
             "run_id": self.run_id, "seq": self.seq, "type": "confirmation_required", "prompt": prompt,
-            "gate": gate, "sources": sources or [], "caption": "Waiting for your reply before continuing.",
-            "ts": self._ts(),
+            "gate": gate, "sources": sources or [], "caption": caption or "Waiting for your reply before continuing.",
+            "agent": agent, "ts": self._ts(),
         }
+        if options:
+            event["options"] = options  # one-click answers ("which password did you forget?")
         await self._publish(event)
         return event
 
     async def emit_final(self, answer: str, sources: list[dict], route: str | None, resolved: bool,
-                          ticket_number: str | None = None, suggestions: list[str] | None = None) -> dict:
+                          ticket_number: str | None = None, suggestions: list[str] | None = None,
+                          agent: str | None = None) -> dict:
         # Stream the final answer as word-chunk "token" events first, for a typing effect.
         words = answer.split()
         chunk_size = 4
@@ -221,6 +229,10 @@ class EventSink:
             "run_id": self.run_id, "seq": self.seq, "type": "final", "answer": answer, "sources": sources,
             "route": route, "resolved": resolved, "ticket_number": ticket_number, "ts": self._ts(),
         }
+        if agent:
+            # Who wrote this answer when it isn't the route's specialist (Atlas for a password
+            # reset, Tess when a blocked reset became a ticket).
+            event["agent"] = agent
         if suggestions:
             # One-click replies for a clarifying question ("what's happening with your laptop?").
             event["suggestions"] = suggestions

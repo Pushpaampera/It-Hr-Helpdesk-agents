@@ -1,5 +1,5 @@
-/** Approvals page (manager/admin). Decides the real `access_request` approvals a manager's
- * reports raise through the AI Assistant (Phase 9's Atlas agent) — this gives that pause/
+/** Approvals page (admin). Decides the real `access_request` approvals employees raise
+ * through the AI Assistant (Phase 9's Atlas agent) — this gives that pause/
  * resume flow a real UI instead of the direct-API calls Phase 9 verified it with. Deciding
  * resumes the paused agent run server-side (app/agents/graph.py::resume_after_approval). */
 import { motion } from "framer-motion";

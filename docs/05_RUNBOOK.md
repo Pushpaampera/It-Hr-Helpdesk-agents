@@ -51,11 +51,19 @@ known failing cases; `docs/09_DEMO_SCRIPT.md` has the full live walkthrough.
 | Role | Email | Lands on |
 |------|-------|----------|
 | employee | `emma.employee@acme.test` | AI Assistant |
-| manager | `mark.manager@acme.test` | Overview |
+| it_support | `ivan.it@acme.test` | Overview (IT queue) |
 | hr | `hannah.hr@acme.test` | Overview |
 | admin | `alex.admin@acme.test` | Overview |
 
 ## Resetting demo data
+**Before every demo:** `cd backend && poetry run reset-demo` (about a second). It puts back the
+small hand-written demo set — 6 people (Emma Employee is the main one; Priya Sharma and Aiden
+Ramirez; Ivan IT, Hannah HR, Alex Admin), ~27 past conversations, 11 tickets, 4 leave requests, 4
+access requests and 1 private HR case — and removes anything created while clicking around. The
+knowledge base and golden questions are kept. Running the backend tests also ends with this reset.
+Start the backend with `poetry run dev` (not plain `uvicorn --reload`): it limits how long a
+code-reload waits for open chat streams, so the server can't hang on a reload.
+
 `POST /api/admin/reset-demo` (admin JWT required) truncates and re-seeds every table to the
 pristine state `poetry run seed` produces — useful before a fresh demo run after live clicking
 has changed ticket/approval/leave state. No frontend button exists for this (its UI was Phase

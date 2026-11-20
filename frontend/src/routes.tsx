@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import RequireAuth from "./components/RequireAuth";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Landing from "./pages/Landing";
+import ChangePassword from "./pages/ChangePassword";
 import Login from "./pages/Login";
 import Approvals from "./pages/dashboard/Approvals";
 import Assistant from "./pages/dashboard/Assistant";
@@ -13,8 +14,8 @@ import Evaluation from "./pages/dashboard/Evaluation";
 import HrInsights from "./pages/dashboard/HrInsights";
 import KnowledgeBase from "./pages/dashboard/KnowledgeBase";
 import Overview from "./pages/dashboard/Overview";
+import PasswordResets from "./pages/dashboard/PasswordResets";
 import ReinforcementLab from "./pages/dashboard/ReinforcementLab";
-import Team from "./pages/dashboard/Team";
 import Tickets from "./pages/dashboard/Tickets";
 import TalkToHr from "./pages/dashboard/TalkToHr";
 import HrCases from "./pages/dashboard/HrCases";
@@ -29,16 +30,17 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route element={<RequireAuth />}>
         <Route path="/app" element={<DashboardLayout />}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<Overview />} />
           <Route path="assistant" element={<Assistant />} />
           <Route path="tickets" element={<Tickets />} />
+          <Route path="password-resets" element={<PasswordResets />} />
           <Route path="hr-support" element={<TalkToHr />} />
           <Route path="hr-cases" element={<HrCases />} />
           <Route path="approvals" element={<Approvals />} />
-          <Route path="team" element={<Team />} />
           <Route path="hr-insights" element={<HrInsights />} />
           <Route path="kb" element={<KnowledgeBase />} />
           <Route path="control-room" element={<ControlRoom />} />

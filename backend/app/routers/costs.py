@@ -1,5 +1,5 @@
 """GET /api/costs — token/cost breakdown over agent_runs, for the Cost Observatory dashboard.
-Manager/hr/admin only."""
+HR/admin only."""
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -8,7 +8,7 @@ from app.db import get_db
 from app.deps import require_roles
 
 router = APIRouter(
-    prefix="/api/costs", tags=["costs"], dependencies=[Depends(require_roles("manager", "hr", "admin"))]
+    prefix="/api/costs", tags=["costs"], dependencies=[Depends(require_roles("hr", "admin"))]
 )
 
 
@@ -35,10 +35,11 @@ def costs(days: int = 30, db: Session = Depends(get_db)):
 
     by_route = db.execute(
         text(
-            """SELECT coalesce(route, 'OTHER') AS route, sum(cost_usd) AS cost_usd,
+            # A run with no route was stopped by the privacy guard before routing.
+            """SELECT coalesce(route, 'BLOCKED') AS route, sum(cost_usd) AS cost_usd,
                    sum(tokens_in) AS tokens_in, sum(tokens_out) AS tokens_out, count(*) AS runs
                FROM agent_runs WHERE created_at >= now() - (:days || ' days')::interval
-               GROUP BY route ORDER BY route"""
+               GROUP BY 1 ORDER BY 1"""
         ),
         {"days": days},
     ).mappings().all()

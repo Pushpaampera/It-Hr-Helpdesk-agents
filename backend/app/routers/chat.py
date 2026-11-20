@@ -8,23 +8,33 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
 from app.agents import clarify, hr_confidential
+from app.agents import leave_request as leave
+from app.agents import password_reset as pw_reset
+from app.agents.spelling import correct as fix_spelling
 from app.agents.events import load_events_for_run, new_run_id
 from app.agents.graph import is_gate_reply, resume_after_user_reply, start_chat
 from app.agents.runs_store import (
     find_awaiting_reply_run, find_pending_clarification, get_run, save_message, update_run,
 )
 from app.config import get_settings
+from app.db import get_db
 from app.deps import ensure_self_or_roles, get_current_user
 from app.models.user import User
+from app.routers.tickets import can_view_run
 
 router = APIRouter(prefix="/api", tags=["chat"])
 settings = get_settings()
 
-# What chat history keeps instead of a private message. Managers and admins can open
-# conversations and agent runs, so the person's own words must never be stored there.
+# What chat history keeps instead of a verification code typed during a password reset.
+CODE_PLACEHOLDER = "[Verification code entered]"
+
+# What chat history keeps instead of a private message. HR, admins (and IT support, for runs
+# behind a ticket they work on) can open conversations and agent runs, so the person's own words
+# must never be stored there.
 PRIVATE_PLACEHOLDER = "[Private HR matter: not stored in chat. The employee was directed to HR.]"
 
 
@@ -88,11 +98,28 @@ async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current
     # SAME run instead of starting a fresh one — that's how the chatbot avoids ever creating a
     # ticket without an explicit "yes" from the user.
     awaiting = find_awaiting_reply_run(req.conversation_id) if req.conversation_id else None
-    if awaiting and not is_gate_reply(req.message):
-        # Not a yes/no: the person has moved on to a new question. Close the open question
-        # (no ticket is created) and answer the new message as a fresh run.
-        update_run(str(awaiting["id"]), status="resolved", outcome="moved_on")
-        awaiting = None
+    reset_step = pw_reset.open_step_for_run(str(awaiting["id"])) if awaiting else None
+    leave_step = leave.open_step_for_run(str(awaiting["id"])) if awaiting else None
+    if awaiting:
+        # Inside a password reset: "which account?" takes an account name, the code step takes a
+        # code / "resend" / "cancel". Inside a leave request: the type, the dates, the reason or
+        # the final OK. Every other open question takes a yes/no.
+        if reset_step:
+            answers_it = pw_reset.answers_open_step(reset_step, req.message, is_gate_reply)
+        elif leave_step:
+            answers_it = leave.answers_open_step(leave_step, fix_spelling(req.message))
+        else:
+            answers_it = is_gate_reply(req.message)
+        if not answers_it:
+            # The person has moved on to a new question. Close the open question (no ticket is
+            # created; a half-done password reset or leave request is cancelled) and answer it as
+            # a fresh run.
+            if reset_step:
+                pw_reset.cancel_open_for_run(str(awaiting["id"]))
+            if leave_step:
+                leave.cancel_open_for_run(str(awaiting["id"]))
+            update_run(str(awaiting["id"]), status="resolved", outcome="moved_on")
+            awaiting = None
 
     if awaiting:
         # agent_runs.id is a Postgres `uuid` column — psycopg deserializes it as a uuid.UUID,
@@ -103,7 +130,9 @@ async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current
         # never a fresh run, which is why it didn't show up in the original happy-path tests.
         run_id = str(awaiting["id"])
         if req.conversation_id:
-            save_message(req.conversation_id, "user", req.message, run_id=run_id)
+            # A verification code is never kept in chat history.
+            stored = CODE_PLACEHOLDER if reset_step == "code" and any(c.isdigit() for c in req.message) else req.message
+            save_message(req.conversation_id, "user", stored, run_id=run_id)
         task = asyncio.create_task(resume_after_user_reply(run_id, req.message, queue=queue))
     else:
         run_id = new_run_id()
@@ -137,9 +166,10 @@ async def chat_stream(req: ChatRequest, current_user: User = Depends(get_current
 
 
 @router.get("/runs/{run_id}/events")
-def get_run_events(run_id: str, current_user: User = Depends(get_current_user)):
+def get_run_events(run_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     run = get_run(run_id)
     if not run:
         raise HTTPException(404, "Run not found")
-    ensure_self_or_roles(current_user, run["user_id"], "manager", "hr", "admin")
+    if not (current_user.role == "it_support" and can_view_run(db, run_id, current_user)):
+        ensure_self_or_roles(current_user, run["user_id"], "hr", "admin")
     return {"run_id": run_id, "status": run["status"], "events": load_events_for_run(run_id)}

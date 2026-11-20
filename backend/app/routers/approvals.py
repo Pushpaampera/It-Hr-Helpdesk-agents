@@ -1,8 +1,8 @@
 """GET /api/approvals (list pending) and POST /api/approvals/{id}/decide — resumes a paused
-agent run after a manager decides.
+agent run after an admin decides.
 
-Phase 4: the approver identity comes from the JWT (must be the approval's own approver_id, or
-an admin standing in), not a body field.
+The approver identity comes from the JWT, not a body field: the approval's own approver, or any
+admin. IT support doesn't handle approvals (they only work IT tickets).
 """
 import asyncio
 from datetime import datetime, timezone
@@ -21,6 +21,9 @@ from app.notify import notify, notify_after_undo_window
 
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
+def _can_decide(approval: dict, user: User) -> bool:
+    return user.role == "admin" or str(approval["approver_id"]) == str(user.id)
+
 
 class DecideRequest(BaseModel):
     decision: str  # "approved" | "rejected"
@@ -33,17 +36,16 @@ def list_approvals(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Approvals addressed to the current user (their own requests to approve). Admins see
-    every pending approval, which is what the demo's Approval Center shows an admin."""
+    """Admins see every approval; anyone else only what is addressed to them."""
     params: dict = {}
     where = []
     if current_user.role == "admin":
         pass
     else:
-        where.append("approver_id = :approver_id")
+        where.append("a.approver_id = :approver_id")
         params["approver_id"] = str(current_user.id)
     if status:
-        where.append("status = :status")
+        where.append("a.status = :status")
         params["status"] = status
     clause = f"WHERE {' AND '.join(where)}" if where else ""
     rows = db.execute(
@@ -72,8 +74,8 @@ async def decide_approval(
         raise HTTPException(404, "Approval not found")
     if approval["status"] != "pending":
         raise HTTPException(409, f"Approval already {approval['status']}")
-    if str(approval["approver_id"]) != str(current_user.id) and current_user.role != "admin":
-        raise HTTPException(403, "Only the assigned approver (or an admin) can decide this")
+    if not _can_decide(approval, current_user):
+        raise HTTPException(403, "Only an admin can decide this")
 
     result = approvals_api.decide(approval_id, req.decision, req.comment, str(current_user.id))
 
@@ -85,7 +87,7 @@ async def decide_approval(
     background.add_task(
         notify_after_undo_window,
         lambda: _still_decided(approval_id, req.decision, decided_at),
-        lambda: _tell_requester(approval, req.decision, (req.comment or "").strip() or None, current_user.name),
+        lambda: _tell_requester(approval, req.decision, (req.comment or "").strip() or None, current_user.name, decided_at),
     )
     return result
 
@@ -95,7 +97,7 @@ def _still_decided(approval_id: str, decision: str, decided_at) -> bool:
     return bool(row) and row["status"] == decision and row["decided_at"] == decided_at
 
 
-def _tell_requester(approval: dict, decision: str, comment: str | None, approver_name: str) -> None:
+def _tell_requester(approval: dict, decision: str, comment: str | None, approver_name: str, decided_at=None) -> None:
     payload = approval.get("payload") or {}
     what = f"{payload.get('access_level', '')} access to {payload['system']}".strip() if payload.get("system") else "your request"
     if decision == "approved":
@@ -106,7 +108,21 @@ def _tell_requester(approval: dict, decision: str, comment: str | None, approver
     else:
         title = "Your request was not approved"
         body = f"{approver_name} rejected {what}.\nReason: {comment}"
-    notify(str(approval["requester_id"]), f"approval_{decision}", title, body, important=True)
+
+    # The email: a short note, signed by the admin who decided.
+    system = payload.get("system", "the system")
+    level = payload.get("access_level")
+    asked_for = f"{level} access to {system}" if level else f"access to {system}"
+    if decision == "approved":
+        email = f"Your request for {asked_for} has been approved. You can start using it now."
+        if comment:
+            email += f"\n\nNote: {comment}"
+    else:
+        email = (f"Your request for {asked_for} has been declined.\n\nReason: {comment}\n\n"
+                 "If you still need it for your work, please submit a new request with a little more detail.")
+    signature = f"{approver_name}\nIT Administration, Ampera"
+    notify(str(approval["requester_id"]), f"approval_{decision}", title, body, important=True, email_body=email,
+           signature=signature)
 
 
 @router.post("/{approval_id}/undo")
@@ -119,8 +135,8 @@ async def undo_approval(approval_id: str, current_user: User = Depends(get_curre
         raise HTTPException(404, "Approval not found")
     if approval["status"] not in ("approved", "rejected"):
         raise HTTPException(409, "This approval hasn't been decided yet")
-    if str(approval["approver_id"]) != str(current_user.id) and current_user.role != "admin":
-        raise HTTPException(403, "Only the assigned approver (or an admin) can undo this")
+    if not _can_decide(approval, current_user):
+        raise HTTPException(403, "Only an admin can undo this")
 
     decided_at = approval.get("decided_at")
     if decided_at is None:

@@ -13,6 +13,8 @@ import { useAuthStore } from "../../store/authStore";
 type DashboardHeaderProps = {
   title: string;
   subtitle: string;
+  /** Overview only: false draws the plain header instead of the navy welcome banner. */
+  hero?: boolean;
 };
 
 function timeOfDayGreeting(): string {
@@ -22,7 +24,7 @@ function timeOfDayGreeting(): string {
   return "Good evening";
 }
 
-export default function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
+export default function DashboardHeader({ title, subtitle, hero = true }: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +33,7 @@ export default function DashboardHeader({ title, subtitle }: DashboardHeaderProp
   const isHome = location.pathname === "/app/overview";
   const showBack = !isHome;
 
-  if (isHome) {
+  if (isHome && hero) {
     const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
     return (
       <section

@@ -1,7 +1,6 @@
 """`poetry run simulate-feedback --n 500` — generates synthetic feedback against the *live*
 bandit state (not a throwaway copy), demonstrating the "lexical wins for error-code queries,
-semantic wins for vague ones" pattern and leaving `bandit_state` warmed up for the demo, the
-same way `app/seed/generators/ops.py::generate_historical_runs` does for the 300 seeded runs.
+semantic wins for vague ones" pattern and leaving `bandit_state` warmed up for the demo.
 """
 import random
 import uuid

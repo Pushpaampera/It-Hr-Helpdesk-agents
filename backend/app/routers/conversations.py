@@ -59,7 +59,7 @@ def get_conversation(
     ).mappings().first()
     if not conv:
         raise HTTPException(404, "Conversation not found")
-    ensure_self_or_roles(current_user, conv["user_id"], "manager", "hr", "admin")
+    ensure_self_or_roles(current_user, conv["user_id"], "hr", "admin")
 
     messages = db.execute(
         text(

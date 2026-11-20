@@ -96,6 +96,8 @@ export default function HrInsights() {
         Your daily view: how many people work here, how much leave has been used, and the leave requests that need you to approve or reject them.
       </InfoBanner>
 
+      <OnLeaveToday today={overview.today} people={overview.on_leave_today} />
+
       <motion.div
         initial="hidden"
         animate="visible"
@@ -304,5 +306,55 @@ export default function HrInsights() {
       )}
     </div>
     </PageTransition>
+  );
+}
+
+
+/** Daily reminder at the top of the HR Dashboard: who is away on approved leave today, and when
+ * they're back. Dates are the server's (YYYY-MM-DD), shown as "Fri 21 Nov". */
+function OnLeaveToday({ today, people }: { today: string; people: HrOverview["on_leave_today"] }) {
+  const day = (iso: string) =>
+    new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const nextDay = (iso: string) => {
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  };
+
+  return (
+    <Panel aria-labelledby="on-leave-today" style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
+      <h2
+        id="on-leave-today"
+        style={{ fontSize: "1rem", marginBottom: "var(--space-3)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+      >
+        On leave today · {day(today)}
+        <Badge label={`${people.length} ${people.length === 1 ? "person" : "people"}`} tone={people.length ? "info" : "neutral"} />
+      </h2>
+      {people.length === 0 ? (
+        <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Everyone is in today. No approved leave covers today.</p>
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: "var(--space-2)" }}>
+          {people.map((p) => (
+            <li
+              key={p.id}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-2)",
+                padding: "var(--space-2) var(--space-3)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)",
+                fontSize: "0.875rem",
+              }}
+            >
+              <span>
+                <strong>{p.user_name}</strong>
+                <span style={{ color: "var(--text-muted)" }}> · {p.department} · {p.leave_type} leave</span>
+              </span>
+              <span style={{ color: "var(--text-secondary)" }}>
+                {p.end_date === today ? "Today only · " : `Until ${day(p.end_date)} · `}
+                back {nextDay(p.end_date)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }

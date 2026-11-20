@@ -2,7 +2,7 @@
 
 Role checks happen here, in the backend, never only in the UI (hard constraint 10).
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -12,8 +12,12 @@ from app.security import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
+# The only things a session signed in with a temporary password may do.
+PASSWORD_CHANGE_PATHS = ("/api/auth/me", "/api/auth/change-password", "/api/auth/logout")
+
 
 def get_current_user(
+    request: Request,
     creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
@@ -25,6 +29,11 @@ def get_current_user(
     user = db.get(User, payload["sub"])
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or inactive")
+    # Signed in with a temporary password: nothing else works until a new password is chosen.
+    # (A session that was already open when the password was reset keeps working.)
+    user.password_change_required = bool(payload.get("pwd_change")) and user.must_change_password
+    if user.password_change_required and request.url.path not in PASSWORD_CHANGE_PATHS:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Please choose a new password first.")
     return user
 
 

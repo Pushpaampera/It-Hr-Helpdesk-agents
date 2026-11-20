@@ -17,7 +17,7 @@ import { useAuthStore } from "../store/authStore";
 import styles from "./DashboardLayout.module.css";
 import { NAV_ITEMS } from "./navItems";
 
-const ROLE_LABELS: Record<string, string> = { employee: "Employee", manager: "Manager", hr: "HR", admin: "Admin" };
+const ROLE_LABELS: Record<string, string> = { employee: "Employee", it_support: "IT Support", hr: "HR", admin: "Admin" };
 
 export default function DashboardLayout() {
   const { user, logout } = useAuthStore();

@@ -55,7 +55,7 @@ CAPABILITIES = (
     "Here's what I can do for you:\n\n"
     "- **Fix IT problems**: VPN and Wi-Fi, passwords and MFA, email, printers, laptops and software.\n"
     "- **Answer HR questions**: leave policies, your own leave balance, payroll, benefits and onboarding.\n"
-    "- **Do things for you**: apply for leave, or request access to a system (your manager approves it).\n"
+    "- **Do things for you**: apply for leave, or request access to a system (an admin approves it).\n"
     "- **Get a person involved**: if I can't solve it, I'll offer to open a ticket for the IT or HR team.\n\n"
     "Just tell me what you need in your own words."
 )

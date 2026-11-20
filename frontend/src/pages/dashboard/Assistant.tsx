@@ -16,7 +16,7 @@ import remarkGfm from "remark-gfm";
 
 import { apiPost } from "../../api/client";
 import { streamSSE } from "../../api/sse";
-import type { ChatEvent, ChatSource, Conversation, HrRedirect } from "../../api/types";
+import type { ChatEvent, ChatSource, ConfirmationGate, Conversation, HrRedirect } from "../../api/types";
 import AgentActivityPanel, { type AgentDeskState, type CaptionLogEntry } from "../../components/chat/AgentActivityPanel";
 import FeedbackWidget from "../../components/chat/FeedbackWidget";
 import HrRedirectCard from "../../components/chat/HrRedirectCard";
@@ -72,11 +72,14 @@ type ChatMessage = {
    * "supervisor", "it_support"]) — rendered as a routing strip above the answer so the
    * employee can see who handled it, not just the final author. */
   routeChain?: AgentKey[];
+  /** Who wrote this when it isn't the route's specialist: Atlas during a password reset, Tess
+   * when a blocked reset became a ticket. */
+  author?: AgentKey | null;
 };
 
 type PulseState = { from: string; to: string; trigger: number };
 type ApprovalState = { approvalId: string; approverName: string; system: string };
-type PendingGateState = { gate: "resolution_confirm" | "ticket_offer" };
+type PendingGateState = { gate: ConfirmationGate; options?: string[] };
 
 export default function Assistant() {
   const reduceMotion = useUIStore((s) => s.reduceMotion);
@@ -108,6 +111,15 @@ export default function Assistant() {
 
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const awaitingCode = pendingGate?.gate === "password_reset_code";
+  // Steps with one-click answers (which account, leave type / dates / reason, the leave summary).
+  const hasOptions = (pendingGate?.options?.length ?? 0) > 0;
+
+  // When Atlas asks for the emailed code, put the cursor in the message box ready to type it.
+  useEffect(() => {
+    if (awaitingCode && !isStreaming) inputRef.current?.focus();
+  }, [awaitingCode, isStreaming]);
 
   // Announced to screen readers: "working…" while streaming, then the finished answer once.
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && !m.pending);
@@ -216,13 +228,16 @@ export default function Assistant() {
               break;
 
             case "confirmation_required": {
-              setPendingGate({ gate: event.gate });
+              setPendingGate({ gate: event.gate, options: event.options });
               setCaptions((c) => [...c, { id: crypto.randomUUID(), agent: "feedback", caption: event.caption }]);
               const gateRoute = lastSpecialist === "it_support" ? "IT" : lastSpecialist === "hr_policy" ? "HR" : null;
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantMsgId
-                    ? { ...msg, content: event.prompt, sources: event.sources, route: gateRoute, routeChain: [...routeChain], pending: false }
+                    ? {
+                        ...msg, content: event.prompt, sources: event.sources, route: gateRoute, routeChain: [...routeChain],
+                        pending: false, author: isKnownAgent(event.agent ?? null) ? (event.agent as AgentKey) : null,
+                      }
                     : msg,
                 ),
               );
@@ -255,6 +270,7 @@ export default function Assistant() {
                         hrRedirect: event.hr_redirect ?? null,
                         hrPrefillText: event.hr_redirect ? query : undefined,
                         suggestions: event.suggestions,
+                        author: isKnownAgent(event.agent ?? null) ? (event.agent as AgentKey) : null,
                       }
                     : msg,
                 ),
@@ -353,10 +369,40 @@ export default function Assistant() {
             </div>
           )}
 
-          {pendingGate && !isStreaming && (
+          {pendingGate && !isStreaming && awaitingCode && (
+            <div role="group" aria-label="Password reset" style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+              <Button variant="ghost" onClick={() => handleSend("Resend code")}>
+                Resend code
+              </Button>
+              <Button variant="ghost" onClick={() => handleSend("Cancel")}>
+                Cancel reset
+              </Button>
+            </div>
+          )}
+
+          {pendingGate && !isStreaming && hasOptions && (
+            <div role="group" aria-label="Quick answers" style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+              {pendingGate.options!.map((option, i) => (
+                <Button
+                  key={option}
+                  variant={pendingGate.gate === "leave_confirm" && i === 0 ? "primary" : "ghost"}
+                  onClick={() => handleSend(option)}
+                >
+                  {option}
+                </Button>
+              ))}
+              {!pendingGate.options!.includes("Cancel") && (
+                <Button variant="ghost" onClick={() => handleSend("Cancel")}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          )}
+
+          {pendingGate && !isStreaming && !awaitingCode && !hasOptions && (
             <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
               <Button variant="primary" onClick={() => handleSend("Yes")}>
-                Yes
+                {pendingGate.gate === "password_reset_consent" ? "Yes, start the reset" : "Yes"}
               </Button>
               <Button variant="ghost" onClick={() => handleSend("No")}>
                 No
@@ -423,14 +469,24 @@ export default function Assistant() {
               </button>
             )}
             <textarea
-              aria-label="Your message to the assistant"
+              ref={inputRef}
+              aria-label={awaitingCode ? "The 6-digit code from your email" : "Your message to the assistant"}
+              autoComplete={awaitingCode ? "one-time-code" : "off"}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
                 if (voice.listening) voice.syncText(e.target.value);
               }}
               onKeyDown={handleKeyDown}
-              placeholder={isStreaming ? "Waiting for a response..." : voice.listening ? "Listening… start speaking" : "Type or speak a message..."}
+              placeholder={
+                isStreaming
+                  ? "Waiting for a response..."
+                  : voice.listening
+                    ? "Listening… start speaking"
+                    : awaitingCode
+                      ? "Type the 6-digit code from your email..."
+                      : "Type or speak a message..."
+              }
               disabled={isStreaming}
               rows={voice.listening || input.length > 80 ? 3 : 1}
               style={{
@@ -463,7 +519,8 @@ export default function Assistant() {
 
 function MessageBubble({ message, showRoutingChain }: { message: ChatMessage; showRoutingChain: boolean }) {
   const isUser = message.role === "user";
-  const routeKey = !isUser ? routeToAgentKey(message.route ?? null) : null;
+  // Who is speaking: the named author (Atlas / Tess) if there is one, else the route's specialist.
+  const routeKey = !isUser ? (message.author ?? routeToAgentKey(message.route ?? null)) : null;
   const identity = routeKey ? AGENTS[routeKey] : null;
   const chain = !isUser ? (message.routeChain ?? []).filter((k) => k !== routeKey || (message.routeChain?.length ?? 0) === 1) : [];
   return (

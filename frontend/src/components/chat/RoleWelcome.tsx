@@ -1,7 +1,7 @@
 /** The empty-state welcome on the Ask the Assistant page, styled per role: a coloured role icon
  * and "<Role> view" badge, then the role's starter questions, either as large tiles (employee)
- * or as topic cards (manager, HR, admin). Managers also get a live card showing how many
- * approvals are waiting on them. The --role-colour custom property drives every accent below,
+ * or as topic cards (HR, admin). A role can also get a live card showing how many access
+ * requests are waiting. The --role-colour custom property drives every accent below,
  * so the look follows the role without per-role CSS. */
 import { ArrowRight, CheckSquare } from "lucide-react";
 import { useEffect, useState, type CSSProperties } from "react";
@@ -39,7 +39,7 @@ export default function RoleWelcome({ config, firstName, disabled, onAsk }: Prop
             <StarterButton key={item.q} item={item} variant="tile" disabled={disabled} onAsk={onAsk} />
           ))}
         </div>
-      ) : (
+      ) : config.groups.length === 0 && !config.showApprovalsCard ? null : (
         <div className="role-welcome__groups">
           {config.groups.map((group) => {
             const GroupIcon = group.icon;
@@ -90,7 +90,7 @@ function ApprovalsCard() {
       </h3>
       <p style={{ fontSize: "2rem", fontWeight: 700, lineHeight: 1.1, color: "var(--role-colour)" }}>{count ?? "–"}</p>
       <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "var(--space-3)" }}>
-        {count === 1 ? "request is" : "requests are"} waiting on you
+        access {count === 1 ? "request is" : "requests are"} waiting
       </p>
       <Link to="/app/approvals" style={{ fontSize: "0.875rem", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
         Review now <ArrowRight size={14} aria-hidden="true" />

@@ -71,7 +71,7 @@
    * separate tokens so a role could be given its own colour again in one place. */
   --role-admin: #9c369a;
   --role-employee: var(--role-admin);
-  --role-manager: var(--role-admin);
+  --role-it-support: var(--role-admin);
   --role-hr: var(--role-admin);
 
   /* Agents — one colour for all seven (name + initial identify them) */
@@ -202,7 +202,7 @@ html[data-theme="dark"] {
 
   --role-admin: #ffffff;
   --role-employee: var(--role-admin);
-  --role-manager: var(--role-admin);
+  --role-it-support: var(--role-admin);
   --role-hr: var(--role-admin);
 
   --agent-supervisor: #ececec;

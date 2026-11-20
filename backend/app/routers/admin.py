@@ -1,4 +1,5 @@
-"""POST /api/admin/reset-demo — wipes and reseeds all demo data. Admin only. Phase 10B (the
+"""POST /api/admin/reset-demo — puts the small hand-written demo data back (same as `poetry run
+reset-demo`: 6 people and their history; the knowledge base is kept). Admin only. Phase 10B (the
 showcase confirmation-modal/progress-animation UI around this) was explicitly skipped by the
 operator; this endpoint stays unused by the frontend for now.
 

@@ -1,5 +1,5 @@
 """Atlas, the Task Doer. Groq gpt-oss-20b with tool calling. request_access pauses the graph
-(via a LangGraph NodeInterrupt) pending the requester's manager's approval."""
+(via a LangGraph NodeInterrupt) pending an admin's approval."""
 import asyncio
 import re
 from datetime import date, timedelta
@@ -13,14 +13,20 @@ settings = get_settings()
 
 SYSTEM_PROMPT = """You are Atlas, a careful IT/HR operations assistant. Given an employee's
 request, call exactly one tool that fulfills it. Only call request_access if the employee is
-asking for access to a system; it always requires manager approval, so explain that in your
+asking for access to a system; it always requires an admin's approval, so explain that in your
 reasoning. Never fabricate dates — if a date is relative ("next week"), resolve it to an actual
 date based on today."""
 
 TOOLS = [
     {"type": "function", "function": {
-        "name": "reset_password", "description": "Resets the employee's own password.",
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "name": "reset_password",
+        "description": "Starts a reset of the employee's own password for one company account (they verify with a "
+                       "code sent to their email).",
+        "parameters": {"type": "object", "properties": {
+            "system": {"type": "string", "enum": ["email", "windows", "payroll", "hr_portal"],
+                       "description": "email = Outlook; windows = Windows/VPN/company sign-in; payroll = Payroll "
+                                      "portal; hr_portal = HR portal. Leave out if the employee didn't say."},
+        }, "required": []},
     }},
     {"type": "function", "function": {
         "name": "unlock_account", "description": "Unlocks the employee's own account.",
@@ -28,13 +34,13 @@ TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "request_access",
-        "description": "Requests access to a system for the employee; always needs manager approval.",
+        "description": "Requests access to a system for the employee; always needs an admin's approval.",
         "parameters": {
             "type": "object",
             "properties": {
-                "system": {"type": "string", "description": "The system name, e.g. 'Finance System'"},
+                "system": {"type": "string", "description": "The tool or system name, e.g. 'Jira', 'GitHub', 'Zendesk'"},
                 "access_level": {"type": "string", "enum": ["read", "write", "admin"]},
-                "justification": {"type": "string"},
+                "justification": {"type": "string", "description": "Why they need it, in their own words"},
             },
             "required": ["system", "access_level", "justification"],
         },
@@ -80,14 +86,17 @@ def _mock_tool_call(query: str) -> dict | None:
     q = query.lower()
     if "unlock" in q:
         return {"name": "unlock_account", "arguments": {}}
-    if "password" in q and ("reset" in q or "forgot" in q):
+    if "password" in q and any(w in q for w in ("reset", "forgot", "forgotten", "expired", "recover")):
         return {"name": "reset_password", "arguments": {}}
     if "access" in q:
-        system_match = re.search(r"access to (?:the )?([A-Za-z0-9 ]+?)(?:\s+system)?[.\s]*$", query, re.IGNORECASE)
-        system = (system_match.group(1).strip().title() + " System") if system_match else "the requested system"
+        system_match = re.search(r"access to (?:the )?([A-Za-z0-9 ]+?)(?:\s+(?:system|tool|app))?(?:\s+(?:for|to|so)\b.*)?[.\s]*$",
+                                 query, re.IGNORECASE)
+        name = system_match.group(1).strip() if system_match else ""
+        # Keep names the way people write them (GitHub, Jira); only fix all-lowercase ones.
+        system = (name if name != name.lower() else name.title()) or "the requested system"
         level = "admin" if "admin" in q else "write" if "write" in q else "read"
         return {"name": "request_access", "arguments": {
-            "system": system, "access_level": level, "justification": "Requested via the AI Assistant.",
+            "system": system, "access_level": level, "justification": query.strip(),
         }}
     if "balance" in q and "leave" in q:
         return {"name": "get_leave_balance", "arguments": {}}
@@ -134,7 +143,7 @@ def _announce_leave_request(user_id: str, result: dict) -> None:
 
 
 def _announce_access_request(user_id: str, approver_id: str, system: str, level: str) -> None:
-    """Tells the approving manager (in-app + email) that a request is waiting for them."""
+    """Tells the admin approving it (in-app + email) that a request is waiting for them."""
     from app.notify import notify
     from app.mock_apis.directory import get_user
 
@@ -162,9 +171,9 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
     args = tool_call.get("arguments", {})
 
     if name == "reset_password":
-        result = it_system.reset_password(user_id)
-        return {**base, "tool": name, "args": args, "result": result, "paused": False,
-                "message": result["message"]}
+        # Never reset here: the graph sends this to the explained, email-verified flow
+        # (app/agents/password_reset.py), which asks first and checks a code.
+        return {**base, "tool": name, "args": args, "result": None, "paused": False, "message": ""}
 
     if name == "unlock_account":
         result = it_system.unlock_account(user_id)
@@ -178,15 +187,10 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
                 "message": "Here's your leave balance:\n" + "\n".join(lines)}
 
     if name == "apply_leave":
-        result = hr_system.apply_leave(
-            user_id, args.get("leave_type", "annual"), args["start_date"], args["end_date"],
-            args.get("reason", "Requested via the AI Assistant."),
-        )
-        _announce_leave_request(user_id, result)
-        return {**base, "tool": name, "args": args, "result": result, "paused": False,
-                "message": f"Your {result['leave_type']} leave request for {_days(result['days'])} "
-                           f"({_dates(result['start_date'], result['end_date'])}) has been sent to HR for approval. "
-                           "You'll get a notification here and an email as soon as HR decides."}
+        # Never submit here: the graph sends this to the step-by-step leave request
+        # (app/agents/leave_request.py), which reads the person's own words, asks for anything
+        # missing and only sends it to HR after a "yes". A model's guessed dates are not used.
+        return {**base, "tool": name, "args": args, "result": None, "paused": False, "message": ""}
 
     if name == "request_access":
         result = it_system.request_access(
@@ -198,7 +202,7 @@ async def decide_and_execute(query: str, user_id: str, run_id: str) -> dict:
                     "message": result.get("message", "Could not submit the access request.")}
         _announce_access_request(user_id, result["approver_id"], args["system"], args.get("access_level", "read"))
         return {**base, "tool": name, "args": args, "result": result, "paused": True,
-                "message": f"Your request for {args['system']} access is waiting on {result['approver_name']}'s approval. "
+                "message": f"Your request for {args['system']} access is waiting on an admin ({result['approver_name']}) to approve it. "
                            "You'll get a notification here and an email when they decide."}
 
     return {**base, "tool": name, "args": args, "result": None, "paused": False,

@@ -1,4 +1,4 @@
-"""Approvals: created by it_system.request_access, decided by a manager."""
+"""Approvals: created by it_system.request_access, decided by an admin."""
 from sqlalchemy import text
 
 from app.db import get_engine
@@ -20,7 +20,7 @@ def get(approval_id: str) -> dict | None:
     with engine.connect() as conn:
         row = conn.execute(
             text(
-                """SELECT id, run_id, status, approver_id, requester_id, payload, decided_at
+                """SELECT id, run_id, type, status, approver_id, requester_id, payload, decided_at, created_at
                    FROM approvals WHERE id = :id"""
             ),
             {"id": approval_id},

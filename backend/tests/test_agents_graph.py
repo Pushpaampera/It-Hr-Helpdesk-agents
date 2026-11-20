@@ -102,40 +102,37 @@ async def test_b_sick_days_routes_hr_with_own_balance():
 
 
 @pytest.mark.asyncio
-async def test_c_reset_password_runs_action():
+async def test_c_reset_password_asks_first_and_changes_nothing_yet():
+    """A password reset goes straight to Atlas, who asks which account and then explains the steps
+    and waits for a yes. Nothing is reset on the first turn (full flow: tests/test_password_reset.py)."""
+    from app.agents import password_reset as pw_reset
+
     emma = _get_user("emma.employee@acme.test")
     run_id, events = await _run_chat(emma, "Please reset my password")
 
-    tool_calls = [e for e in events if e.get("type") == "agent_event" and e.get("agent") == "action" and e.get("status") == "tool_call"]
-    assert tool_calls, "expected an action tool_call event"
-    assert tool_calls[0]["action"] == "reset_password"
-
-    # A completed action goes straight to Atlas (no knowledge answer in front of it) and finishes
-    # without a "did this solve your problem?" question.
     assert not [e for e in events if e.get("agent") == "it_support"], "requests skip the knowledge agent"
-    assert not [e for e in events if e["type"] == "confirmation_required"]
-    finals = [e for e in events if e["type"] == "final"]
-    assert finals and finals[0]["resolved"] is True
-    assert get_run(run_id)["status"] == "resolved"
+    # It doesn't say which account, so Atlas first asks (Email / Windows-VPN / Payroll / HR portal).
+    gates = [e for e in events if e["type"] == "confirmation_required"]
+    assert gates and gates[0]["gate"] == pw_reset.SYSTEM_GATE and gates[0]["agent"] == "action"
+    assert "Which password did you forget?" in gates[0]["prompt"] and len(gates[0]["options"]) == 4
+    assert not [e for e in events if e["type"] == "final"]
+    assert get_run(run_id)["status"] == "awaiting_user_confirmation"
+    pw_reset.cancel_open_for_run(run_id)
 
 
 @pytest.mark.asyncio
-async def test_c2_leave_request_goes_to_hr_without_policy_text():
-    from sqlalchemy import text
+async def test_c2_leave_request_goes_to_atlas_not_the_policy_guides():
+    """"i want a leave" is a request: Atlas asks what kind of leave (the full step-by-step flow is
+    in tests/test_leave_request.py). No policy text, no "did this solve your problem?"."""
+    from app.agents import leave_request as leave
 
     emma = _get_user("emma.employee@acme.test")
     run_id, events = await _run_chat(emma, "i want a leave")
-    finals = [e for e in events if e["type"] == "final"]
-    assert finals, "a leave request should finish in one go"
-    answer = finals[0]["answer"]
-    assert "sent to HR for approval" in answer
-    assert "carried forward" not in answer and "Did this solve" not in answer
-    assert not [e for e in events if e["type"] == "confirmation_required"]
-    with get_engine().begin() as conn:  # keep HR's queue clean
-        conn.execute(text("""DELETE FROM leave_requests WHERE user_id = :u AND status = 'pending'
-                             AND reason = 'Requested via the AI Assistant.' AND created_at > now() - interval '5 minutes'"""),
-                     {"u": emma["id"]})
-        conn.execute(text("DELETE FROM notifications WHERE kind IN ('leave_pending','leave_submitted') AND created_at > now() - interval '5 minutes'"))
+    assert not [e for e in events if e.get("agent") == "hr_policy"], "requests skip the knowledge agent"
+    gates = [e for e in events if e["type"] == "confirmation_required"]
+    assert gates and gates[0]["gate"] == leave.TYPE_GATE and gates[0]["agent"] == "action"
+    assert "Did this solve" not in gates[0]["prompt"] and "carried forward" not in gates[0]["prompt"]
+    leave.cancel_open_for_run(run_id)
 
 
 @pytest.mark.asyncio
@@ -145,7 +142,7 @@ async def test_d_access_request_pauses_then_resumes_on_approval():
     emma = _get_user("emma.employee@acme.test")
     run_id = new_run_id()
     queue: asyncio.Queue = asyncio.Queue()
-    task = asyncio.create_task(start_chat(emma, "I need access to the Finance system", None, run_id, queue))
+    task = asyncio.create_task(start_chat(emma, "I need access to Jira", None, run_id, queue))
 
     # The stream intentionally stays open (no sentinel) while awaiting approval — stop
     # collecting as soon as we see the approval_required event rather than waiting for one.
@@ -166,8 +163,13 @@ async def test_d_access_request_pauses_then_resumes_on_approval():
     approval = approvals_api.get(approval_id)
     assert approval["status"] == "pending"
 
-    manager = _get_user("mark.manager@acme.test")
-    approvals_api.decide(approval_id, "approved", "Approved for project work.", manager["id"])
+    # Access requests are approved by an admin (there is no manager role).
+    with get_engine().connect() as conn:
+        approver_role = conn.execute(
+            text("SELECT role FROM users WHERE id = :id"), {"id": approval["approver_id"]}
+        ).scalar_one()
+    assert approver_role == "admin"
+    approvals_api.decide(approval_id, "approved", "Approved for project work.", str(approval["approver_id"]))
     await resume_after_approval(run_id, True)
 
     # The access-granted answer finishes the run straight away (no "did this solve" question).
@@ -224,6 +226,11 @@ async def test_e_unanswerable_question_creates_ticket():
         ).mappings().first()
     assert ticket is not None
     assert "bonus" in ticket["summary"].lower()
+    # Don't leave a test ticket (and its notifications) in the demo data.
+    with get_engine().begin() as conn:
+        tid = conn.execute(text("SELECT id FROM tickets WHERE number = :n"), {"n": finals[0]["ticket_number"]}).scalar_one()
+        conn.execute(text("DELETE FROM notifications WHERE link LIKE :l"), {"l": f"%{tid}%"})
+        conn.execute(text("DELETE FROM tickets WHERE id = :id"), {"id": tid})
 
 
 @pytest.mark.asyncio

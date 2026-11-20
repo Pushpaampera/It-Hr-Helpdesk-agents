@@ -46,7 +46,30 @@ def overview(db: Session = Depends(get_db)):
         {"today": date.today()},
     ).mappings().all()
 
+    # Who is away today (approved leave covering today), as a daily reminder on the dashboard.
+    # No reason here: it can be medical, and a reminder doesn't need it.
+    away = db.execute(
+        text(
+            """SELECT lr.id, lr.user_id, u.name AS user_name, u.department, lr.leave_type, lr.start_date,
+                      lr.end_date, lr.days
+               FROM leave_requests lr JOIN users u ON u.id = lr.user_id
+               WHERE lr.status = 'approved' AND lr.start_date <= :today AND lr.end_date >= :today
+               ORDER BY lr.end_date, u.name"""
+        ),
+        {"today": date.today()},
+    ).mappings().all()
+
     return {
+        "today": date.today().isoformat(),
+        "on_leave_today": [
+            {
+                "id": str(r["id"]), "user_id": str(r["user_id"]), "user_name": r["user_name"],
+                "department": r["department"], "leave_type": r["leave_type"],
+                "start_date": r["start_date"].isoformat(), "end_date": r["end_date"].isoformat(),
+                "days": r["days"],
+            }
+            for r in away
+        ],
         "headcount_by_department": [{"department": r["department"], "count": r["n"]} for r in headcount],
         "leave_requests_by_status": {
             "pending": leave_by_status.get("pending", 0),
@@ -112,7 +135,8 @@ def decide_leave_request(
         raise HTTPException(400, "A reason is required to reject a request")
 
     lr = db.execute(
-        text("SELECT id, user_id, leave_type, start_date, end_date, days, status FROM leave_requests WHERE id = :id"),
+        text("""SELECT id, user_id, leave_type, start_date, end_date, days, status, reason, created_at
+                FROM leave_requests WHERE id = :id"""),
         {"id": leave_request_id},
     ).mappings().first()
     if not lr:
@@ -139,7 +163,7 @@ def decide_leave_request(
     background.add_task(
         notify_after_undo_window,
         lambda: _still_decided(leave_request_id, req.decision, decided_at),
-        lambda: _tell_employee(dict(lr), req.decision, comment, current_user.name),
+        lambda: _tell_employee(dict(lr), req.decision, comment, current_user.name, decided_at),
     )
     return {"id": leave_request_id, "status": req.decision}
 
@@ -155,7 +179,7 @@ def _still_decided(leave_request_id: str, decision: str, decided_at) -> bool:
     return bool(row) and row["status"] == decision and row["decided_at"] == decided_at
 
 
-def _tell_employee(lr: dict, decision: str, comment: str | None, hr_name: str) -> None:
+def _tell_employee(lr: dict, decision: str, comment: str | None, hr_name: str, decided_at=None) -> None:
     days = lr["days"]
     days_txt = f"{int(days) if float(days).is_integer() else days} day{'' if days == 1 else 's'}"
     fmt = lambda d: f"{d.day} {d.strftime('%b %Y')}"  # noqa: E731
@@ -169,7 +193,18 @@ def _tell_employee(lr: dict, decision: str, comment: str | None, hr_name: str) -
     else:
         title = "Your leave request was not approved"
         body = f"{hr_name} from HR rejected your {leave}.\nReason: {comment}\nIf you have questions, reply through Talk to HR or ask the Assistant."
-    notify(str(lr["user_id"]), f"leave_{decision}", title, body, important=True)
+
+    # The email: a short note, signed by the HR person who decided.
+    what = f"{lr['leave_type']} leave from {dates} ({days_txt})" if lr["start_date"] != lr["end_date"] else f"{lr['leave_type']} leave on {dates}"
+    if decision == "approved":
+        email = f"Your {what} has been approved. Your leave balance has been updated."
+        if comment:
+            email += f"\n\nNote: {comment}"
+    else:
+        email = (f"Your request for {what} has been declined.\n\nReason: {comment}\n\n"
+                 "If you'd like to talk about it, please reach out to HR.")
+    signature = f"{hr_name}\nHR Team, Ampera"
+    notify(str(lr["user_id"]), f"leave_{decision}", title, body, important=True, email_body=email, signature=signature)
 
 
 @router.post("/leave-requests/{leave_request_id}/undo")

@@ -76,7 +76,7 @@ export default function AuditLog() {
                   </td>
                   <td style={{ padding: "var(--space-3) var(--space-4)" }}>{e.actor_name ?? "—"}</td>
                   <td style={{ padding: "var(--space-3) var(--space-4)" }}>{e.action.replace(/_/g, " ")}</td>
-                  <td style={{ padding: "var(--space-3) var(--space-4)", color: "var(--text-muted)" }}>{e.target_type}</td>
+                  <td style={{ padding: "var(--space-3) var(--space-4)", color: "var(--text-muted)" }}>{e.target_type.replace(/_/g, " ")}</td>
                 </tr>
               ))}
             </tbody>

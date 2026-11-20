@@ -34,47 +34,48 @@ def email_configured() -> bool:
     return bool(s.SMTP_HOST and (s.SMTP_FROM or s.SMTP_USERNAME))
 
 
-def _render_html(name: str, title: str, body: str, link_url: str | None) -> str:
-    paragraphs = "".join(
-        f'<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:#050505">{escape(p)}</p>'
-        for p in body.split("\n") if p.strip()
-    )
-    button = (
-        f'<p style="margin:20px 0 0"><a href="{escape(link_url)}" style="display:inline-block;background:#9c369a;'
-        f'color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px">Open HelpDesk</a></p>'
-        if link_url else ""
-    )
-    return f"""<!doctype html><html><body style="margin:0;background:#fcfcfc;font-family:Montserrat,Helvetica,Arial,sans-serif">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fcfcfc;padding:24px 12px">
-<tr><td align="center"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e6e6ec;border-radius:14px">
-<tr><td style="background:#0f1d66;color:#ffffff;padding:16px 24px;border-radius:14px 14px 0 0;font-weight:700;font-size:16px">Ampera HelpDesk</td></tr>
-<tr><td style="padding:24px">
-<p style="margin:0 0 12px;font-size:15px;color:#050505">Hi {escape(name)},</p>
-<h1 style="margin:0 0 16px;font-size:19px;color:#050505">{escape(title)}</h1>
-{paragraphs}{button}
-<p style="margin:24px 0 0;font-size:12px;color:#5b5b5b">This is an automatic message from Ampera HelpDesk. Please don't reply to it.</p>
-</td></tr></table></td></tr></table></body></html>"""
+DEFAULT_SIGNATURE = "Ampera HelpDesk"
+FOOTER = "This is an automated message from Ampera HelpDesk."
 
 
-def send_email(to_address: str, to_name: str, subject: str, body: str, link: str | None = None) -> tuple[str, str | None]:
+def email_text(name: str, body: str, signature: str | None = None) -> str:
+    """A short, normal email: greeting, the message, and who it's from. No links or buttons."""
+    return f"Hi {name},\n\n{body.strip()}\n\nRegards,\n{signature or DEFAULT_SIGNATURE}\n\n{FOOTER}\n"
+
+
+def _render_html(text_: str) -> str:
+    """Same content as the plain text, in the reader's normal email font: one paragraph per blank-
+    line-separated block, line breaks kept. No colours, cards or buttons."""
+    blocks = [b for b in text_.split("\n\n") if b.strip()]
+    paras = []
+    for i, block in enumerate(blocks):
+        style = "margin:0 0 14px"
+        if block.strip() == FOOTER:
+            style += ";color:#6b6b6b;font-size:12px"
+        paras.append(f'<p style="{style}">{escape(block.strip()).replace(chr(10), "<br>")}</p>')
+    return ('<!doctype html><html><body style="margin:0;padding:16px;font-family:Arial,Helvetica,sans-serif;'
+            'font-size:14px;line-height:1.5;color:#1a1a1a">' + "".join(paras) + "</body></html>")
+
+
+def send_email(to_address: str, to_name: str, subject: str, body: str, link: str | None = None,
+               signature: str | None = None) -> tuple[str, str | None]:
     """Sends one email. Returns (status, error) where status is 'sent', 'failed' or 'not_configured'."""
     s = get_settings()
     if not email_configured():
         return "not_configured", None
     recipient = s.EMAIL_REDIRECT_ALL_TO.strip() or to_address
-    link_url = f"{s.APP_PUBLIC_URL.rstrip('/')}{link}" if link else None
-
+    # `link` is accepted for older callers but not put in the email: it reads like a normal email.
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = f"Ampera HelpDesk <{s.SMTP_FROM or s.SMTP_USERNAME}>"
+    # The inbox shows who it's from: "Alex Admin via Ampera HelpDesk", or just "Ampera HelpDesk".
+    sender = f"{signature.splitlines()[0]} via Ampera HelpDesk" if signature else "Ampera HelpDesk"
+    msg["From"] = f"{sender} <{s.SMTP_FROM or s.SMTP_USERNAME}>"
     msg["To"] = recipient
-    plain = f"Hi {to_name},\n\n{subject}\n\n{body}\n"
-    if link_url:
-        plain += f"\nOpen HelpDesk: {link_url}\n"
+    plain = email_text(to_name, body, signature)
     if recipient != to_address:
         plain += f"\n(Demo redirect: originally addressed to {to_address}.)\n"
     msg.set_content(plain)
-    msg.add_alternative(_render_html(to_name, subject, body, link_url), subtype="html")
+    msg.add_alternative(_render_html(plain), subtype="html")
 
     try:
         security = s.SMTP_SECURITY.strip().lower()
@@ -98,12 +99,14 @@ EMAIL_PREFERENCES = ("important", "all", "off")
 
 
 def notify(user_id: str, kind: str, title: str, body: str, link: str | None = None,
-           important: bool = False, email: bool = True, email_body: str | None = None) -> None:
+           important: bool = False, email: bool = True, email_body: str | None = None,
+           signature: str | None = None) -> None:
     """Creates an in-app notification for one user (always) and emails it when their email
     preference allows: 'all' -> every notification, 'important' (default) -> only when
     `important` is true, 'off' -> never. `email=False` means this one is never emailed.
     `email_body` replaces `body` in the email when the in-app text shouldn't leave the site
-    (confidential HR cases)."""
+    (confidential HR cases). `signature` signs the email (e.g. "Hannah HR\\nHR Team, Ampera");
+    without it the email is signed "Ampera HelpDesk"."""
     try:
         engine = get_engine()
         with engine.begin() as conn:
@@ -124,7 +127,8 @@ def notify(user_id: str, kind: str, title: str, body: str, link: str | None = No
         if preference == "off" or (preference == "important" and not important):
             status, error = "skipped", None
         else:
-            status, error = send_email(user["email"], user["name"].split(" ")[0], title, email_body or body, link or "/app/overview")
+            status, error = send_email(user["email"], user["name"].split(" ")[0], title, email_body or body, link,
+                                       signature=signature)
         with engine.begin() as conn:
             conn.execute(
                 text("UPDATE notifications SET email_status = :s, email_error = :e WHERE id = :id"),

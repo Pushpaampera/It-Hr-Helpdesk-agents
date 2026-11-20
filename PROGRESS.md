@@ -1,5 +1,20 @@
 # PROGRESS.md
 
+## LATEST (2026-11-19, night): small readable demo data (`poetry run reset-demo` before demos)
+6 people (Emma is the main demo employee), ~27 chats, 11 tickets — see docs/07_CHANGELOG.md.
+Start the backend with `poetry run dev`. Not yet committed.
+Later the same night: emails are plain (no card / button) and decision emails list the full
+request + decision details; access-request examples are Jira / Zendesk / Power BI, never "Finance
+System" (migration 0011). Another session is working on password reset in parallel.
+
+## 2026-11-19: manager role replaced by IT support (IT tickets + own self-service)
+One IT support login, Ivan IT (ivan.it@acme.test): Overview + Tickets for IT work, plus Ask the
+Assistant + Talk to HR for their own needs (no approvals); works IT
+tickets the AI couldn't solve (auto-assigned + bell, take / ask employee / ask admin / resolve with
+a note). Admin approves access requests. Demo data: `poetry run reset-demo`.
+Migrations 0007 + 0008 applied to the dev DB (dumps in backups/). pytest 81/81, tsc clean.
+Not yet committed. Next planned: real password reset / forgot-password flow.
+
 ## LATEST (2026-11-18, later): Campus Hire navy + magenta colours, new landing page + 3D orbit
 Whole app recoloured to match the Ampera Campus Hire portal (navy sidebar/banners, magenta
 actions); landing page redesigned full width, with a 3D orbit animation in the hero (src/three/HeroOrbit.tsx); Accessibility button is

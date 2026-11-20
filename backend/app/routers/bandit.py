@@ -1,5 +1,5 @@
 """GET /api/bandit/stats — arm pulls, average reward over time, a simple regret estimate, and
-per-context win rates, for the Reinforcement Lab dashboard. Manager/hr/admin only."""
+per-context win rates, for the Reinforcement Lab dashboard. HR/admin only."""
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -8,7 +8,7 @@ from app.db import get_db
 from app.deps import require_roles
 
 router = APIRouter(
-    prefix="/api/bandit", tags=["bandit"], dependencies=[Depends(require_roles("manager", "hr", "admin"))]
+    prefix="/api/bandit", tags=["bandit"], dependencies=[Depends(require_roles("hr", "admin"))]
 )
 
 

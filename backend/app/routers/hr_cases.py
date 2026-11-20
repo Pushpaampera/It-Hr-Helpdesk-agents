@@ -4,11 +4,11 @@ concerns, personal/wellbeing matters.
 Who can see what (enforced here, server-side, never only in the UI):
   * the employee who raised a case — their own cases, and only those;
   * users with the `hr` role — every case (anonymous reporters shown as "Anonymous employee");
-  * managers and admins — NOTHING. Not the list, not a single case (404, so a case's existence
+  * IT support and admins — NOTHING. Not the list, not a single case (404, so a case's existence
     isn't even confirmed), not via the audit log, chat history or agent runs (case content is
     never written to any of those).
 
-Any signed-in user can raise a case, managers and admins included: they can have a complaint too.
+Any signed-in user can raise a case, IT support and admins included: they can have a complaint too.
 """
 from datetime import date
 from typing import Literal
@@ -110,7 +110,7 @@ def _load_case_row(db: Session, case_id: str) -> dict | None:
 
 def _load_case_for(db: Session, case_id: str, viewer: User) -> dict:
     row = _load_case_row(db, case_id)
-    # 404 (not 403) for everyone without access, so managers/admins can't even confirm a case exists.
+    # 404 (not 403) for everyone without access, so IT support and admins can't even confirm a case exists.
     if row is None or not (_is_hr(viewer) or str(row["reporter_id"]) == str(viewer.id)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Case not found")
     return dict(row)

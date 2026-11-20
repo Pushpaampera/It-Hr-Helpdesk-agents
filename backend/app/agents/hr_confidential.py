@@ -6,7 +6,7 @@ These are NOT handled by the AI agents. The chat router (app/routers/chat.py) ch
 before any agent, LLM call or run logging, and instead:
   * replies with care and points the person to the private "Talk to HR" page and HR's direct
     contact details;
-  * never stores what they typed in chat history, agent runs or events — managers and admins can
+  * never stores what they typed in chat history, agent runs or events — IT support and admins can
     read those, and these matters must be seen by HR only.
 
 Deterministic regex, no LLM: it has to work in LLM_MOCK_MODE, and a private message must never
@@ -143,7 +143,7 @@ def reply_for(match: ConfidentialMatch, first_name: str, hr_email: str) -> str:
             f"I'm sorry this is happening{name}. Your safety comes first: **if you are in immediate danger, call your "
             "local emergency number now.**\n\n"
             f"Please tell HR straight away, either directly at **{hr_email}** or through the private **Talk to HR** "
-            "page (already marked urgent). Only the HR team can read it. Your manager and admins cannot."
+            "page (already marked urgent). Only the HR team can read it. Your manager, IT support and admins cannot."
         )
     opener = {
         "harassment": f"I'm sorry you're dealing with this{name}. Nobody should be treated that way at work.",
@@ -158,7 +158,7 @@ def reply_for(match: ConfidentialMatch, first_name: str, hr_email: str) -> str:
         f"{opener}\n\n"
         "This is a private matter, so I won't handle the details here, and I haven't saved what you just typed. "
         "Please take it straight to HR:\n\n"
-        "- **Talk to HR privately**: open a confidential case. **Only the HR team can read it.** Your manager and "
+        "- **Talk to HR privately**: open a confidential case. **Only the HR team can read it.** Your manager, IT support and "
         "admins cannot. You can stay anonymous if you prefer.\n"
         f"- **Contact HR directly**: **{hr_email}**\n\n"
         "HR will reply to you on the same page, and you can follow your case there."

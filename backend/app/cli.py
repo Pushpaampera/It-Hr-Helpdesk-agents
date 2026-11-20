@@ -133,4 +133,7 @@ def dev() -> None:
     import uvicorn
 
     settings = get_settings()
-    uvicorn.run("app.main:app", host="0.0.0.0", port=settings.APP_PORT, reload=True)
+    # Chat answers stream over long-lived connections (and a chat waiting on an approval keeps
+    # its stream open). Without a limit, an auto-reload after a code change waits for every open
+    # browser tab's stream to end, so the server hangs until those tabs are closed.
+    uvicorn.run("app.main:app", host="0.0.0.0", port=settings.APP_PORT, reload=True, timeout_graceful_shutdown=3)
